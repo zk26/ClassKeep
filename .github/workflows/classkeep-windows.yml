@@ -1,0 +1,132 @@
+name: ClassKeep Windows Build
+
+# Produces real Windows binaries (teacher + student + classroom.dll) using
+# MSYS2 UCRT64 / Qt6 / MinGW-w64, i.e. the toolchain Veyon's CMake requires.
+#
+# UCRT64 is mandatory: MSYS2 ships QCA and LibVNC only for ucrt64/clang64,
+# not for mingw64. `windows-binaries` from upstream WindowsInstaller.cmake is
+# NOT used here - it hardcodes Linux cross-compiler paths (/usr/lib/gcc/...)
+# and runs a full build that hits the broken upstream filetransfer plugin.
+# We build explicit targets and collect the DLLs ourselves.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/classkeep-windows.yml'
+      - 'veyon/plugins/classroom/**'
+      - 'veyon/CMakeLists.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Compile Windows binaries (UCRT64 / Qt6 / MinGW)
+    runs-on: windows-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-5compat
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-httpserver
+            mingw-w64-ucrt-x86_64-qt6-websockets
+            mingw-w64-ucrt-x86_64-qca
+            mingw-w64-ucrt-x86_64-libvncserver
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-lzo2
+            mingw-w64-ucrt-x86_64-libldap
+            mingw-w64-ucrt-x86_64-libsasl
+
+      - name: Fetch Veyon 3rdparty sources (pinned to v4.11.4)
+        shell: bash
+        run: |
+          set -e
+          base=veyon/3rdparty
+          mkdir -p "$base"
+          fetch() {
+            name=$1; url=$2; sha=$3
+            if [ -d "$base/$name/.git" ]; then return 0; fi
+            git init -q "$base/$name"
+            git -C "$base/$name" remote add origin "$url"
+            git -C "$base/$name" fetch -q --depth 1 origin "$sha" \
+              || git -C "$base/$name" fetch -q origin "$sha"
+            git -C "$base/$name" checkout -q FETCH_HEAD
+          }
+          fetch libvncserver https://github.com/veyon/libvncserver.git 30860286c0f55674a846df9cab458da9afd1735b
+          fetch ultravnc     https://github.com/veyon/ultravnc.git      479a32b8d7f929b6a0eb5730a678f3c812c8be0a
+          fetch kldap        https://invent.kde.org/pim/kldap.git      2002b2c4ec81d05eb0fc5b2106ef112d404f5cea
+          fetch qthttpserver https://github.com/veyon/qthttpserver.git  f80feff79a3d698ca3f23cfa240bd763d87cf0ba
+          fetch libfakekey   https://github.com/veyon/libfakekey.git    7ad885912efb2131e80914e964d5e635b0d07b40
+
+      - name: Configure
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          /ucrt64/bin/qt-cmake -S veyon -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWITH_QT6=ON \
+            -DWITH_BUNDLED_LIBVNC=ON \
+            -DWITH_WEBAPI=OFF \
+            -DWITH_TRANSLATIONS=OFF \
+            -DWITH_LTO=OFF \
+            -DWITH_PCH=OFF \
+            -DWITH_UNITY_BUILD=OFF \
+            -DWITH_STACK_PROTECTION=OFF \
+            -DWITH_TESTS=OFF \
+            -DWITH_CORE_ONLY=OFF \
+            -DCMAKE_SKIP_INSTALL_RULES=ON \
+            -DCMAKE_CXX_FLAGS="-include cmath" 2>&1 | tee configure.log
+
+      # Build only what we ship. classroom pulls in veyon-core, so all Windows-only
+      # code (UWF / Core Audio / WFP / SetupAPI) is compiled here.
+      - name: Build classroom plugin + Veyon executables
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          cmake --build build --target classroom --parallel 4 2>&1 | tee build.log
+
+      - name: Collect Windows binaries
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bin = 'dist-windows'
+          New-Item -ItemType Directory -Force -Path $bin | Out-Null
+          $built = Get-ChildItem -Path build -Recurse -File -Include *.exe,*.dll -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch 'CMakeFiles' }
+          foreach ($f in $built) { Copy-Item -LiteralPath $f.FullName -Destination $bin -Force }
+          # Runtime DLLs from the UCRT64 toolchain
+          $ucrt = 'C:\msys64\ucrt64\bin'
+          if (Test-Path $ucrt) {
+            Get-ChildItem -LiteralPath $ucrt -File -Filter '*.dll' |
+              Where-Object { $_.Name -match '^(Qt6|libqca|libgcc|libstdc\+\+|libwinpthread|libcrypto|libssl|libjpeg|libpng|liblzo|libvnc|libldap|liblber|libsasl|zlib1)' } |
+              ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $bin -Force }
+          }
+          Get-ChildItem -LiteralPath $bin -File | Select-Object Name, @{N='KB';E={[math]::Round($_.Length/1KB,1)}} | Format-Table -AutoSize
+          if (-not (Test-Path (Join-Path $bin 'classroom.dll'))) { throw 'classroom.dll was not produced' }
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: classkeep-windows-binaries
+          path: dist-windows/*
+          if-no-files-found: error
