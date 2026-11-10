@@ -85,6 +85,16 @@ mobile/                       Android 教室端（Kotlin，零第三方网络库
 
 ---
 
+> **关于两份 `mobile/` 目录**：本机 `g:/veyon/mobile` 是 Android Studio 打开的原始开发工程，
+> 仓库内 `veyon/mobile/` 是提交用的副本。两者内容相同但**互不联动**，在一处改动后需手动同步，
+> 否则下次提交会漏掉改动。建议后续直接以仓库内 `mobile/` 作为唯一工程打开。同步命令：
+>
+> ```powershell
+> robocopy g:\veyon\mobile g:\veyon\veyon\mobile /E /XD .gradle .idea build .cxx captures /XF local.properties *.iml
+> ```
+>
+> 排除项已写入根 `.gitignore`（`local.properties`、`*.iml`、`.gradle/`、`.idea/`、`build/` 等）。
+
 ## 4. 构建
 
 ### 4.1 桌面端（Windows）

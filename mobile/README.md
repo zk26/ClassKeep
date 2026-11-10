@@ -3,6 +3,9 @@
 教师机侧的移动伴侣 App（**不是学生端**）。在局域网内发现教师机后同步班级/积分/日志数据，
 并把控制指令交给教师机执行。Kotlin + 传统 XML View + Material3，**零第三方网络/JSON/加密库**。
 
+> 本机 `g:/veyon/mobile` 是原始开发工程，本目录是仓库内的提交副本（两者互不联动）。
+> 同步方式见 [`CLASSKEEP.md` 第 3 节](../docs/CLASSKEEP.md)。建议后续直接以本目录作为唯一工程打开。
+
 完整说明见仓库根目录 `docs/`：
 
 - [`CLASSKEEP.md`](../docs/CLASSKEEP.md) — 功能总览与架构
