@@ -48,15 +48,15 @@ jobs:
             mingw-w64-ucrt-x86_64-qt6-tools
             mingw-w64-ucrt-x86_64-qt6-httpserver
             mingw-w64-ucrt-x86_64-qt6-websockets
-            mingw-w64-ucrt-x86_64-qca
+            mingw-w64-ucrt-x86_64-qca-qt6
             mingw-w64-ucrt-x86_64-libvncserver
             mingw-w64-ucrt-x86_64-openssl
             mingw-w64-ucrt-x86_64-zlib
             mingw-w64-ucrt-x86_64-libjpeg-turbo
             mingw-w64-ucrt-x86_64-libpng
             mingw-w64-ucrt-x86_64-lzo2
-            mingw-w64-ucrt-x86_64-libldap
-            mingw-w64-ucrt-x86_64-libsasl
+            mingw-w64-ucrt-x86_64-openldap
+            mingw-w64-ucrt-x86_64-cyrus-sasl
 
       - name: Fetch Veyon 3rdparty sources (pinned to v4.11.4)
         shell: bash
