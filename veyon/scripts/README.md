@@ -53,3 +53,30 @@ RELEASE-NOTES.md
 - 分发 ZIP 时请同时附上 `LICENSE` / `NOTICE.md` / `COPYING` 与完整源码获取方式（GPL 要求）。
 - 自动构建与发布由 [`../.github/workflows/classkeep-release.yml`](../.github/workflows/classkeep-release.yml) 完成，
   本脚本用于本地或离线打包。
+
+## `package-presets.ps1`（部署预设包）
+
+在没有 Qt / QCA / LibVNC / CMake 的机器上，**无法编译桌面端二进制**。
+该脚本不改变这一事实，而是产出**真实可用的部署预设包**：配置模板、安装辅助脚本、
+全套文档、`LICENSE` / `NOTICE.md` / `COPYING`。
+
+```powershell
+.\veyon\scripts\package-presets.ps1 -Version 1.0.0 -OutputDir dist
+```
+
+输出：
+
+```
+ClassKeep-Teacher-1.0.0-win64-preset.zip
+ClassKeep-Student-1.0.0-win64-preset.zip
+SHA256SUMS.txt        （自动纳入 dist/ 下所有 ClassKeep-* 产物）
+```
+
+> **两个 ZIP 都不含任何 Veyon / 课守可执行文件或 DLL**，包内 `README.txt` 首行明确标注了这一点，
+> 文件名也带 `-preset` 后缀，避免与完整二进制包混淆。它们不是占位包：配置、脚本、文档与许可文件
+> 均可直接用于部署。完整二进制包仍由 `package-classkeep.ps1` 或 CI 生成。
+
+| 脚本 | 需要编译产物 | 产出 |
+|---|---|---|
+| `package-classkeep.ps1` | 是（教师端 / 学生端目录 + APK） | 两个完整二进制 ZIP + APK + 校验 + 说明 |
+| `package-presets.ps1` | 否 | 两个部署预设 ZIP + 校验 |

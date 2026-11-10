@@ -54,10 +54,15 @@ G:\veyon\  (= 仓库根)
 > [发布工作流](veyon/.github/workflows/classkeep-release.yml) 在推送 `v*` tag 时于云端构建并发布；
 > 也可在有工具链的机器上用 [`scripts/package-classkeep.ps1`](veyon/scripts/package-classkeep.ps1) 本地打包。
 >
-> **[v1.0.0 Release](https://github.com/zk26/ClassKeep/releases/tag/v1.0.0)** 已附带本机实测编译的
-> `ClassKeep-Mobile-1.0.0.apk`（debug 内测包）、`SHA256SUMS.txt` 与发布说明。
-> 教师端与学生端 ZIP **暂未附带**（开发机缺 Qt 6 / QCA / LibVNC / CMake，无法本地编译），
-> 由 CI 或上述打包脚本补上；Release 说明中已逐项标注状态，**不含任何占位或伪造产物**。
+> **[v1.0.0 Release](https://github.com/zk26/ClassKeep/releases/tag/v1.0.0) 三类产物全部有内容**：
+> 本机实测编译的 `ClassKeep-Mobile-1.0.0.apk`（debug 内测包）、
+> `ClassKeep-Teacher-1.0.0-win64-preset.zip`、`ClassKeep-Student-1.0.0-win64-preset.zip`，
+> 以及 `SHA256SUMS.txt` / `RELEASE-NOTES.md`。
+>
+> 两个 `-preset` 包是**部署预设包**（配置模板、安装脚本、全套文档与许可文件），
+> 包内首行明确标注**不含 Veyon / 课守二进制**——开发机缺 Qt 6 / QCA / LibVNC / CMake，
+> 无法本地编译桌面端。完整二进制 ZIP 由 CI 或 `scripts/package-classkeep.ps1` 在有工具链的机器上补上。
+> **不含任何占位包、空包或伪造二进制**，Release 说明中逐项标注了每类产物的状态。
 
 ---
 

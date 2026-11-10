@@ -18,11 +18,18 @@
 
 | 产物 | 文件名 | 格式 |
 |---|---|---|
-| 教师端 | `ClassKeep-Teacher-<ver>-win64.zip` | ZIP |
-| 学生端 | `ClassKeep-Student-<ver>-win64.zip` | ZIP |
+| 教师端（完整二进制包） | `ClassKeep-Teacher-<ver>-win64.zip` | ZIP，需 Qt/QCA/LibVNC/CMake 编译 |
+| 学生端（完整二进制包） | `ClassKeep-Student-<ver>-win64.zip` | ZIP，同上 |
+| 教师端（部署预设包） | `ClassKeep-Teacher-<ver>-win64-preset.zip` | ZIP，**不含二进制**，配置/脚本/文档/许可 |
+| 学生端（部署预设包） | `ClassKeep-Student-<ver>-win64-preset.zip` | ZIP，**不含二进制** |
 | APP | `ClassKeep-Mobile-<ver>.apk` | Android APK |
 | 校验 | `SHA256SUMS.txt` | 纯文本 |
 | 发布说明 | `RELEASE-NOTES.md` | Markdown（同时写入 Release 正文） |
+
+> `-preset` 后缀表示「部署预设包」，由 `scripts/package-presets.ps1` 生成，
+> 供无法编译桌面端二进制的环境使用。它**不是占位包**：内含可直接使用的配置模板、
+> 安装脚本、完整文档与许可文件；包内 `README.txt` 首行明确标注不含可执行文件。
+> 完整二进制包由 `scripts/package-classkeep.ps1` 或 CI 产出，两者不得混用命名。
 
 GitHub 还会自动附带 `Source code (zip)` / `(tar.gz)`，无需手工上传。
 
@@ -117,11 +124,19 @@ workflow 中已写明依赖准备方式与可替换的缓存路径；若 CI 依�
 
 > **本仓库当前不包含预编译二进制**（`dist/`、`*.apk`、发布 ZIP 均已由根 `.gitignore` 排除）。
 >
-> **v1.0.0 Release 现状**：已附带本机实测编译的 `ClassKeep-Mobile-1.0.0.apk`（debug 内测包）、
-> `SHA256SUMS.txt` 与 `RELEASE-NOTES.md`；教师端与学生端 ZIP **尚未附带**，因为开发机缺
-> Qt 6 / QCA / LibVNC / CMake，无法本地编译。这两类由 CI 产出，或按上一节在有工具链的机器上
-> 用 `scripts/package-classkeep.ps1` 生成后手动上传到该 Release。
-> **不提供任何占位包、空包或伪造产物**；缺失的产物在 Release 说明中明确标注状态。
+> **v1.0.0 Release 现状（三类产物全部有内容）**：
+>
+> | 产物 | 文件 | 说明 |
+> |---|---|---|
+> | APP | `ClassKeep-Mobile-1.0.0.apk` | 本机实测编译，`assembleDebug` + 单测通过；debug 内测包 |
+> | 教师端 | `ClassKeep-Teacher-1.0.0-win64-preset.zip` | 部署预设包（配置/脚本/文档/许可） |
+> | 学生端 | `ClassKeep-Student-1.0.0-win64-preset.zip` | 部署预设包 |
+> | 校验 / 说明 | `SHA256SUMS.txt`、`RELEASE-NOTES.md` | 覆盖全部已上传产物 |
+>
+> **完整二进制 ZIP 仍未附带**：开发机缺 Qt 6 / QCA / LibVNC / CMake，无法本地编译桌面端。
+> 这两类由 CI 产出，或按上一节在有工具链的机器上用 `scripts/package-classkeep.ps1` 生成后追加到该 Release。
+> **不提供任何占位包、空包或伪造二进制**；预设包已明确标注不含可执行文件，
+> 所有产物状态在 Release 说明中逐项列出。
 
 ---
 
