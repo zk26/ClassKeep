@@ -16,7 +16,14 @@
 | **QCA 没有 vcpkg port** | `find_package(Qca-qt6 REQUIRED)` 要 `Qca-qt6Config.cmake`（CONFIG 模式），仓库无 `FindQCA.cmake`；vcpkg 无 `qca` port，且 MSVC ABI 与 MinGW 不兼容 | `CMakeLists.txt:234`、`core/CMakeLists.txt:37-43` |
 | **官方 Windows 构建是 MinGW 交叉编译** | 上游 `.ci/windows/build.sh` 用 `/usr/x86_64-w64-mingw32/bin/qt-cmake -G Ninja` → `ninja windows-binaries`；GitLab 镜像 `ci-mingw-w64:main` **私有且不提供 Dockerfile**，外部无法重建 | `.gitlab-ci.yml:43-53`、`.ci/windows/build.sh:14-26` |
 
-一句话：**Windows 二进制只能用 MinGW-w64/GCC 编译，MSVC + vcpkg 是死路；但「验证代码能否编译」可以立刻在 Linux/GCC 上做到。**
+一句话：**Windows 二进制只能用 MinGW-w64/GCC 编译，MSVC + vcpkg 是死路。**
+目前仓库提供三条可立即运行的 GitHub Actions 路线：
+
+| Workflow | 作用 | 当前状态 |
+|---|---|---|
+| **ClassKeep Build Check** | Linux/Qt6/GCC 全量验证课守插件，产出 `classroom.so` | ✅ 已跑通，两个 job 全绿 |
+| **ClassKeep Windows Build** | MSYS2 UCRT64/MinGW 产出真实 Windows `.exe`/`.dll` | 见路线 D |
+| **ClassKeep Release** | 汇总 APK + 教师端/学生端包，自动发 Release | 见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) |
 
 ---
 
@@ -123,7 +130,34 @@ kldap master 的 Qt6-only 符号。
 
 `ClassroomSystem.cpp` 里 UWF / Core Audio / WFP / SetupAPI 的实现都在 `#ifdef Q_OS_WIN` 内，
 Linux 编译走 `#else` 分支，**不会验证这些 Windows 专属代码**。
-它们需要用路线 B 的 MinGW 编译才能真正确认。其余 30 多个文件（协议、积分、词云、报表、Bridge、学生端 UI、插件分发）都能被路线 A 覆盖。
+它们需要路线 B（本机 MinGW）或路线 D（GitHub Windows 构建）才能真正确认。
+其余 30 多个文件（协议、积分、词云、报表、Bridge、学生端 UI、插件分发）都能被路线 A 覆盖。
+
+---
+
+## 路线 D：GitHub Actions 产出 Windows 二进制（推荐用于出包）
+
+workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Build**
+
+| 项 | 值 |
+|---|---|
+| Runner | `windows-latest` + `msys2/setup-msys2@v2` |
+| 环境 | **UCRT64**（不是 MINGW64——MSYS2 的 QCA / LibVNC 只发布到 ucrt64 / clang64） |
+| 编译器 | `mingw-w64-ucrt-x86_64-gcc` + Ninja |
+| Qt | `mingw-w64-ucrt-x86_64-qt6-base` 等，由 `/ucrt64/bin/qt-cmake` 配置 |
+| 关键包名 | `qca-qt6`、`openldap`、`cyrus-sasl`（**不是** `qca` / `libldap` / `libsasl`） |
+| 产物 | `classkeep-windows-binaries` artifact：编译出的 `.exe` / `.dll` + UCRT64 运行时 DLL |
+
+设计要点：
+
+- 3rdparty 仍按上游 v4.11.4 的 gitlink SHA 精确检出，另加 Windows 需要的 `ultravnc` / `qthttpserver`。
+- **不调用上游 `windows-binaries` target**：`WindowsInstaller.cmake` 硬编码了 Linux 交叉编译路径
+  （`/usr/lib/gcc/${MINGW_TARGET}/...`、`${MINGW_PREFIX}/bin`），且会触发全量编译撞上损坏的 `filetransfer` 插件。
+  这里改为显式 `--target classroom` 并自行收集 DLL。
+- `classroom` 目标会连带编译 `veyon-core`，因此 **UWF / Core Audio / WFP 这些 Windows 专属实现会被真正编译**。
+
+产出 `classroom.dll` 后，即可用 `scripts/package-classkeep.ps1` 组装教师端 / 学生端 ZIP
+（详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md)）。
 
 ---
 
