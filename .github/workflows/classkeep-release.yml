@@ -65,7 +65,7 @@ jobs:
           mkdir -p dist
           cp "$APK" "dist/ClassKeep-Mobile-$VERSION.apk"
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: classkeep-release-assets
           path: dist/*
@@ -80,7 +80,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: classkeep-release-assets
           path: dist
@@ -107,7 +107,7 @@ jobs:
           $notes = $template.Replace('{VER}', $v)
           [IO.File]::WriteAllText('dist/RELEASE-NOTES.md', $notes, (New-Object Text.UTF8Encoding($false)))
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: classkeep-release-final
           path: dist/*
@@ -119,7 +119,7 @@ jobs:
     needs: presets
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: classkeep-release-final
           path: dist
