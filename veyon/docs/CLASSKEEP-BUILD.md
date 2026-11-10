@@ -144,7 +144,7 @@ workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Bui
 | Runner | `windows-latest` + `msys2/setup-msys2@v2` |
 | 环境 | **UCRT64**（不是 MINGW64——MSYS2 的 QCA / LibVNC 只发布到 ucrt64 / clang64） |
 | 编译器 | `mingw-w64-ucrt-x86_64-gcc` + Ninja |
-| Qt | `mingw-w64-ucrt-x86_64-qt6-base` 等，由 `/ucrt64/bin/qt-cmake` 配置 |
+| Qt | `mingw-w64-ucrt-x86_64-qt6-base` 等，用 `cmake -DCMAKE_PREFIX_PATH=/ucrt64` 配置（MSYS2 没有 `qt-cmake` wrapper） |
 | 关键包名 | `qca-qt6`、`openldap`、`cyrus-sasl`（**不是** `qca` / `libldap` / `libsasl`） |
 | 产物 | `classkeep-windows-binaries` artifact：编译出的 `.exe` / `.dll` + UCRT64 运行时 DLL |
 

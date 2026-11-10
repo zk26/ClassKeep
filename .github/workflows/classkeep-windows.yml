@@ -83,7 +83,8 @@ jobs:
         shell: msys2 {0}
         run: |
           set -o pipefail
-          /ucrt64/bin/qt-cmake -S veyon -B build -G Ninja \
+          cmake -S veyon -B build -G Ninja \
+            -DCMAKE_PREFIX_PATH=/ucrt64 \
             -DCMAKE_BUILD_TYPE=Release \
             -DWITH_QT6=ON \
             -DWITH_BUNDLED_LIBVNC=ON \
