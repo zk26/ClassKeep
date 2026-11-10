@@ -68,7 +68,7 @@ QString ClassroomPlugin::localIpAddress() const
 {
 	for( const auto& address : QNetworkInterface::allAddresses() )
 	{
-		if( address.isLoopBack() == false && address.protocol() == QAbstractSocket::IPv4Protocol )
+		if( address.isLoopback() == false && address.protocol() == QAbstractSocket::IPv4Protocol )
 		{
 			return address.toString();
 		}

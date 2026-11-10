@@ -1402,7 +1402,7 @@ void ClassroomMasterDialog::setupSystemTab()
 	m_teacherIp = new QLineEdit( page );
 	for( const auto& address : QNetworkInterface::allAddresses() )
 	{
-		if( address.isLoopBack() == false && address.protocol() == QAbstractSocket::IPv4Protocol )
+		if( address.isLoopback() == false && address.protocol() == QAbstractSocket::IPv4Protocol )
 		{
 			m_teacherIp->setText( address.toString() );
 			break;
