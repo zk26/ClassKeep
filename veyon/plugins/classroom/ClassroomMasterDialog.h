@@ -8,6 +8,7 @@
 
 #include <QDialog>
 #include <QDate>
+#include <QDateTime>
 #include <QJsonObject>
 #include <QMap>
 #include <QSharedPointer>
@@ -31,6 +32,7 @@ class QTimer;
 class ClassroomAiClient;
 class ClassroomBridge;
 class ClassroomScorePanel;
+class ClassroomSeatGrid;
 class ComputerControlInterface;
 class ClassroomConfiguration;
 class ClassroomLogStore;
@@ -53,6 +55,8 @@ public:
 
 	void showCall( const QString& ip, const QString& seat, const QString& student );
 	void syncNow();
+	//! Called by the plugin when a student submits the attendance prompt.
+	void recordCheckIn( const QString& className, const QString& seat, const QString& typedName );
 
 private:
 	void setupClassTab();
@@ -61,6 +65,10 @@ private:
 	void setupAiTab();
 	void setupMonitorTab();
 	void setupSystemTab();
+	void setupSeatTab();
+	void refreshSeatGrid();
+	void startCheckIn();
+	void refreshCheckIn();
 
 	QString dataDirectory() const;
 	QString currentClassName() const;
@@ -178,4 +186,11 @@ private:
 	QLineEdit* m_silenceText = nullptr;
 	QCheckBox* m_bridgeEnabled = nullptr;
 	QSpinBox* m_bridgePort = nullptr;
+
+	ClassroomSeatGrid* m_seatGrid = nullptr;
+	QTableWidget* m_checkInTable = nullptr;
+	QLabel* m_checkInSummary = nullptr;
+	QMap<QString, QString> m_checkInNames;
+	QMap<QString, QDateTime> m_checkInTimes;
+	QDateTime m_checkInStarted;
 };

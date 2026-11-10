@@ -137,6 +137,14 @@ int main( int argc, char** argv )
 	check( xml.contains( QByteArrayLiteral("98") ), "report contains current total" );
 	check( ClassroomTermReport::toCsv( roster, book, options ).startsWith( QByteArrayLiteral("\xEF\xBB\xBF") ),
 		   "csv has UTF-8 BOM" );
+	check( xml.contains( QByteArrayLiteral("Score details") ),
+		   "term report contains the per-entry detail worksheet" );
+	check( ClassroomTermReport::toDetailsCsv( book, options ).contains( QByteArrayLiteral("Reason") ),
+		   "detail csv carries the reason column" );
+	check( static_cast<int>( Classroom::Command::StartCheckIn ) == 37 &&
+		   static_cast<int>( Classroom::Command::CheckInReply ) == 38 &&
+		   static_cast<int>( Classroom::Argument::CheckInName ) == 49,
+		   "wire protocol enum values stay stable" );
 
 	std::fprintf( stdout, "\n%d failure(s)\n", failures );
 	return failures == 0 ? 0 : 1;

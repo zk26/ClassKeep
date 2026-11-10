@@ -39,6 +39,11 @@ public:
 	void refresh();
 	void showCall( const QString& ip, const QString& seat, const QString& student );
 
+	//! Used by the seat grid: current total for a seat, and quick +/- scoring.
+	int scoreForSeat( const QString& seat ) const;
+	void addEntryForSeat( const QString& seat, int delta, const QString& label,
+						  const QString& richText = QString{} );
+
 private:
 	void setupDailyTab();
 	void setupRulesTab();
@@ -61,7 +66,7 @@ private:
 	ClassroomRoster& m_roster;
 	ClassroomLogStore& m_store;
 	QJsonObject m_settings;
-	ClassroomScoreBook m_book;
+	mutable ClassroomScoreBook m_book;
 	QString m_className;
 	QString m_lessonId;
 
@@ -87,4 +92,5 @@ private:
 	QLineEdit* m_term = nullptr;
 	QCheckBox* m_includeRules = nullptr;
 	QCheckBox* m_attendanceColumn = nullptr;
+	QCheckBox* m_includeDetails = nullptr;
 };

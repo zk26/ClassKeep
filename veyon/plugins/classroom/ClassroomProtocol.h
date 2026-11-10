@@ -98,7 +98,11 @@ enum class Command
 
 	// teacher machine <-> mobile bridge
 	SyncRequest,
-	SyncReply
+	SyncReply,
+
+	// attendance check-in (appended last: numeric values are the wire protocol)
+	StartCheckIn,
+	CheckInReply
 };
 
 enum class Argument
@@ -159,7 +163,10 @@ enum class Argument
 	TeacherId,
 	BridgePort,
 	DeviceClass,
-	BlockMinutes
+	BlockMinutes,
+
+	// attendance check-in
+	CheckInName
 };
 
 inline FeatureMessage message( Command command )
@@ -194,6 +201,8 @@ inline QString install()      { return QStringLiteral("install"); }
 inline QString sync()         { return QStringLiteral("sync"); }
 inline QString remote()       { return QStringLiteral("remote"); }
 inline QString demo()         { return QStringLiteral("demo"); }
+inline QString checkIn()      { return QStringLiteral("check-in"); }
+inline QString quickScore()   { return QStringLiteral("quick-score"); }
 }
 
 namespace SettingKey

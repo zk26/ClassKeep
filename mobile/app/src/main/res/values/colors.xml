@@ -3,18 +3,32 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <color name="ck_background">#FFF3F6F8</color>
+    <!-- Brand palette sampled from ClassKeep_logo.png (blue -> violet) -->
+    <color name="ck_gradient_start">#FF2E9BFF</color>
+    <color name="ck_gradient_end">#FF8A3FE8</color>
+    <color name="ck_primary">#FF2563D6</color>
+    <color name="ck_primary_dark">#FF1240A8</color>
+    <color name="ck_accent">#FF7B46E8</color>
+
+    <color name="ck_background">#FFF3F6FC</color>
     <color name="ck_card">#FFFFFFFF</color>
-    <color name="ck_border">#FFDCE3EA</color>
-    <color name="ck_primary">#FF1F6F8B</color>
-    <color name="ck_secondary">#FF7B8B9A</color>
-    <color name="ck_title">#FF1F2D3D</color>
-    <color name="ck_body">#FF4A5A6A</color>
-    <color name="ck_hint">#FF8896A5</color>
-    <color name="ck_badge_ok_bg">#FFDFF5E6</color>
-    <color name="ck_badge_ok_fg">#FF1D7A3C</color>
-    <color name="ck_badge_off_bg">#FFFDE7E7</color>
-    <color name="ck_badge_off_fg">#FFA12B2B</color>
-    <color name="ck_chip_bg">#FFEAF2F6</color>
-    <color name="ck_chip_border">#FFC6DBE5</color>
+    <color name="ck_border">#FFE1E9F4</color>
+    <color name="ck_secondary">#FF6B7C93</color>
+    <color name="ck_title">#FF16263D</color>
+    <color name="ck_body">#FF45566B</color>
+    <color name="ck_hint">#FF8A99AC</color>
+    <color name="ck_divider">#FFEEF2F8</color>
+
+    <color name="ck_badge_ok_bg">#FFDCF6E8</color>
+    <color name="ck_badge_ok_fg">#FF127A42</color>
+    <color name="ck_badge_off_bg">#FFFFE6E6</color>
+    <color name="ck_badge_off_fg">#FFA42C2C</color>
+
+    <color name="ck_chip_bg">#FFE9F1FF</color>
+    <color name="ck_chip_pressed">#FFD5E5FF</color>
+    <color name="ck_chip_border">#FFC9DCF9</color>
+    <color name="ck_input_bg">#FFF7FAFF</color>
+
+    <color name="ck_brand_text">#FFFFFFFF</color>
+    <color name="ck_brand_subtext">#FFE6EEFF</color>
 </resources>

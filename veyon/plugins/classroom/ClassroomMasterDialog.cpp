@@ -34,6 +34,7 @@
 #include <QPair>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QSpinBox>
@@ -53,6 +54,7 @@
 #include "ClassroomMasterDialog.h"
 #include "ClassroomProtocol.h"
 #include "ClassroomScorePanel.h"
+#include "ClassroomSeatGrid.h"
 #include "ClassroomSystem.h"
 #include "ComputerControlInterface.h"
 #include "FeatureManager.h"
@@ -98,6 +100,8 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 	m_scorePanel = new ClassroomScorePanel( dataDirectory(), m_roster, m_store, settingsJson(), m_tabs );
 	m_tabs->addTab( m_scorePanel, tr( "Score & reports" ) );
 
+	setupSeatTab();
+
 	auto* closeButton = new QPushButton( tr( "Close" ), this );
 	connect( closeButton, &QPushButton::clicked, this, &QDialog::close );
 	auto* footer = new QHBoxLayout;
@@ -112,6 +116,9 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 	refreshRosterTable();
 	m_scorePanel->setClassName( currentClassName() );
 	if( m_bridge ) { m_bridge->setClassName( currentClassName() ); }
+	if( m_seatGrid ) { m_seatGrid->setClassName( currentClassName() ); }
+	refreshSeatGrid();
+	refreshCheckIn();
 	refreshMachines();
 	refreshLogs();
 	refreshAnalysis();
@@ -341,6 +348,12 @@ void ClassroomMasterDialog::setupClassTab()
 		refreshStatus();
 		if( m_scorePanel ) { m_scorePanel->setClassName( currentClassName() ); }
 		if( m_bridge ) { m_bridge->setClassName( currentClassName() ); }
+		if( m_seatGrid ) { m_seatGrid->setClassName( currentClassName() ); }
+		m_checkInNames.clear();
+		m_checkInTimes.clear();
+		m_checkInStarted = {};
+		refreshCheckIn();
+		refreshSeatGrid();
 	} );
 	connect( addClassButton, &QPushButton::clicked, this, [this]() { addClass(); } );
 	connect( importButton, &QPushButton::clicked, this, [this]() { importRoster(); } );
@@ -465,6 +478,7 @@ void ClassroomMasterDialog::refreshRosterTable()
 
 void ClassroomMasterDialog::refreshStatus()
 {
+	refreshSeatGrid();
 	const auto states = m_store.identityStates();
 	m_status.clear();
 	for( auto it = states.constBegin(); it != states.constEnd(); ++it )
@@ -1386,6 +1400,151 @@ void ClassroomMasterDialog::syncNow()
 	}
 	m_bridge->syncNow();
 	if( m_systemStatus ) { m_systemStatus->setText( m_bridge->status() ); }
+}
+
+
+void ClassroomMasterDialog::setupSeatTab()
+{
+	auto* page = new QWidget( m_tabs );
+	auto* layout = new QVBoxLayout( page );
+
+	auto* toolbar = new QHBoxLayout;
+	auto* checkInButton = new QPushButton( tr( "Start check-in" ), page );
+	auto* clearButton = new QPushButton( tr( "Clear results" ), page );
+	m_checkInSummary = new QLabel( tr( "No check-in started." ), page );
+	m_checkInSummary->setWordWrap( true );
+	toolbar->addWidget( checkInButton );
+	toolbar->addWidget( clearButton );
+	toolbar->addWidget( m_checkInSummary, 1 );
+	layout->addLayout( toolbar );
+
+	m_seatGrid = new ClassroomSeatGrid( m_roster );
+	m_seatGrid->setClassName( currentClassName() );
+	m_seatGrid->setThumbnailProvider( [this]( const QString& ip ) -> QImage {
+		for( const auto& controlInterface : m_master.allComputerControlInterfaces() )
+		{
+			if( ipOfInterface( controlInterface.data() ) == ip )
+			{
+				return controlInterface->scaledFramebuffer();
+			}
+		}
+		return {};
+	} );
+	m_seatGrid->setScoreProvider( [this]( const QString& seat ) -> int {
+		return m_scorePanel ? m_scorePanel->scoreForSeat( seat ) : 100;
+	} );
+	m_seatGrid->setScoreSink( [this]( const QString& seat, int delta, const QString& reason ) {
+		if( m_scorePanel )
+		{
+			m_scorePanel->addEntryForSeat( seat, delta,
+										   reason.isEmpty() ? QString::number( delta ) : reason );
+		}
+		appendTeacherEvent( EventType::quickScore(),
+							tr( "%1 points at seat %2: %3" ).arg( delta ).arg( seat, reason ), {} );
+	} );
+
+	auto* scroller = new QScrollArea( page );
+	scroller->setWidgetResizable( true );
+	scroller->setWidget( m_seatGrid );
+	layout->addWidget( scroller, 3 );
+
+	m_checkInTable = new QTableWidget( 0, 5, page );
+	m_checkInTable->setHorizontalHeaderLabels( QStringList{ tr( "Seat" ), tr( "Roster name" ),
+														  tr( "Typed name" ), tr( "Status" ), tr( "Time" ) } );
+	m_checkInTable->horizontalHeader()->setSectionResizeMode( QHeaderView::Stretch );
+	m_checkInTable->setEditTriggers( QAbstractItemView::NoEditTriggers );
+	m_checkInTable->setMaximumHeight( 210 );
+	layout->addWidget( m_checkInTable, 1 );
+
+	connect( checkInButton, &QPushButton::clicked, this, &ClassroomMasterDialog::startCheckIn );
+	connect( clearButton, &QPushButton::clicked, this, [this]() {
+		m_checkInNames.clear();
+		m_checkInTimes.clear();
+		m_checkInStarted = {};
+		refreshCheckIn();
+	} );
+
+	m_tabs->addTab( page, tr( "Seats & check-in" ) );
+}
+
+
+void ClassroomMasterDialog::refreshSeatGrid()
+{
+	if( m_seatGrid == nullptr ) { return; }
+	m_seatGrid->setClassName( currentClassName() );
+	m_seatGrid->setOnlineIps( onlineIps() );
+}
+
+
+void ClassroomMasterDialog::startCheckIn()
+{
+	m_checkInNames.clear();
+	m_checkInTimes.clear();
+	m_checkInStarted = QDateTime::currentDateTime();
+
+	auto message = Classroom::message( Command::StartCheckIn );
+	message.addArgument( Argument::ClassName, currentClassName() );
+	sendToAll( message );
+	appendTeacherEvent( EventType::checkIn(),
+						tr( "check-in started for %1" ).arg( currentClassName() ), {} );
+	refreshCheckIn();
+}
+
+
+void ClassroomMasterDialog::recordCheckIn( const QString& className, const QString& seat,
+										   const QString& typedName )
+{
+	if( seat.isEmpty() || className != currentClassName() ) { return; }
+	m_checkInNames.insert( seat, typedName );
+	m_checkInTimes.insert( seat, QDateTime::currentDateTime() );
+	refreshCheckIn();
+}
+
+
+void ClassroomMasterDialog::refreshCheckIn()
+{
+	if( m_checkInTable == nullptr ) { return; }
+
+	const auto* classItem = m_roster.findClass( currentClassName() );
+	const int rows = classItem ? classItem->students.size() : 0;
+	m_checkInTable->setRowCount( rows );
+	int present = 0;
+	int mismatched = 0;
+
+	for( int row = 0; row < rows; ++row )
+	{
+		const auto& student = classItem->students.at( row );
+		const auto typed = m_checkInNames.value( student.seat );
+		QString status = tr( "absent" );
+		if( typed.isEmpty() == false && typed == student.name )
+		{
+			status = tr( "present" );
+			++present;
+		}
+		else if( typed.isEmpty() == false )
+		{
+			status = tr( "name mismatch" );
+			++mismatched;
+		}
+		const auto time = m_checkInTimes.value( student.seat );
+
+		m_checkInTable->setItem( row, 0, new QTableWidgetItem( student.seat ) );
+		m_checkInTable->setItem( row, 1, new QTableWidgetItem( student.name ) );
+		m_checkInTable->setItem( row, 2, new QTableWidgetItem( typed ) );
+		m_checkInTable->setItem( row, 3, new QTableWidgetItem( status ) );
+		m_checkInTable->setItem( row, 4, new QTableWidgetItem(
+			time.isValid() ? time.toString( QStringLiteral("HH:mm:ss") ) : QString{} ) );
+	}
+
+	if( m_checkInSummary )
+	{
+		m_checkInSummary->setText(
+			m_checkInStarted.isValid()
+				? tr( "Check-in %1: %2 present, %3 name mismatch, %4 absent (total %5)" )
+					  .arg( m_checkInStarted.toString( QStringLiteral("HH:mm:ss") ) )
+					  .arg( present ).arg( mismatched ).arg( rows - present - mismatched ).arg( rows )
+				: tr( "No check-in started." ) );
+	}
 }
 
 

@@ -10,8 +10,10 @@
 #include <QColorDialog>
 #include <QComboBox>
 #include <QDateEdit>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFont>
 #include <QFontDialog>
 #include <QHBoxLayout>
@@ -356,8 +358,11 @@ void ClassroomScorePanel::setupReportTab()
 	m_includeRules = new QCheckBox( tr( "Include scoring rules sheet" ), page );
 	m_attendanceColumn = new QCheckBox( tr( "Include attendance column" ), page );
 	m_attendanceColumn->setChecked( true );
+	m_includeDetails = new QCheckBox( tr( "Include per-entry score details" ), page );
+	m_includeDetails->setChecked( true );
 	layout->addWidget( m_includeRules );
 	layout->addWidget( m_attendanceColumn );
+	layout->addWidget( m_includeDetails );
 
 	auto* buttons = new QHBoxLayout;
 	auto* xlsButton = new QPushButton( tr( "Export Excel (.xls)" ), page );
@@ -382,6 +387,7 @@ void ClassroomScorePanel::exportReport( bool xls )
 	options.to = m_reportTo->date();
 	options.includeRules = m_includeRules->isChecked();
 	options.attendanceColumn = m_attendanceColumn->isChecked();
+	options.includeDetails = m_includeDetails->isChecked();
 
 	const auto filter = xls ? tr( "Excel 2003 XML (*.xls)" ) : tr( "CSV files (*.csv)" );
 	const auto fileName = QFileDialog::getSaveFileName( this, tr( "Export class report" ), {}, filter );
@@ -399,6 +405,18 @@ void ClassroomScorePanel::exportReport( bool xls )
 		ok = file.open( QFile::WriteOnly | QFile::Truncate );
 		if( ok ) { ok = file.write( ClassroomTermReport::toCsv( m_roster, m_book, options ) ) > 0; }
 		if( ok == false ) { error = file.errorString(); }
+
+		if( ok && options.includeDetails )
+		{
+			const QFileInfo info( fileName );
+			const QString detailsName = info.absolutePath() + QLatin1Char('/') +
+										 info.completeBaseName() + QStringLiteral("-details.csv");
+			QFile detailsFile( detailsName );
+			if( detailsFile.open( QFile::WriteOnly | QFile::Truncate ) )
+			{
+				detailsFile.write( ClassroomTermReport::toDetailsCsv( m_book, options ) );
+			}
+		}
 	}
 	QMessageBox::information( this, windowTitle(), ok ? tr( "Report exported." ) : error );
 }
@@ -462,6 +480,23 @@ void ClassroomScorePanel::addEntry( int delta, const QString& label )
 		QMessageBox::information( this, windowTitle(), tr( "Please select a student row first." ) );
 		return;
 	}
+	addEntryForSeat( seat, delta, label, m_detail->toHtml() );
+	m_detail->clear();
+}
+
+
+int ClassroomScorePanel::scoreForSeat( const QString& seat ) const
+{
+	if( seat.isEmpty() || m_className.isEmpty() ) { return 0; }
+	m_book.load( m_className );
+	return m_book.total( seat );
+}
+
+
+void ClassroomScorePanel::addEntryForSeat( const QString& seat, int delta, const QString& label,
+										   const QString& richText )
+{
+	if( seat.isEmpty() || m_className.isEmpty() ) { return; }
 	ensureLesson();
 
 	ClassroomScoreEntry entry;
@@ -470,9 +505,9 @@ void ClassroomScorePanel::addEntry( int delta, const QString& label )
 	entry.seat = seat;
 	entry.student = studentName( seat );
 	entry.delta = delta;
-	entry.label = label.isEmpty() ? QString::number( delta ) : label;
-	entry.richText = m_detail->toHtml();
+	entry.label = label;
+	entry.richText = richText;
+	entry.author = tr( "Teacher" );
 	m_book.addEntry( entry );
-	m_detail->clear();
 	refreshStudentTable();
 }

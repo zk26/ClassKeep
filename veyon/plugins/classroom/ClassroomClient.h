@@ -24,6 +24,7 @@ class QTextBrowser;
 class QTimer;
 class ClassroomAiChatWidget;
 class ClassroomAiClient;
+class ClassroomCheckInDialog;
 class ClassroomScoreView;
 class ClassroomSilencePage;
 class QTextBrowser;
@@ -42,6 +43,7 @@ public:
 	void setLocked( bool locked );
 	void setScoreHtml( const QString& html );
 	void setSilence( bool visible, const QString& text );
+	void showCheckIn();
 
 	QString className() const { return m_className; }
 	QString seat() const { return m_seat; }
@@ -54,6 +56,7 @@ Q_SIGNALS:
 	void quitAuthorized();
 	void scoreRequested();
 	void callTeacherRequested();
+	void checkInSubmitted( const QString& name );
 
 protected:
 	void closeEvent( QCloseEvent* event ) override;
@@ -83,6 +86,7 @@ private:
 	ClassroomAiChatWidget* m_aiChat = nullptr;
 	ClassroomScoreView* m_scoreView = nullptr;
 	ClassroomSilencePage* m_silencePage = nullptr;
+	ClassroomCheckInDialog* m_checkIn = nullptr;
 
 	QString m_sessionKey;
 	QString m_className;
@@ -152,6 +156,26 @@ public:
 
 private:
 	QLabel* m_label = nullptr;
+};
+
+
+//! Attendance prompt shown on every student desktop when the teacher starts a check-in.
+class ClassroomCheckInDialog : public QWidget
+{
+	Q_OBJECT
+public:
+	explicit ClassroomCheckInDialog( QWidget* parent = nullptr );
+
+	void prepare( const QString& className, const QString& seat );
+
+Q_SIGNALS:
+	void submitted( const QString& name );
+
+private:
+	void submit();
+
+	QLabel* m_info = nullptr;
+	QLineEdit* m_nameEdit = nullptr;
 };
 
 

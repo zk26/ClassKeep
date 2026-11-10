@@ -28,6 +28,8 @@
 | A9 | 密钥加密落盘、兼容旧明文 | ✅ | `ClassroomSecrets.h/.cpp`（Veyon `CryptoCore` RSA） | 自动 |
 | A10 | 教师发现不对可**强制退出 / 换学生 / 批量操作** | ✅ | `ForceLogout` / `SwitchUser` / 批量登录与锁定 | 「课堂与登录」页 |
 | A11 | 换课清身份、补传离线事件、多教师端上下文 | ✅ | `startNewSession()` 先 `ForceLogout`；server 补传队列（上限 5000）；`QVector<MessageContext>` | 自动 |
+| A12 | **批量登录后点「开始签到」**：学生桌面弹窗输入姓名，按座位号与名单比对，直接看出谁来了/谁没来 | ✅ | `StartCheckIn` / `CheckInReply`；`ClassroomCheckInDialog`；`ClassroomMasterDialog::startCheckIn()/recordCheckIn()/refreshCheckIn()` | 「Seats & check-in」页 → 开始签到 |
+| A13 | 签到结果三态：已到 / 姓名不符 / 未到，含时间与汇总计数 | ✅ | 同上，教师机本地比对，学生机不判对错 | 签到表实时刷新 |
 
 > A5/A6 标 ◐：纯用户态无法 100% 阻止 SYSTEM 权限的进程终止，当前靠「密钥 + 超管凭据 + 服务看门狗 + 留痕」四层。彻底防杀需驱动级保护，**本项目刻意不做**（Defender 友好）。
 
@@ -75,6 +77,9 @@
 | D7 | 表格列式：`M.d 教学内容` + `目前总积分` + **独立出勤列** + `期末总积分` | ✅ | 同上（√ / 迟到 / 缺勤 / 请假 由留痕推断，不再把缺勤打勾） | 同上 |
 | D8 | 累计分按**课程日期**而非录入顺序 | ✅ | `total()` 用 `std::stable_sort` | 自动 |
 | D9 | Excel 工作表名合法化、规则富文本转纯文本 | ✅ | `sheetName()` + 正则去标签 | 自动 |
+| D10 | **座位缩略图 + 下方「XX号：XX分」**，点击分数给分/减分 | ✅ | `ClassroomSeatGrid.h/.cpp`（插件内实现，不改 Veyon 未导出的 delegate）；缩略图取 `ComputerControlInterface::scaledFramebuffer()` | 「Seats & check-in」页座位网格 |
+| D11 | 点分数弹出 **-5~+5 步长 1** 的选择，选后填**加减分原因**才生效 | ✅ | `chooseDelta()` → `QMenu` 11 项 → `QInputDialog` → `ClassroomScorePanel::addEntryForSeat()` | 点分数条 |
+| D12 | **期末成绩详情表**：逐条列出每次加减分（时间/节次/座位/姓名/分值/原因/操作人） | ✅ | `ClassroomTermReport::toSpreadsheetMl()` 明细 Worksheet + `toDetailsCsv()`；CSV 导出时额外生成 `*-details.csv` | 「Score & reports」→ 期末报表（默认勾选「包含逐条明细」） |
 
 ---
 
@@ -117,6 +122,8 @@
 | F11 | App 控制指令（静音/断网/肃静/USB/远控/投屏/UWF 等 13 项） | ✅ | `/api/classroom/command` → `handleCommand()` → FeatureMessage / 原生 Feature | App 控制网格 |
 | F12 | 期末表导出 `.xls`、词云 WebView 查看 | ✅ | `BridgeClient.kt` → `report()` / `wordCloud()` | App |
 | F13 | 401 明确提示「可能换了新课，检查密钥」 | ✅ | `UnauthorizedError` / `MainActivity.kt` | App |
+| F14 | **手机端美化**：品牌渐变头部（Logo + 课守 / ClassKeep）、圆角卡片/输入框/胶囊状态、控制按钮按下态、行距与状态栏配色 | ✅ | `activity_main.xml`、`bg_brand.xml`、`bg_input.xml`、`bg_badge_*.xml`、`bg_button_chip.xml`、`colors.xml`、`themes.xml` | App 全界面 |
+| F15 | **更换图标为 `ClassKeep_logo.png`**（全密度方形 + 圆形） | ✅ | `mobile/tools/generate_icons.py` 生成 `mipmap-{mdpi..xxxhdpi}/ic_launcher*.png`；删除模板自适应 XML 与 webp | 桌面图标 |
 
 ---
 
@@ -162,6 +169,7 @@
 | AI 设置 | 本地/网络地址、密钥、模型、系统提示词、超时、测试连接、推送 |
 | Score & reports | 每日积分录入、富文本明细、规则发布、每生词云、期末 `.xls`/`.csv` 导出、呼叫处理 |
 | System & devices | 静音 / 断网 / USB / 肃静 / 远控 / 分组投屏 / 广播 / UWF / 装软件 / Bridge / 手动同步 |
+| Seats & check-in | **开始签到 / 清空结果**、名单比对（已到·姓名不符·未到）、实时座位缩略图、点击 `XX号:XX分` 选 -5~+5 并填原因 |
 
 **学生端悬浮条**：登录（座位号+姓名+密钥）、AI assistant、Score、Call teacher、受保护退出。
 

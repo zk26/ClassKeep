@@ -297,6 +297,7 @@ bool ClassroomPlugin::handleFeatureMessageFromWorker( VeyonServerInterface& serv
 	case Command::ReportEvent:
 	case Command::QueryScore:
 	case Command::CallTeacher:
+	case Command::CheckInReply:
 	case Command::UwfStatusReport:
 		if( hasActiveContext() )
 		{
@@ -342,6 +343,27 @@ bool ClassroomPlugin::handleFeatureMessage( ComputerControlInterface::Pointer co
 		auto reply = Classroom::message( Command::ScoreReply );
 		reply.addArgument( Argument::RichText, book.studentHtml( seat, student ) );
 		if( computerControlInterface ) { computerControlInterface->sendFeatureMessage( reply ); }
+		return true;
+	}
+
+	if( command == Command::CheckInReply )
+	{
+		const auto seat = message.argument( Argument::Seat ).toString();
+		const auto typedName = message.argument( Argument::CheckInName ).toString();
+		const auto className = message.argument( Argument::ClassName ).toString();
+
+		ClassroomEvent event;
+		event.timestamp = QDateTime::currentDateTime();
+		event.className = className;
+		event.seat = seat;
+		event.student = message.argument( Argument::Student ).toString();
+		event.ip = message.argument( Argument::Ip ).toString();
+		event.host = message.argument( Argument::Host ).toString();
+		event.type = EventType::checkIn();
+		event.detail = typedName;
+		store()->append( event );
+		if( m_dialog ) { m_dialog->recordCheckIn( className, seat, typedName ); }
+		Q_EMIT eventReceived();
 		return true;
 	}
 
@@ -423,6 +445,18 @@ void ClassroomPlugin::ensureClientUi( VeyonWorkerInterface& worker )
 			 .addArgument( Argument::Host, m_hostName )
 			 .addArgument( Argument::Ip, m_ipAddress );
 		m_worker->sendFeatureMessageReply( query );
+	} );
+	connect( m_clientWidget, &ClassroomClientWidget::checkInSubmitted, this, [this]( const QString& name ) {
+		if( m_worker == nullptr ) { return; }
+		auto reply = Classroom::message( Command::CheckInReply );
+		reply.addArgument( Argument::ClassName, m_className )
+			.addArgument( Argument::Seat, m_seat )
+			.addArgument( Argument::Student, m_student )
+			.addArgument( Argument::CheckInName, name )
+			.addArgument( Argument::Host, m_hostName )
+			.addArgument( Argument::Ip, m_ipAddress );
+		m_worker->sendFeatureMessageReply( reply );
+		reportEvent( EventType::checkIn(), name, {} );
 	} );
 	connect( m_clientWidget, &ClassroomClientWidget::callTeacherRequested, this, [this]() {
 		if( m_worker == nullptr ) { return; }
@@ -569,6 +603,10 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 
 	case Command::ScoreReply:
 		m_clientWidget->setScoreHtml( message.argument( Argument::RichText ).toString() );
+		break;
+
+	case Command::StartCheckIn:
+		m_clientWidget->showCheckIn();
 		break;
 
 	case Command::ShowSilencePage:

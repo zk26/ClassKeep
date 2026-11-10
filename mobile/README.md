@@ -39,6 +39,21 @@ app/src/main/java/top/ikee002/classkeep/
 **零第三方网络/JSON/加密库**：全部使用 Android / JDK 平台内置 API。
 第三方构建依赖与许可见 [`../veyon/docs/CLASSKEEP-THIRD-PARTY.md`](../veyon/docs/CLASSKEEP-THIRD-PARTY.md)。
 
+## 图标与界面
+
+应用图标来自仓库根的 [`../ClassKeep_logo.png`](../ClassKeep_logo.png)（课守 ClassKeep 品牌徽标）。
+`tools/generate_icons.py` 从该图生成 `mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/` 下的
+`ic_launcher.png`（圆角方形）与 `ic_launcher_round.png`（圆形），并清理 Android Studio 模板的
+自适应图标 XML / webp。更换 Logo 后重跑：
+
+```bash
+python tools/generate_icons.py     # 需要 Pillow
+```
+
+界面采用与 Logo 一致的蓝→紫品牌渐变：头部展示 Logo 与中英文名称，卡片/输入框/状态胶囊/控制按钮
+均为圆角样式（`res/drawable/bg_*.xml`），配色集中在 `res/values/colors.xml`，主题在 `themes.xml`。
+夜间主题在 `values-night/themes.xml`。
+
 ## 权限
 
 `INTERNET`、`ACCESS_NETWORK_STATE`、`ACCESS_WIFI_STATE`、`CHANGE_WIFI_MULTICAST_STATE`，

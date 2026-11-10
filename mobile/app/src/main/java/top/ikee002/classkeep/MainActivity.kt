@@ -1,6 +1,5 @@
 package top.ikee002.classkeep
 
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.os.Environment
 import android.view.View
@@ -263,7 +262,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun addGroup(container: LinearLayout, commands: List<Cmd>) {
-        val gap = (8 * resources.displayMetrics.density).toInt()
+        val density = resources.displayMetrics.density
+        val gap = (8 * density).toInt()
+        val pad = (10 * density).toInt()
         commands.chunked(2).forEach { pair ->
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -275,13 +276,15 @@ class MainActivity : AppCompatActivity() {
             pair.forEach { cmd ->
                 val button = Button(this).apply {
                     text = getString(cmd.label)
-                    textSize = 12f
-                    backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(this@MainActivity, R.color.ck_chip_bg),
-                    )
+                    textSize = 13f
+                    setBackgroundResource(R.drawable.bg_button_chip)
                     setTextColor(ContextCompat.getColor(this@MainActivity, R.color.ck_primary))
+                    setPadding(pad, pad, pad, pad)
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                        .apply { marginEnd = gap }
+                        .apply {
+                            marginEnd = gap
+                            topMargin = (6 * density).toInt()
+                        }
                     setOnClickListener { sendCommand(cmd.name, cmd.enabled) }
                 }
                 row.addView(button)
@@ -323,8 +326,8 @@ class MainActivity : AppCompatActivity() {
         badge.setTextColor(
             ContextCompat.getColor(this, if (connected) R.color.ck_badge_ok_fg else R.color.ck_badge_off_fg),
         )
-        badge.setBackgroundColor(
-            ContextCompat.getColor(this, if (connected) R.color.ck_badge_ok_bg else R.color.ck_badge_off_bg),
+        badge.setBackgroundResource(
+            if (connected) R.drawable.bg_badge_ok else R.drawable.bg_badge_off
         )
     }
 

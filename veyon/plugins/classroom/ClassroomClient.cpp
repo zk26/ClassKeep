@@ -44,6 +44,7 @@
 #include <QTextBrowser>
 #include <QTimer>
 #include <QVariantMap>
+#include <QVBoxLayout>
 
 #include "ClassroomAiClient.h"
 #include "ClassroomClient.h"
@@ -490,6 +491,71 @@ void ClassroomClientWidget::setSilence( bool visible, const QString& text )
 }
 
 
+void ClassroomClientWidget::showCheckIn()
+{
+	if( m_checkIn == nullptr )
+	{
+		m_checkIn = new ClassroomCheckInDialog( this );
+		connect( m_checkIn, &ClassroomCheckInDialog::submitted,
+				 this, &ClassroomClientWidget::checkInSubmitted );
+	}
+	m_checkIn->prepare( m_className, m_seat );
+	m_checkIn->show();
+	m_checkIn->raise();
+}
+
+
+ClassroomCheckInDialog::ClassroomCheckInDialog( QWidget* parent ) :
+	QWidget( parent )
+{
+	setWindowTitle( tr( "Attendance check-in" ) );
+	setWindowFlags( Qt::Tool | Qt::WindowStaysOnTopHint );
+	resize( 460, 210 );
+	setStyleSheet( QStringLiteral("background:#ffffff;") );
+
+	m_info = new QLabel( this );
+	m_info->setWordWrap( true );
+	m_info->setStyleSheet( QStringLiteral("color:#1f2d3d; font-size:15px; font-weight:bold;") );
+
+	m_nameEdit = new QLineEdit( this );
+	m_nameEdit->setPlaceholderText( tr( "Type your full name" ) );
+	connect( m_nameEdit, &QLineEdit::returnPressed, this, &ClassroomCheckInDialog::submit );
+
+	auto* submitButton = new QPushButton( tr( "Check in" ), this );
+	connect( submitButton, &QPushButton::clicked, this, &ClassroomCheckInDialog::submit );
+
+	auto* form = new QFormLayout;
+	form->addRow( tr( "Name:" ), m_nameEdit );
+
+	auto* layout = new QVBoxLayout( this );
+	layout->addWidget( m_info );
+	layout->addLayout( form );
+	layout->addWidget( submitButton );
+}
+
+
+void ClassroomCheckInDialog::prepare( const QString& className, const QString& seat )
+{
+	m_info->setText( tr( "%1 - seat %2: teacher started a check-in. Type your name to confirm." )
+					 .arg( className, seat.isEmpty() ? tr( "unknown" ) : seat ) );
+	m_nameEdit->clear();
+	m_nameEdit->setFocus();
+}
+
+
+void ClassroomCheckInDialog::submit()
+{
+	const auto name = m_nameEdit->text().trimmed();
+	if( name.isEmpty() )
+	{
+		QMessageBox::information( this, windowTitle(), tr( "Please type your name first." ) );
+		return;
+	}
+	Q_EMIT submitted( name );
+	hide();
+}
+
+
 ClassroomScoreView::ClassroomScoreView( QWidget* parent ) :
 	QWidget( parent )
 {
@@ -742,7 +808,7 @@ void ClassroomMonitor::sample()
 	const auto application = m_captureProcess ? info.first : QString{};
 	if( title.isEmpty() && application.isEmpty() ) { return; }
 	if( title.contains( Classroom::productName() ) || title.contains( tr( "AI assistant" ) ) ||
-		title.contains( tr( "My score" ) ) ) { return; }
+		title.contains( tr( "My score" ) ) || title.contains( tr( "Attendance check-in" ) ) ) { return; }
 
 	const QString key = application + QLatin1Char('|') + title;
 	if( key == m_lastSample ) { return; }

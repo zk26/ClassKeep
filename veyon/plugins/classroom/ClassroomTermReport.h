@@ -24,6 +24,8 @@ public:
 		QDate to;
 		bool includeRules = false;
 		bool attendanceColumn = true;
+		//! Append a per-entry detail worksheet to the .xls export.
+		bool includeDetails = true;
 	};
 
 	static QByteArray toSpreadsheetMl( const ClassroomRoster& roster,
@@ -32,6 +34,8 @@ public:
 	static QByteArray toCsv( const ClassroomRoster& roster,
 							 const ClassroomScoreBook& book,
 							 const Options& options );
+	//! Every single +/- entry with time, lesson, seat, name, delta, reason and author.
+	static QByteArray toDetailsCsv( const ClassroomScoreBook& book, const Options& options );
 
 	static bool exportXls( const QString& fileName, const ClassroomRoster& roster,
 						   const ClassroomScoreBook& book, const Options& options,

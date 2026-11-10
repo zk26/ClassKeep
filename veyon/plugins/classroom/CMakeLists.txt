@@ -23,6 +23,8 @@ build_veyon_plugin(classroom
 	ClassroomScore.h
 	ClassroomScorePanel.cpp
 	ClassroomScorePanel.h
+	ClassroomSeatGrid.cpp
+	ClassroomSeatGrid.h
 	ClassroomSecrets.cpp
 	ClassroomSecrets.h
 	ClassroomSystem.cpp

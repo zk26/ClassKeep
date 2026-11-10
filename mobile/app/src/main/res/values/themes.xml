@@ -1,10 +1,15 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.ClassKeep" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/ck_primary</item>
+        <item name="colorPrimaryDark">@color/ck_primary_dark</item>
+        <item name="colorAccent">@color/ck_accent</item>
         <item name="colorSurface">@color/ck_card</item>
         <item name="android:colorBackground">@color/ck_background</item>
         <item name="android:textColorPrimary">@color/ck_title</item>
         <item name="android:textColorSecondary">@color/ck_body</item>
+        <item name="android:statusBarColor">@color/ck_primary_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/ck_background</item>
     </style>
 
     <style name="Theme.ClassKeep" parent="Base.Theme.ClassKeep" />
@@ -12,9 +17,10 @@
     <style name="ClassKeepSection">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
         <item name="android:textColor">@color/ck_title</item>
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.02</item>
     </style>
 </resources>

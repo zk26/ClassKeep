@@ -17,14 +17,15 @@
 | `ClassroomPlugin.h/.cpp` | 插件入口；Master / Server / Worker 三端消息分发、worker 生命周期与看门狗 |
 | `ClassroomConfiguration.h` | 配置项宏（`Classroom` 注册表段） |
 | `ClassroomConfigurationPage.h/.cpp` | Veyon Configurator 配置页 |
-| `ClassroomMasterDialog.h/.cpp` | 教师端控制台（课堂/日志/分析/AI/监控/系统设备 6 个页签） |
-| `ClassroomScorePanel.h/.cpp` | 积分录入、规则发布、每生词云、期末报表导出 |
-| `ClassroomClient.h/.cpp` | 学生端悬浮条、AI 聊天、积分明细、肃静页、行为采集 |
+| `ClassroomMasterDialog.h/.cpp` | 教师端控制台（课堂/日志/分析/AI/监控/系统设备/积分报表/座位签到 8 个页签） |
+| `ClassroomScorePanel.h/.cpp` | 积分录入、规则发布、每生词云、期末报表导出（含逐条明细） |
+| `ClassroomSeatGrid.h/.cpp` | **座位网格**：实时缩略图、`XX号:XX分` 点击条、-5~+5 选择与原因输入 |
+| `ClassroomClient.h/.cpp` | 学生端悬浮条、AI 聊天、积分明细、肃静页、**签到弹窗**、行为采集 |
 | `ClassroomAiClient.h/.cpp` | OpenAI 兼容 HTTP 客户端 |
 | `ClassroomBridge.h/.cpp` | 教师机 HTTP/JSON + UDP 发现 + 课堂密钥挑战应答认证 |
 | `ClassroomData.h/.cpp` | 名单、`ClassroomLogStore` 日志存储、兴趣分析、内存状态索引 |
 | `ClassroomScore.h/.cpp` | 积分册：节次、富文本明细、规则发布、学生端 HTML |
-| `ClassroomTermReport.h/.cpp` | 期末 `.xls`（Excel 2003 SpreadsheetML）/ CSV 导出 |
+| `ClassroomTermReport.h/.cpp` | 期末 `.xls`（Excel 2003 SpreadsheetML，含明细工作表）/ CSV / 明细 CSV 导出 |
 | `ClassroomWordCloud.h/.cpp` | 中文分词、螺旋布局、SVG 与位图词云 |
 | `ClassroomSystem.h/.cpp` | UWF / Core Audio / 防火墙 / 安装命令（仅 Windows 系统 API） |
 | `ClassroomSecrets.h/.cpp` | 密钥加密落盘与 SHA-256 挑战应答摘要 |

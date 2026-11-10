@@ -11,45 +11,76 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="14dp">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Brand header -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textColor="@color/ck_title"
-            android:textSize="26sp"
-            android:textStyle="bold" />
+            android:layout_marginBottom="14dp"
+            android:background="@drawable/bg_brand"
+            android:elevation="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="18dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name_en"
-            android:textColor="@color/ck_hint"
-            android:textSize="13sp" />
+            <ImageView
+                android:layout_width="62dp"
+                android:layout_height="62dp"
+                android:contentDescription="@string/app_name"
+                android:src="@mipmap/ic_launcher" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textColor="@color/ck_brand_text"
+                    android:textSize="25sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.12"
+                    android:text="@string/app_name_en"
+                    android:textColor="@color/ck_brand_subtext"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/tagline"
+                    android:textColor="@color/ck_brand_subtext"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </LinearLayout>
 
         <!-- Connection -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:background="@drawable/bg_card"
             android:orientation="vertical">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@color/ck_badge_off_bg"
-                    android:paddingLeft="8dp"
-                    android:paddingTop="3dp"
-                    android:paddingRight="8dp"
-                    android:paddingBottom="3dp"
+                    android:background="@drawable/bg_badge_off"
                     android:text="@string/status_offline"
                     android:textColor="@color/ck_badge_off_fg"
                     android:textSize="11sp"
@@ -68,7 +99,7 @@
                 android:id="@+id/message"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="10dp"
                 android:text="@string/status_discovering"
                 android:textColor="@color/ck_body"
                 android:textSize="12sp" />
@@ -77,35 +108,46 @@
                 android:id="@+id/ipInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_input"
                 android:hint="@string/hint_ip"
                 android:importantForAutofill="no"
                 android:inputType="textUri"
+                android:textColor="@color/ck_title"
+                android:textColorHint="@color/ck_hint"
                 android:textSize="14sp" />
 
             <EditText
                 android:id="@+id/keyInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input"
                 android:hint="@string/hint_key"
                 android:importantForAutofill="no"
                 android:inputType="textPassword"
+                android:textColor="@color/ck_title"
+                android:textColorHint="@color/ck_hint"
                 android:textSize="14sp" />
 
             <EditText
                 android:id="@+id/portInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input"
                 android:hint="@string/hint_port"
                 android:importantForAutofill="no"
                 android:inputType="number"
                 android:text="11880"
+                android:textColor="@color/ck_title"
+                android:textColorHint="@color/ck_hint"
                 android:textSize="14sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
                 android:orientation="horizontal">
 
                 <Button
@@ -113,7 +155,10 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/sync_now" />
+                    android:backgroundTint="@color/ck_primary"
+                    android:text="@string/sync_now"
+                    android:textColor="@color/white"
+                    android:textStyle="bold" />
 
                 <Button
                     android:id="@+id/offlineButton"
@@ -121,8 +166,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
-                    android:backgroundTint="@color/ck_secondary"
-                    android:text="@string/work_offline" />
+                    android:backgroundTint="@color/ck_chip_bg"
+                    android:text="@string/work_offline"
+                    android:textColor="@color/ck_primary" />
             </LinearLayout>
 
             <TextView
@@ -150,6 +196,7 @@
                 android:id="@+id/snapshot"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:lineSpacingExtra="4dp"
                 android:textColor="@color/ck_body"
                 android:textSize="13sp" />
         </LinearLayout>
@@ -226,6 +273,7 @@
                 android:id="@+id/activity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:lineSpacingExtra="3dp"
                 android:text="@string/msg_no_activity"
                 android:textColor="@color/ck_body"
                 android:textSize="12sp" />

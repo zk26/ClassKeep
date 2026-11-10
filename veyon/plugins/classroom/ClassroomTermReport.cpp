@@ -4,9 +4,13 @@
  * This file is part of the Veyon classroom modification.
  */
 
+#include <algorithm>
+
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
+#include <QMap>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QStringList>
@@ -97,6 +101,90 @@ static QString attendanceMark( const ClassroomScoreBook& book, const QString& le
 		if( label.contains( QStringLiteral("\u8FDF\u5230") ) ) { mark = QStringLiteral("\u8FDF\u5230"); }
 	}
 	return mark;
+}
+
+
+namespace
+{
+struct DetailRow
+{
+	QDateTime timestamp;
+	QString lesson;
+	QString seat;
+	QString student;
+	int delta = 0;
+	QString label;
+	QString author;
+};
+
+
+QVector<DetailRow> detailRows( const ClassroomScoreBook& book )
+{
+	QMap<QString, QString> lessonTitles;
+	for( const auto& lesson : book.lessons() )
+	{
+		lessonTitles.insert( lesson.id, lessonHeader( lesson ) );
+	}
+
+	QVector<DetailRow> rows;
+	for( const auto& entry : book.entries() )
+	{
+		rows.append( DetailRow{ entry.timestamp, lessonTitles.value( entry.lessonId ),
+								entry.seat, entry.student, entry.delta, entry.label, entry.author } );
+	}
+	std::stable_sort( rows.begin(), rows.end(), []( const DetailRow& a, const DetailRow& b ) {
+		return a.timestamp < b.timestamp;
+	} );
+	return rows;
+}
+
+
+QString detailsWorksheet( const QVector<DetailRow>& rows )
+{
+	const QStringList headers{
+		QCoreApplication::translate( "ClassroomTermReport", "Time" ),
+		QCoreApplication::translate( "ClassroomTermReport", "Lesson" ),
+		QCoreApplication::translate( "ClassroomTermReport", "Seat" ),
+		QCoreApplication::translate( "ClassroomTermReport", "Name" ),
+		QCoreApplication::translate( "ClassroomTermReport", "Delta" ),
+		QCoreApplication::translate( "ClassroomTermReport", "Reason" ),
+		QCoreApplication::translate( "ClassroomTermReport", "Operator" )
+	};
+
+	QString xml = QStringLiteral("<Worksheet ss:Name=\"%1\"><Table>\n")
+					  .arg( sheetName( QCoreApplication::translate( "ClassroomTermReport", "Score details" ) ) );
+	xml += QStringLiteral("<Row ss:Height=\"26\">");
+	for( const auto& header : headers )
+	{
+		xml += QStringLiteral("<Cell ss:StyleID=\"head\"><Data ss:Type=\"String\">%1</Data></Cell>")
+				   .arg( cellText( header ) );
+	}
+	xml += QStringLiteral("</Row>\n");
+
+	for( const auto& row : rows )
+	{
+		xml += QStringLiteral("<Row>");
+		xml += QStringLiteral("<Cell ss:StyleID=\"cell\"><Data ss:Type=\"String\">%1</Data></Cell>")
+				   .arg( cellText( row.timestamp.toString( QStringLiteral("yyyy-MM-dd HH:mm") ) ) );
+		xml += QStringLiteral("<Cell ss:StyleID=\"cell\"><Data ss:Type=\"String\">%1</Data></Cell>")
+				   .arg( cellText( row.lesson ) );
+		xml += QStringLiteral("<Cell ss:StyleID=\"cell\"><Data ss:Type=\"String\">%1</Data></Cell>")
+				   .arg( cellText( row.seat ) );
+		xml += QStringLiteral("<Cell ss:StyleID=\"cell\"><Data ss:Type=\"String\">%1</Data></Cell>")
+				   .arg( cellText( row.student ) );
+		xml += QStringLiteral("<Cell ss:StyleID=\"%1\"><Data ss:Type=\"Number\">%2</Data></Cell>")
+				   .arg( row.delta > 0 ? QStringLiteral("good") :
+						 ( row.delta < 0 ? QStringLiteral("bad") : QStringLiteral("num") ) )
+				   .arg( row.delta );
+		xml += QStringLiteral("<Cell ss:StyleID=\"cell\"><Data ss:Type=\"String\">%1</Data></Cell>")
+				   .arg( cellText( row.label ) );
+		xml += QStringLiteral("<Cell ss:StyleID=\"cell\"><Data ss:Type=\"String\">%1</Data></Cell>")
+				   .arg( cellText( row.author ) );
+		xml += QStringLiteral("</Row>\n");
+	}
+	xml += QStringLiteral("</Table></Worksheet>\n");
+	return xml;
+}
 }
 
 
@@ -236,6 +324,11 @@ QByteArray ClassroomTermReport::toSpreadsheetMl( const ClassroomRoster& roster,
 						  "</WorksheetOptions>\n");
 	xml += QStringLiteral("</Worksheet>\n");
 
+	if( options.includeDetails )
+	{
+		xml += detailsWorksheet( detailRows( book ) );
+	}
+
 	if( options.includeRules && book.rules().published )
 	{
 		QString plainRules = book.rules().html;
@@ -294,6 +387,45 @@ QByteArray ClassroomTermReport::toCsv( const ClassroomRoster& roster,
 			}
 			csv += QLatin1Char(',') + QString::number( book.total( student.seat ) ) + QLatin1Char('\n');
 		}
+	}
+
+	QByteArray data( "\xEF\xBB\xBF", 3 );
+	data.append( csv.toUtf8() );
+	return data;
+}
+
+
+QByteArray ClassroomTermReport::toDetailsCsv( const ClassroomScoreBook& book, const Options& options )
+{
+	const auto quote = []( const QString& value ) {
+		QString escaped = value;
+		escaped.replace( QStringLiteral("\""), QStringLiteral("\"\"") );
+		return QStringLiteral("\"%1\"").arg( escaped );
+	};
+
+	QString csv;
+	csv += quote( trText("Class") ) + QLatin1Char(',') + quote( options.className ) + QLatin1Char('\n');
+
+	const QStringList headers{
+		trText("Time"), trText("Lesson"), trText("Seat"), trText("Name"),
+		trText("Delta"), trText("Reason"), trText("Operator")
+	};
+	for( int index = 0; index < headers.size(); ++index )
+	{
+		if( index > 0 ) { csv += QLatin1Char(','); }
+		csv += quote( headers.at( index ) );
+	}
+	csv += QLatin1Char('\n');
+
+	for( const auto& row : detailRows( book ) )
+	{
+		csv += quote( row.timestamp.toString( QStringLiteral("yyyy-MM-dd HH:mm") ) ) + QLatin1Char(',') +
+			   quote( row.lesson ) + QLatin1Char(',') +
+			   quote( row.seat ) + QLatin1Char(',') +
+			   quote( row.student ) + QLatin1Char(',') +
+			   QString::number( row.delta ) + QLatin1Char(',') +
+			   quote( row.label ) + QLatin1Char(',') +
+			   quote( row.author ) + QLatin1Char('\n');
 	}
 
 	QByteArray data( "\xEF\xBB\xBF", 3 );

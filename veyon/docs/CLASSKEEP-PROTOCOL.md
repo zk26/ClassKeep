@@ -86,8 +86,14 @@
 | 34 | `UwfStatusReport` | W→S→M | UWF 状态回报（当前由 `ReportEvent` 承载） | `UwfStateJson` |
 | 35 | `SyncRequest` | 保留 | Bridge 层同步走 HTTP，不经此通道 | `Revision` |
 | 36 | `SyncReply` | 保留 | 同上 | `SyncDataJson` |
+| 37 | `StartCheckIn` | M→S→W | 教师端「开始签到」，学生机弹出姓名输入框 | `ClassName` |
+| 38 | `CheckInReply` | W→S→M | 学生提交姓名，教师端按「座位号 → 名单姓名」比对 | `ClassName`、`Seat`、`Student`、`CheckInName`、`Host`、`Ip` |
 
 > 标注「保留」的命令已在协议中占位但尚未接线；收到时 `default` 分支返回 `false`，不会静默吞掉。
+>
+> **签到判定规则**（全部在教师机完成，学生机不判断对错）：名单里每个座位，
+> `CheckInName == 名单姓名` → 已到；有回复但不相等 → 姓名不符；无回复 → 未到。
+> 每次 `StartCheckIn` 清空上一轮结果；换班也清空。所有回复同时写入 `check-in` 行为日志。
 
 ---
 
@@ -121,7 +127,10 @@
 | 21 | `LessonTopic` | QString | 46 | `BridgePort` | int |
 | 22 | `LessonDate` | QString(ISO date) | 47 | `DeviceClass` | QString |
 | 23 | `Delta` | int | 48 | `BlockMinutes` | int |
-| 24 | `Label` | QString | | | |
+| 24 | `Label` | QString | 49 | `CheckInName` | QString |
+
+> `CheckInName` 是学生签到时**自己输入**的姓名，与 `Student`（名单姓名）语义不同；
+> 教师端用 `Seat` 查名单后再比对两者。
 
 ---
 
@@ -132,8 +141,11 @@
 ```
 login, logout, switch, assign, app, window, web, ai, lock, unlock,
 key-failed, quit-attempt, quit-allowed, connection,
-score, call, silence, mute, internet, usb, uwf, install, sync, remote, demo
+score, call, silence, mute, internet, usb, uwf, install, sync, remote, demo,
+check-in, quick-score
 ```
+
+`check-in` 由学生签到回复与教师端「开始签到」共同产生；`quick-score` 记录座位网格上的一次快捷加减分（含分值与原因）。
 
 ---
 
