@@ -41,9 +41,14 @@
 
 ### 它用的确切配置
 
-> **Qt6 是必需的**。Veyon 4.11.4 的 `plugins/filetransfer` 是 Qt6-only
-> （`QUuid` 完整性、`QCoreApplication::setQuitOnLastWindowClosed`），
-> Qt5 路线会在那里失败。依赖清单照搬上游 `.ci/linux.ubuntu.24.04/Dockerfile`。
+> **Qt6 是正确路线**：Windows 平台插件无条件 `find_package(Qt6 GuiPrivate)`，课守代码也使用 Qt6 API。
+> 依赖清单照搬上游 `.ci/linux.ubuntu.24.04/Dockerfile`。
+>
+> ⚠️ 但**不要跑全量 `cmake --build build`**：这份 4.11.4 上游快照里的 `plugins/filetransfer`
+> 在 **Qt5 和 Qt6 下都编不过**（`FileCollection.h` 缺 `#include <QUuid>`、
+> `qApp->setQuitOnLastWindowClosed` 在 `QCoreApplication` 上不存在），与课守无关。
+> 因此 CI 只编译 `--target classroom`——它会连带编译课守依赖的 `veyon-core` 等，
+> 但不会去碰那个损坏的上游插件。
 
 ```bash
 # 依赖（Ubuntu 24.04 / noble，Qt6）
@@ -83,7 +88,7 @@ cmake -S veyon -B build -G Ninja \
   -DWITH_STACK_PROTECTION=OFF -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF \
   -DCMAKE_SKIP_INSTALL_RULES=ON \
   -DCMAKE_CXX_FLAGS="-include cmath"
-cmake --build build --parallel 4
+cmake --build build --target classroom --parallel 4
 ```
 
 `-DCMAKE_CXX_FLAGS="-include cmath"` 是因为上游 `core/src/Toast.cpp` 用了 `floor()` / `ceil()`
@@ -91,7 +96,10 @@ cmake --build build --parallel 4
 
 **Qt5 路线已实测失败，不要再试**：Ubuntu 22.04 + Qt5 会依次遇到
 `qsizepolicy.h` 的 `-Werror=deprecated-enum-enum-conversion`、`Toast.cpp` 缺 `<cmath>`、
-kldap master 的 Qt6-only 符号，最后卡在 `plugins/filetransfer`（Qt6-only API）。
+kldap master 的 Qt6-only 符号。
+
+`plugins/filetransfer` 的失败**与 Qt 版本无关**——Qt5 和 Qt6 下报的是同一批错误，
+是这份上游快照自身的缺陷；用 `--target classroom` 绕开即可，不需要（也不应该）为了全量编译去改上游代码。
 
 `-DCMAKE_SKIP_INSTALL_RULES=ON` 是必需的：bundled LibVNC 的 `vncclient` / `vncserver`
 把源码目录写进了 `INTERFACE_INCLUDE_DIRECTORIES`，Veyon 的 `install(TARGETS ...)`
@@ -225,7 +233,7 @@ cd G:\veyon
 | `ninja: error: loading 'build.ninja': No such file or directory` | 上一条 CMake 错误导致未生成构建文件 | 看 `configure.log`；同时确认 `tee` 步骤有 `set -o pipefail` |
 | `sdkmanager failed with exit code 1`（Android CI） | `android-actions/setup-android@v3` 覆盖 runner 预装的 cmdline-tools 版本 | 去掉该 action，用 runner 自带 SDK + `sdkmanager --licenses`，让 AGP 自动装 platform |
 | `classroom.dll` 没生成 | `-DWITH_CORE_ONLY=ON` 跳过了 `plugins/` | 设为 OFF；`plugins/CMakeLists.txt` 是 GLOB，改插件后需重新跑 CMake |
-| `plugins/filetransfer`: `QUuid` incomplete / `QCoreApplication::setQuitOnLastWindowClosed` 不存在 | 上游该插件是 **Qt6-only**，Qt5 编不过 | 必须 `WITH_QT6=ON`；Qt5 路线在 4.11.4 不可行 |
+| `plugins/filetransfer`: `QUuid` incomplete / `QCoreApplication::setQuitOnLastWindowClosed` 不存在 | 上游该插件在 **Qt5 与 Qt6 下都编不过**（缺 `#include <QUuid>`、`qApp` 类型不对），与课守无关 | 用 `cmake --build build --target classroom` 只编译课守目标；不要跑全量 `cmake --build build` |
 | `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里，仅 Qt5 路线） | clone 了 KDE kldap 最新 master 而非锁定版本 | 按 v4.11.4 的 gitlink SHA 精确检出；或直接用本方案的 Qt6 `kldap` |
 | `qsizepolicy.h: bitwise operation between different enumeration types ... [-Werror=deprecated-enum-enum-conversion]` | Ubuntu 22.04 的 GCC 11+ 对 Qt5 头文件产生新警告，被 Veyon 的 `-Werror` 放大；连上游 `AboutDialog.cpp` 都失败 | 加 `-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"`，或改用 Debian 11 / GCC 10 容器 |
 | 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
