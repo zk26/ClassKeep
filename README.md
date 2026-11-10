@@ -1,5 +1,23 @@
 # Veyon - Virtual Eye On Networks
 
+> ## 课守 ClassKeep
+>
+> 本仓库是 **Veyon 4.x 的教学管理定制分支**，在保留 Veyon 原有监控/控屏/演示能力的基础上，
+> 增加了班级与 IP 绑定、课堂密钥防退出、全量行为日志与兴趣词云、积分制与期末报表、
+> UWF 还原与远程装软件、本地 AI 助手、Android 教室端 App 等能力。
+>
+> | 文档 | 内容 |
+> |---|---|
+> | [docs/CLASSKEEP.md](docs/CLASSKEEP.md) | 功能总览、架构、目录结构与构建 |
+> | [docs/CLASSKEEP-PROTOCOL.md](docs/CLASSKEEP-PROTOCOL.md) | FeatureMessage 命令表、Bridge HTTP/UDP 协议、认证算法、数据文件格式 |
+> | [docs/CLASSKEEP-DEPLOY.md](docs/CLASSKEEP-DEPLOY.md) | 教师机/学生机/手机端部署、UWF 与 Defender 注意事项 |
+> | [docs/CLASSKEEP-LICENSE.md](docs/CLASSKEEP-LICENSE.md) | 许可证与衍生作品声明 |
+> | [mobile/README.md](mobile/README.md) | Android 教室端 App |
+>
+> 新增代码集中在 `plugins/classroom/`、`mobile/` 以及对 `core/`、`master/`、`server/` 的少量扩展点。
+> 本项目继承上游 **GPL-2.0-or-later**（见 `COPYING`），详见许可证文档。
+> 上游项目主页：https://veyon.io/ — 本分支与上游 Veyon 项目无隶属关系。
+
 [![.github/workflows/build.yml](https://github.com/veyon/veyon/actions/workflows/build.yml/badge.svg?branch=4.5)](https://github.com/veyon/veyon/actions/workflows/build.yml)
 [![Latest stable release](https://img.shields.io/github/release/veyon/veyon.svg?maxAge=3600)](https://github.com/veyon/veyon/releases)
 [![Overall downloads on Github](https://img.shields.io/github/downloads/veyon/veyon/total.svg?maxAge=3600)](https://github.com/veyon/veyon/releases)

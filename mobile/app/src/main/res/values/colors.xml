@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="ck_background">#FFF3F6F8</color>
+    <color name="ck_card">#FFFFFFFF</color>
+    <color name="ck_border">#FFDCE3EA</color>
+    <color name="ck_primary">#FF1F6F8B</color>
+    <color name="ck_secondary">#FF7B8B9A</color>
+    <color name="ck_title">#FF1F2D3D</color>
+    <color name="ck_body">#FF4A5A6A</color>
+    <color name="ck_hint">#FF8896A5</color>
+    <color name="ck_badge_ok_bg">#FFDFF5E6</color>
+    <color name="ck_badge_ok_fg">#FF1D7A3C</color>
+    <color name="ck_badge_off_bg">#FFFDE7E7</color>
+    <color name="ck_badge_off_fg">#FFA12B2B</color>
+    <color name="ck_chip_bg">#FFEAF2F6</color>
+    <color name="ck_chip_border">#FFC6DBE5</color>
+</resources>

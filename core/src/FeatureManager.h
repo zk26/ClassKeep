@@ -34,6 +34,7 @@
 class QWidget;
 
 class FeatureWorkerManager;
+class VeyonServerInterface;
 
 class VEYON_CORE_EXPORT FeatureManager : public QObject
 {
@@ -79,6 +80,8 @@ public:
 	void handleFeatureMessage(VeyonWorkerInterface& worker, const FeatureMessage& message) const;
 
 	void sendAsyncFeatureMessages(VeyonServerInterface& server, const MessageContext& messageContext) const;
+
+	void startSessionFeatures(VeyonServerInterface& server) const;
 
 	FeatureUidList activeFeatures( VeyonServerInterface& server ) const;
 

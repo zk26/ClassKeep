@@ -309,7 +309,14 @@ void ComputerMonitoringWidget::addSubFeaturesToMenu( const Feature& parentFeatur
 
 void ComputerMonitoringWidget::runDoubleClickFeature( const QModelIndex& index )
 {
-	const Feature& feature = VeyonCore::featureManager().feature( VeyonCore::config().computerDoubleClickFeature() );
+	auto featureUid = VeyonCore::config().computerDoubleClickFeature();
+	// Ctrl+double-click always opens remote control, independent of the configured
+	// default double-click feature (classroom modification).
+	if( QApplication::keyboardModifiers() & Qt::ControlModifier )
+	{
+		featureUid = Feature::Uid{ QStringLiteral("ca00ad68-1709-4abe-85e2-48dff6ccf8a2") };
+	}
+	const Feature& feature = VeyonCore::featureManager().feature( featureUid );
 
 	if( index.isValid() && feature.isValid() )
 	{

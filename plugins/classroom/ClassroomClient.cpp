@@ -1,0 +1,761 @@
+/*
+ * ClassroomClient.cpp - always-on-top student widgets and activity sampler
+ *
+ * This file is part of the Veyon classroom modification.
+ */
+
+#include <QtGlobal>
+
+#ifdef Q_OS_WIN
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0602
+#endif
+#include <windows.h>
+#endif
+
+#include <algorithm>
+
+#include <QApplication>
+#include <QBoxLayout>
+#include <QJsonArray>
+#include <QCloseEvent>
+#include <QContextMenuEvent>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFileInfo>
+#include <QFormLayout>
+#include <QGuiApplication>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMenu>
+#include <QMessageBox>
+#include <QMouseEvent>
+#include <QProcess>
+#include <QPushButton>
+#include <QScreen>
+#include <QScrollBar>
+#include <QStandardPaths>
+#include <QTextBrowser>
+#include <QTimer>
+#include <QVariantMap>
+
+#include "ClassroomAiClient.h"
+#include "ClassroomClient.h"
+#include "ClassroomProtocol.h"
+#include "CryptoCore.h"
+#include "PlatformCoreFunctions.h"
+#include "PlatformPluginInterface.h"
+#include "PlatformUserFunctions.h"
+#include "VeyonCore.h"
+
+
+static void keepOnTop( QWidget* widget )
+{
+	widget->setWindowFlags( Qt::Tool | Qt::CustomizeWindowHint | Qt::FramelessWindowHint |
+							Qt::WindowStaysOnTopHint );
+	VeyonCore::platform().coreFunctions().raiseWindow( widget, true );
+}
+
+
+static QPoint mouseGlobalPoint( QMouseEvent* event )
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+	return event->globalPosition().toPoint();
+#else
+	return event->globalPos();
+#endif
+}
+
+
+ClassroomClientWidget::ClassroomClientWidget( QWidget* parent ) :
+	QWidget( parent ),
+	m_aiClient( new ClassroomAiClient( this ) )
+{
+	setObjectName( QStringLiteral("classroomClient") );
+	setWindowTitle( Classroom::productName() );
+	setAttribute( Qt::WA_DeleteOnClose, false );
+	keepOnTop( this );
+
+	const auto dark = VeyonCore::useDarkMode();
+	setStyleSheet( QStringLiteral(
+		"QWidget#classroomClient { background: %1; border: 1px solid %2; border-radius: 6px; }"
+		"QLabel { color: %3; }"
+		"QLineEdit { padding: 3px; }"
+		"QPushButton { padding: 4px 8px; }" ).
+		arg( dark ? QStringLiteral("#2b2b2b") : QStringLiteral("#f5f7f9"),
+			 dark ? QStringLiteral("#555555") : QStringLiteral("#9fc4d0"),
+			 dark ? QStringLiteral("#f0f0f0") : QStringLiteral("#202020") ) );
+
+	m_statusLabel = new QLabel( this );
+	m_statusLabel->setWordWrap( true );
+	m_lockLabel = new QLabel( this );
+	m_lockLabel->setAlignment( Qt::AlignRight | Qt::AlignVCenter );
+
+	auto* header = new QHBoxLayout;
+	auto* title = new QLabel( tr( "Classroom client" ), this );
+	title->setStyleSheet( QStringLiteral("font-weight: bold;") );
+	header->addWidget( title );
+	header->addStretch( 1 );
+	header->addWidget( m_lockLabel );
+
+	m_seatEdit = new QLineEdit( this );
+	m_seatEdit->setPlaceholderText( tr( "Seat number" ) );
+	m_seatEdit->setMaxLength( 16 );
+	m_nameEdit = new QLineEdit( this );
+	m_nameEdit->setPlaceholderText( tr( "Name" ) );
+	m_nameEdit->setMaxLength( 32 );
+	m_keyEdit = new QLineEdit( this );
+	m_keyEdit->setPlaceholderText( tr( "Connection key" ) );
+	m_keyEdit->setEchoMode( QLineEdit::Password );
+
+	auto* inputLayout = new QHBoxLayout;
+	inputLayout->addWidget( m_seatEdit );
+	inputLayout->addWidget( m_nameEdit );
+	inputLayout->addWidget( m_keyEdit );
+
+	m_loginButton = new QPushButton( tr( "Sign in" ), this );
+	m_aiButton = new QPushButton( tr( "AI assistant" ), this );
+	m_aiButton->setEnabled( false );
+	m_scoreButton = new QPushButton( tr( "Score" ), this );
+	m_callButton = new QPushButton( tr( "Call teacher" ), this );
+
+	auto* buttonLayout = new QHBoxLayout;
+	buttonLayout->addWidget( m_loginButton );
+	buttonLayout->addWidget( m_aiButton );
+	buttonLayout->addWidget( m_scoreButton );
+	buttonLayout->addWidget( m_callButton );
+
+	auto* hint = new QLabel( tr( "Right-click for the protected exit dialog" ), this );
+	hint->setStyleSheet( QStringLiteral("font-size: 9px; opacity: 0.7;") );
+
+	auto* mainLayout = new QVBoxLayout( this );
+	mainLayout->setContentsMargins( 10, 8, 10, 8 );
+	mainLayout->setSpacing( 6 );
+	mainLayout->addLayout( header );
+	mainLayout->addWidget( m_statusLabel );
+	mainLayout->addLayout( inputLayout );
+	mainLayout->addLayout( buttonLayout );
+	mainLayout->addWidget( hint );
+
+	setFixedWidth( 360 );
+	adjustSize();
+	placeOnScreen();
+	updateStatus();
+
+	connect( m_loginButton, &QPushButton::clicked, this, &ClassroomClientWidget::handleLogin );
+	connect( m_aiButton, &QPushButton::clicked, this, &ClassroomClientWidget::showAiChat );
+	connect( m_keyEdit, &QLineEdit::returnPressed, this, &ClassroomClientWidget::handleLogin );
+	connect( m_scoreButton, &QPushButton::clicked, this, [this]() { Q_EMIT scoreRequested(); } );
+	connect( m_callButton, &QPushButton::clicked, this, [this]() { Q_EMIT callTeacherRequested(); } );
+}
+
+
+void ClassroomClientWidget::placeOnScreen()
+{
+	if( auto* screen = QGuiApplication::primaryScreen() )
+	{
+		const auto area = screen->availableGeometry();
+		move( area.right() - width() - 16, area.top() + 16 );
+	}
+}
+
+
+void ClassroomClientWidget::setSettings( const QJsonObject& settings )
+{
+	m_allowSelfLogin = settings.value( Classroom::SettingKey::allowSelfLogin() ).toBool( true );
+	m_aiEnabled = settings.value( Classroom::SettingKey::aiEnabled() ).toBool( true );
+	m_exitProtection = settings.value( Classroom::SettingKey::exitProtection() ).toBool( true );
+	m_exitRequiresAdmin = settings.value( Classroom::SettingKey::exitRequiresAdmin() ).toBool( true );
+	m_exitAdminUsername = settings.value( Classroom::SettingKey::exitAdminUsername() ).toString();
+
+	ClassroomAiClient::Settings fallback;
+	fallback.endpoint = settings.value( Classroom::SettingKey::aiEndpoint() ).toString();
+	fallback.apiKey = settings.value( Classroom::SettingKey::aiApiKey() ).toString();
+	fallback.model = settings.value( Classroom::SettingKey::aiModel() ).toString();
+	fallback.systemPrompt = settings.value( Classroom::SettingKey::aiSystemPrompt() ).toString();
+	fallback.timeout = settings.value( Classroom::SettingKey::aiTimeout() ).toInt( 60 );
+	fallback.enabled = m_aiEnabled;
+	m_aiClient->setSettings( ClassroomAiClient::Settings::fromJson( settings, fallback ) );
+
+	m_aiButton->setEnabled( m_aiEnabled );
+	m_loginButton->setEnabled( m_allowSelfLogin );
+	updateStatus();
+}
+
+
+void ClassroomClientWidget::setRoster( const QJsonObject& roster )
+{
+	m_roster = roster;
+	const auto classes = roster.value( QStringLiteral("classes") ).toArray();
+	if( m_className.isEmpty() && classes.isEmpty() == false )
+	{
+		m_className = classes.first().toObject().value( QStringLiteral("name") ).toString();
+	}
+	updateStatus();
+}
+
+
+void ClassroomClientWidget::setSessionKey( const QString& key )
+{
+	m_sessionKey = key;
+	updateStatus();
+}
+
+
+void ClassroomClientWidget::setIdentity( const QString& className, const QString& seat, const QString& student )
+{
+	m_className = className;
+	m_seat = seat;
+	m_student = student;
+	m_loggedIn = true;
+
+	m_seatEdit->setText( seat );
+	m_nameEdit->setText( student );
+	m_keyEdit->clear();
+	m_seatEdit->setVisible( false );
+	m_nameEdit->setVisible( false );
+	m_keyEdit->setVisible( false );
+	m_loginButton->setText( tr( "Sign in again" ) );
+	m_loginButton->setVisible( m_allowSelfLogin );
+
+	updateStatus();
+	Q_EMIT identityChanged( m_seat, m_student, true );
+}
+
+
+void ClassroomClientWidget::clearIdentity()
+{
+	m_seat.clear();
+	m_student.clear();
+	m_loggedIn = false;
+	m_seatEdit->clear();
+	m_nameEdit->clear();
+	m_keyEdit->clear();
+	m_seatEdit->setVisible( true );
+	m_nameEdit->setVisible( true );
+	m_keyEdit->setVisible( true );
+	m_loginButton->setText( tr( "Sign in" ) );
+	m_loginButton->setVisible( true );
+	updateStatus();
+	Q_EMIT identityChanged( {}, {}, false );
+}
+
+
+void ClassroomClientWidget::setLocked( bool locked )
+{
+	m_locked = locked;
+	updateStatus();
+}
+
+
+void ClassroomClientWidget::updateStatus()
+{
+	const auto studentText = m_loggedIn ? QStringLiteral("%1 (%2)").arg( m_student, m_seat ) : tr( "not signed in" );
+	m_statusLabel->setText( tr( "Class: %1  |  Student: %2  |  Key: %3" ).
+							arg( m_className.isEmpty() ? tr( "not selected" ) : m_className,
+								 studentText,
+								 m_sessionKey.isEmpty() ? tr( "none" ) : tr( "active" ) ) );
+	m_lockLabel->setText( m_locked ? tr( "locked" ) : tr( "unlocked" ) );
+}
+
+
+bool ClassroomClientWidget::rosterAccepts( const QString& seat, const QString& name ) const
+{
+	const auto classes = m_roster.value( QStringLiteral("classes") ).toArray();
+	if( classes.isEmpty() ) { return true; }
+
+	QJsonArray acceptedClasses;
+	if( m_className.isEmpty() ) { acceptedClasses = classes; }
+	else
+	{
+		for( const auto& value : classes )
+		{
+			if( value.toObject().value( QStringLiteral("name") ).toString() == m_className )
+			{
+				acceptedClasses.append( value );
+			}
+		}
+	}
+	if( acceptedClasses.isEmpty() ) { return true; }
+
+	for( const auto& value : acceptedClasses )
+	{
+		for( const auto& studentValue : value.toObject().value( QStringLiteral("students") ).toArray() )
+		{
+			const auto student = studentValue.toObject();
+			if( student.value( QStringLiteral("seat") ).toString() == seat &&
+				student.value( QStringLiteral("name") ).toString() == name )
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
+void ClassroomClientWidget::handleLogin()
+{
+	const auto seat = m_seatEdit->text().trimmed();
+	const auto name = m_nameEdit->text().trimmed();
+	const auto key = m_keyEdit->text().trimmed();
+
+	if( seat.isEmpty() || name.isEmpty() )
+	{
+		QMessageBox::warning( this, windowTitle(), tr( "Please enter both the seat number and your name." ) );
+		return;
+	}
+	if( m_sessionKey.isEmpty() )
+	{
+		Q_EMIT eventOccurred( Classroom::EventType::keyFailed(), tr( "no connection key issued by the teacher" ), {} );
+		QMessageBox::warning( this, windowTitle(), tr( "The teacher has not issued a connection key for this lesson yet." ) );
+		return;
+	}
+	if( key != m_sessionKey )
+	{
+		Q_EMIT eventOccurred( Classroom::EventType::keyFailed(), tr( "wrong connection key for seat %1" ).arg( seat ), {} );
+		QMessageBox::warning( this, windowTitle(), tr( "The connection key is not correct. Ask your teacher for the current key." ) );
+		return;
+	}
+	if( m_allowSelfLogin == false )
+	{
+		QMessageBox::information( this, windowTitle(), tr( "Self sign-in is disabled. Please wait for the teacher to sign you in." ) );
+		return;
+	}
+	if( rosterAccepts( seat, name ) == false )
+	{
+		Q_EMIT eventOccurred( Classroom::EventType::keyFailed(), tr( "seat/name mismatch for %1" ).arg( seat ), {} );
+		QMessageBox::warning( this, windowTitle(), tr( "The seat number and name do not match the class roster." ) );
+		return;
+	}
+	if( m_loggedIn )
+	{
+		m_loggedIn = false;
+		m_seatEdit->setVisible( true );
+		m_nameEdit->setVisible( true );
+		m_keyEdit->setVisible( true );
+	}
+
+	setIdentity( m_className, seat, name );
+	setLocked( true );
+	Q_EMIT eventOccurred( Classroom::EventType::login(), tr( "student signed in at seat %1" ).arg( seat ), {} );
+}
+
+
+void ClassroomClientWidget::showAiChat()
+{
+	if( m_aiEnabled == false )
+	{
+		QMessageBox::information( this, windowTitle(), tr( "The teacher has disabled the AI assistant." ) );
+		return;
+	}
+
+	if( m_aiChat == nullptr )
+	{
+		m_aiChat = new ClassroomAiChatWidget( m_aiClient, this );
+		connect( m_aiChat, &ClassroomAiChatWidget::eventOccurred,
+				 this, &ClassroomClientWidget::eventOccurred );
+	}
+	m_aiChat->setIdentityLabel( m_loggedIn ? QStringLiteral("%1 (%2)").arg( m_student, m_seat ) : tr( "not signed in" ) );
+	m_aiChat->show();
+	m_aiChat->raise();
+	VeyonCore::platform().coreFunctions().raiseWindow( m_aiChat, true );
+}
+
+
+void ClassroomClientWidget::requestQuit()
+{
+	if( m_exitProtection == false )
+	{
+		Q_EMIT eventOccurred( Classroom::EventType::quitAllowed(), tr( "exit protection disabled" ), {} );
+		Q_EMIT quitAuthorized();
+		return;
+	}
+
+	QDialog dialog( this );
+	dialog.setWindowTitle( tr( "Exit classroom client" ) );
+	auto* form = new QFormLayout( &dialog );
+	auto* username = new QLineEdit( &dialog );
+	auto* password = new QLineEdit( &dialog );
+	auto* key = new QLineEdit( &dialog );
+	username->setText( VeyonCore::platform().userFunctions().
+					   queryCurrentUserProperty( PlatformUserFunctions::UserProperty::LoginName ) );
+	password->setEchoMode( QLineEdit::Password );
+	key->setEchoMode( QLineEdit::Password );
+	form->addRow( tr( "Administrator account:" ), username );
+	form->addRow( tr( "Administrator password:" ), password );
+	form->addRow( tr( "Connection key:" ), key );
+	auto* buttons = new QDialogButtonBox( QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog );
+	form->addRow( buttons );
+	connect( buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept );
+	connect( buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject );
+
+	if( dialog.exec() != QDialog::Accepted ) { return; }
+
+	bool authorized = false;
+	if( m_exitRequiresAdmin )
+	{
+		const auto expectedUser = m_exitAdminUsername.trimmed();
+		const auto userMatches = expectedUser.isEmpty() ||
+								 username->text().trimmed().compare( expectedUser, Qt::CaseInsensitive ) == 0;
+		if( userMatches && password->text().isEmpty() == false )
+		{
+			const CryptoCore::PlaintextPassword plainPassword = password->text().toUtf8();
+			authorized = VeyonCore::platform().userFunctions().authenticate( username->text().trimmed(), plainPassword );
+		}
+	}
+	else
+	{
+		authorized = m_sessionKey.isEmpty() == false && key->text().trimmed() == m_sessionKey;
+	}
+
+	if( authorized )
+	{
+		Q_EMIT eventOccurred( Classroom::EventType::quitAllowed(), tr( "authorized client exit" ), {} );
+		Q_EMIT quitAuthorized();
+	}
+	else
+	{
+		Q_EMIT eventOccurred( Classroom::EventType::quitAttempt(), tr( "rejected client exit" ), {} );
+		QMessageBox::warning( this, windowTitle(),
+							  tr( "Administrator credentials or connection key are not valid. This attempt has been logged." ) );
+	}
+}
+
+
+void ClassroomClientWidget::closeEvent( QCloseEvent* event )
+{
+	event->ignore();
+	hide();
+}
+
+
+void ClassroomClientWidget::contextMenuEvent( QContextMenuEvent* event )
+{
+	QMenu menu( this );
+	menu.addAction( tr( "Show AI assistant" ), this, &ClassroomClientWidget::showAiChat );
+	menu.addSeparator();
+	menu.addAction( tr( "Exit client (protected)..." ), this, &ClassroomClientWidget::requestQuit );
+	menu.exec( event->globalPos() );
+}
+
+
+void ClassroomClientWidget::mousePressEvent( QMouseEvent* event )
+{
+	if( event->button() == Qt::LeftButton )
+	{
+		m_dragPosition = mouseGlobalPoint( event ) - frameGeometry().topLeft();
+	}
+	QWidget::mousePressEvent( event );
+}
+
+
+void ClassroomClientWidget::mouseMoveEvent( QMouseEvent* event )
+{
+	if( event->buttons() & Qt::LeftButton )
+	{
+		move( mouseGlobalPoint( event ) - m_dragPosition );
+	}
+	QWidget::mouseMoveEvent( event );
+}
+
+
+void ClassroomClientWidget::setScoreHtml( const QString& html )
+{
+	if( m_scoreView == nullptr )
+	{
+		m_scoreView = new ClassroomScoreView( this );
+	}
+	m_scoreView->setHtml( html );
+	m_scoreView->show();
+	m_scoreView->raise();
+}
+
+
+void ClassroomClientWidget::setSilence( bool visible, const QString& text )
+{
+	if( m_silencePage == nullptr )
+	{
+		m_silencePage = new ClassroomSilencePage( this );
+	}
+	m_silencePage->setText( text );
+	m_silencePage->setVisible( visible );
+	if( visible ) { m_silencePage->raise(); }
+}
+
+
+ClassroomScoreView::ClassroomScoreView( QWidget* parent ) :
+	QWidget( parent )
+{
+	setWindowTitle( tr( "My score" ) );
+	setWindowFlags( Qt::Tool | Qt::WindowStaysOnTopHint );
+	resize( 620, 620 );
+	m_view = new QTextBrowser( this );
+	m_view->setOpenExternalLinks( false );
+	auto* layout = new QVBoxLayout( this );
+	layout->addWidget( m_view );
+	auto* closeButton = new QPushButton( tr( "Close" ), this );
+	layout->addWidget( closeButton );
+	connect( closeButton, &QPushButton::clicked, this, &QWidget::hide );
+}
+
+
+void ClassroomScoreView::setHtml( const QString& html )
+{
+	m_view->setHtml( html );
+}
+
+
+ClassroomSilencePage::ClassroomSilencePage( QWidget* parent ) :
+	QWidget( parent )
+{
+	setWindowFlags( Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint |
+					Qt::WindowTransparentForInput );
+	setWindowState( Qt::WindowFullScreen );
+	setStyleSheet( QStringLiteral("background:#0d1b2a;") );
+	m_label = new QLabel( this );
+	m_label->setAlignment( Qt::AlignCenter );
+	m_label->setWordWrap( true );
+	m_label->setStyleSheet( QStringLiteral("color:#f0f0f0; font-size:48px; font-weight:bold;") );
+	auto* layout = new QVBoxLayout( this );
+	layout->addWidget( m_label );
+}
+
+
+void ClassroomSilencePage::setText( const QString& text )
+{
+	m_label->setText( text );
+}
+
+
+ClassroomAiChatWidget::ClassroomAiChatWidget( ClassroomAiClient* client, QWidget* parent ) :
+	QWidget( parent ),
+	m_aiClient( client )
+{
+	setWindowTitle( tr( "AI assistant" ) );
+	setAttribute( Qt::WA_DeleteOnClose, false );
+	keepOnTop( this );
+	setFixedSize( 420, 460 );
+
+	const auto dark = VeyonCore::useDarkMode();
+	setStyleSheet( QStringLiteral(
+		"QWidget#classroomAi { background: %1; border: 1px solid %2; border-radius: 6px; }"
+		"QLabel, QTextBrowser { color: %3; }" ).
+		arg( dark ? QStringLiteral("#2b2b2b") : QStringLiteral("#f5f7f9"),
+			 dark ? QStringLiteral("#555555") : QStringLiteral("#9fc4d0"),
+			 dark ? QStringLiteral("#f0f0f0") : QStringLiteral("#202020") ) );
+	setObjectName( QStringLiteral("classroomAi") );
+
+	auto* title = new QLabel( tr( "AI assistant (configured by the teacher)" ), this );
+	title->setStyleSheet( QStringLiteral("font-weight: bold; padding: 4px;") );
+	m_view = new QTextBrowser( this );
+	m_view->setReadOnly( true );
+	m_view->setOpenExternalLinks( true );
+	m_input = new QLineEdit( this );
+	m_input->setPlaceholderText( tr( "Ask a question..." ) );
+	m_sendButton = new QPushButton( tr( "Send" ), this );
+
+	auto* inputLayout = new QHBoxLayout;
+	inputLayout->addWidget( m_input, 1 );
+	inputLayout->addWidget( m_sendButton );
+
+	auto* mainLayout = new QVBoxLayout( this );
+	mainLayout->setContentsMargins( 8, 8, 8, 8 );
+	mainLayout->addWidget( title );
+	mainLayout->addWidget( m_view, 1 );
+	mainLayout->addLayout( inputLayout );
+
+	appendLine( tr( "Welcome! Your questions and this session are recorded in the classroom log." ) );
+
+	connect( m_sendButton, &QPushButton::clicked, this, &ClassroomAiChatWidget::sendMessage );
+	connect( m_input, &QLineEdit::returnPressed, this, &ClassroomAiChatWidget::sendMessage );
+	connect( m_aiClient, &ClassroomAiClient::finished, this, [this]( bool success, const QString& reply ) {
+		m_sendButton->setEnabled( true );
+		if( success )
+		{
+			m_history.append( QVariantMap{ { QStringLiteral("role"), QStringLiteral("user") },
+										   { QStringLiteral("content"), m_lastPrompt } } );
+			m_history.append( QVariantMap{ { QStringLiteral("role"), QStringLiteral("assistant") },
+										   { QStringLiteral("content"), reply } } );
+			while( m_history.size() > 20 ) { m_history.removeFirst(); }
+			appendLine( QStringLiteral("<b>AI:</b> %1").arg( reply.toHtmlEscaped() ) );
+		}
+		else
+		{
+			appendLine( QStringLiteral("<i>%1</i>").arg( reply.toHtmlEscaped() ) );
+		}
+	} );
+}
+
+
+void ClassroomAiChatWidget::setIdentityLabel( const QString& label )
+{
+	setWindowTitle( tr( "AI assistant - %1" ).arg( label ) );
+}
+
+
+void ClassroomAiChatWidget::appendLine( const QString& html )
+{
+	m_view->append( html );
+	m_view->verticalScrollBar()->setValue( m_view->verticalScrollBar()->maximum() );
+}
+
+
+void ClassroomAiChatWidget::sendMessage()
+{
+	const auto prompt = m_input->text().trimmed();
+	if( prompt.isEmpty() || m_sendButton->isEnabled() == false ) { return; }
+
+	m_lastPrompt = prompt;
+	m_input->clear();
+	m_sendButton->setEnabled( false );
+	appendLine( QStringLiteral("<b>%1</b> %2").arg( tr( "Me:" ), prompt.toHtmlEscaped() ) );
+	Q_EMIT eventOccurred( Classroom::EventType::ai(), prompt.left( 200 ), QStringLiteral("AI") );
+	m_aiClient->chat( m_history, prompt );
+}
+
+
+void ClassroomAiChatWidget::closeEvent( QCloseEvent* event )
+{
+	event->ignore();
+	hide();
+}
+
+
+void ClassroomAiChatWidget::mousePressEvent( QMouseEvent* event )
+{
+	if( event->button() == Qt::LeftButton )
+	{
+		m_dragPosition = mouseGlobalPoint( event ) - frameGeometry().topLeft();
+	}
+	QWidget::mousePressEvent( event );
+}
+
+
+void ClassroomAiChatWidget::mouseMoveEvent( QMouseEvent* event )
+{
+	if( event->buttons() & Qt::LeftButton )
+	{
+		move( mouseGlobalPoint( event ) - m_dragPosition );
+	}
+	QWidget::mouseMoveEvent( event );
+}
+
+
+QPair<QString, QString> ClassroomMonitor::foregroundWindowInfo()
+{
+#ifdef Q_OS_WIN
+	const auto window = GetForegroundWindow();
+	if( window == nullptr ) { return {}; }
+
+	wchar_t titleBuffer[512]{};
+	const auto titleLength = GetWindowTextW( window, titleBuffer, 512 );
+	const auto title = QString::fromWCharArray( titleBuffer, titleLength );
+
+	DWORD processId = 0;
+	GetWindowThreadProcessId( window, &processId );
+	QString application;
+	const auto process = OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processId );
+	if( process != nullptr )
+	{
+		wchar_t pathBuffer[MAX_PATH]{};
+		DWORD pathLength = MAX_PATH;
+		if( QueryFullProcessImageNameW( process, 0, pathBuffer, &pathLength ) )
+		{
+			application = QFileInfo( QString::fromWCharArray( pathBuffer ) ).fileName();
+		}
+		CloseHandle( process );
+	}
+	return { application, title };
+#else
+	static const auto xprop = QStandardPaths::findExecutable( QStringLiteral("xprop") );
+	if( xprop.isEmpty() ) { return {}; }
+
+	QProcess process;
+	process.start( xprop, { QStringLiteral("-root"), QStringLiteral("_NET_ACTIVE_WINDOW") } );
+	process.waitForFinished( 300 );
+	const auto output = QString::fromUtf8( process.readAllStandardOutput() );
+	const auto id = output.section( QLatin1Char('#'), 1 ).trimmed();
+	if( id.isEmpty() || id == QStringLiteral("0x0") ) { return {}; }
+
+	process.start( xprop, { QStringLiteral("-id"), id, QStringLiteral("WM_NAME"), QStringLiteral("WM_CLASS") } );
+	process.waitForFinished( 300 );
+	const auto details = QString::fromUtf8( process.readAllStandardOutput() );
+	QString title;
+	QString application;
+	for( const auto& line : details.split( QLatin1Char('\n') ) )
+	{
+		if( line.contains( QStringLiteral("WM_NAME") ) ) { title = line.section( QLatin1Char('='), 1 ).trimmed(); }
+		if( line.contains( QStringLiteral("WM_CLASS") ) )
+		{
+			const auto values = line.section( QLatin1Char('='), 1 ).split( QLatin1Char(',') );
+			application = values.value( values.size() - 1 ).trimmed().remove( QLatin1Char('"') );
+		}
+	}
+	return { application, title.remove( QLatin1Char('"') ) };
+#endif
+}
+
+
+ClassroomMonitor::ClassroomMonitor( QObject* parent ) :
+	QObject( parent ),
+	m_timer( new QTimer( this ) )
+{
+	connect( m_timer, &QTimer::timeout, this, &ClassroomMonitor::sample );
+}
+
+
+void ClassroomMonitor::setSettings( const QJsonObject& settings )
+{
+	m_enabled = settings.value( Classroom::SettingKey::monitoringEnabled() ).toBool( true );
+	m_captureWindowTitle = settings.value( Classroom::SettingKey::captureWindowTitle() ).toBool( true );
+	m_captureProcess = settings.value( Classroom::SettingKey::captureProcess() ).toBool( true );
+	const auto interval = settings.value( Classroom::SettingKey::captureInterval() ).toInt( 5 );
+	m_timer->setInterval( std::max( 1, interval ) * 1000 );
+	if( m_enabled ) { start(); }
+	else { stop(); }
+}
+
+
+void ClassroomMonitor::start()
+{
+	if( m_enabled ) { m_timer->start(); }
+}
+
+
+void ClassroomMonitor::stop()
+{
+	m_timer->stop();
+}
+
+
+void ClassroomMonitor::sample()
+{
+	const auto info = foregroundWindowInfo();
+	const auto title = m_captureWindowTitle ? info.second : QString{};
+	const auto application = m_captureProcess ? info.first : QString{};
+	if( title.isEmpty() && application.isEmpty() ) { return; }
+	if( title.contains( Classroom::productName() ) || title.contains( tr( "AI assistant" ) ) ||
+		title.contains( tr( "My score" ) ) ) { return; }
+
+	const QString key = application + QLatin1Char('|') + title;
+	if( key == m_lastSample ) { return; }
+	m_lastSample = key;
+
+	static const QStringList browsers{ QStringLiteral("chrome"), QStringLiteral("msedge"), QStringLiteral("firefox"),
+									  QStringLiteral("iexplore"), QStringLiteral("opera"), QStringLiteral("brave"),
+									  QStringLiteral("360"), QStringLiteral("qqbrowser"), QStringLiteral("safari") };
+	bool browser = false;
+	for( const auto& candidate : browsers )
+	{
+		if( application.toLower().contains( candidate ) ) { browser = true; break; }
+	}
+
+	Q_EMIT activity( application, title, browser );
+}

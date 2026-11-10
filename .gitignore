@@ -4,3 +4,13 @@ svg
 Makefile
 plugins/addons
 plugins/extra
+
+# ClassKeep Android app (generated / machine-local files)
+mobile/.gradle/
+mobile/.idea/
+mobile/build/
+mobile/app/build/
+mobile/app/.cxx/
+mobile/local.properties
+mobile/*.iml
+mobile/captures/

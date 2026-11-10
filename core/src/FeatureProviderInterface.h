@@ -170,6 +170,17 @@ public:
 	}
 
 	/*!
+	 * \brief Called once when the server has been started
+	 *
+	 * Plugins can use this hook to launch persistent session workers which have to be
+	 * available even before a master connects (e.g. always-on-top client widgets).
+	 */
+	virtual void startSessionFeature( VeyonServerInterface& server )
+	{
+		Q_UNUSED(server)
+	}
+
+	/*!
 	 * \brief Handles a received feature message inside worker
 	 * \param worker a reference to a worker instance implementing the VeyonWorkerInterface
 	 * \param message the message which has been received and needs to be handled
