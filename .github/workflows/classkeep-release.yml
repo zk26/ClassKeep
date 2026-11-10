@@ -255,7 +255,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
-          name: 课守 ClassKeep ${{ github.ref_name }}
+          name: 课守 ClassKeep ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
           body_path: dist/RELEASE-NOTES.md
           files: |
             dist/ClassKeep-Teacher-*-win64.zip
