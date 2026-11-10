@@ -1,16 +1,33 @@
-.vagrant/*
+# ---------------------------------------------------------------- OS / IDE
 .DS_Store
-svg
-Makefile
-plugins/addons
-plugins/extra
+Thumbs.db
+.idea/
+*.iml
+.vscode/
 
-# ClassKeep Android app (generated / machine-local files)
-mobile/.gradle/
-mobile/.idea/
-mobile/build/
-mobile/app/build/
-mobile/app/.cxx/
-mobile/local.properties
-mobile/*.iml
-mobile/captures/
+# ------------------------------------------------------- Java / Gradle / Android
+.gradle/
+build/
+local.properties
+captures/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# ------------------------------------------------------------- CMake / C++
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.o
+*.obj
+*.pdb
+
+# --------------------------------------------------- ClassKeep release output
+dist/
+ClassKeep-Teacher-*.zip
+ClassKeep-Student-*.zip
+
+# ------------------------------------------------------------------- Python
+__pycache__/
+*.pyc

@@ -1,181 +1,139 @@
-# Veyon - Virtual Eye On Networks
+# 课守 ClassKeep
 
-> ## 课守 ClassKeep
->
-> 本仓库是 **Veyon 4.x 的教学管理定制分支**，在保留 Veyon 原有监控/控屏/演示能力的基础上，
-> 增加了班级与 IP 绑定、课堂密钥防退出、全量行为日志与兴趣词云、积分制与期末报表、
-> UWF 还原与远程装软件、本地 AI 助手、Android 教室端 App 等能力。
->
-> | 文档 | 内容 |
-> |---|---|
-> | [docs/CLASSKEEP.md](docs/CLASSKEEP.md) | 功能总览、架构、目录结构与构建 |
-> | [docs/CLASSKEEP-PROTOCOL.md](docs/CLASSKEEP-PROTOCOL.md) | FeatureMessage 命令表、Bridge HTTP/UDP 协议、认证算法、数据文件格式 |
-> | [docs/CLASSKEEP-DEPLOY.md](docs/CLASSKEEP-DEPLOY.md) | 教师机/学生机/手机端部署、UWF 与 Defender 注意事项 |
-> | [docs/CLASSKEEP-LICENSE.md](docs/CLASSKEEP-LICENSE.md) | 许可证与衍生作品声明 |
-> | [mobile/README.md](mobile/README.md) | Android 教室端 App |
->
-> 新增代码集中在 `plugins/classroom/`、`mobile/` 以及对 `core/`、`master/`、`server/` 的少量扩展点。
-> 本项目继承上游 **GPL-2.0-or-later**（见 `COPYING`），详见许可证文档。
-> 上游项目主页：https://veyon.io/ — 本分支与上游 Veyon 项目无隶属关系。
+> 基于 [Veyon](https://veyon.io/) 4.x 的教学管理定制分支。中文名「课守」，英文名 `ClassKeep`。
+> 仓库：<https://github.com/zk26/ClassKeep> · 许可：**GPL-2.0-or-later**
+> 本分支不是 Veyon 官方版本，与上游项目无隶属关系。
 
-[![.github/workflows/build.yml](https://github.com/veyon/veyon/actions/workflows/build.yml/badge.svg?branch=4.5)](https://github.com/veyon/veyon/actions/workflows/build.yml)
-[![Latest stable release](https://img.shields.io/github/release/veyon/veyon.svg?maxAge=3600)](https://github.com/veyon/veyon/releases)
-[![Overall downloads on Github](https://img.shields.io/github/downloads/veyon/veyon/total.svg?maxAge=3600)](https://github.com/veyon/veyon/releases)
-[![Documentation Status](https://readthedocs.org/projects/veyon/badge/?version=latest)](https://docs.veyon.io/)
-[![Localise on Transifex](https://img.shields.io/badge/localise-on_transifex-green.svg)](https://app.transifex.com/veyon-solutions/veyon/)
-[![license](https://img.shields.io/badge/license-GPLv2-green.svg)](LICENSE)
+一个课堂上真正能用的「看得见、管得住、记得下、评得准」的整套方案：
+教师机控制台 + 学生机常驻客户端 + 教师机数据主库 + Android 教室端 App + 本地 AI。
 
+---
 
-## What is Veyon?
+## 1. 仓库目录
 
-Veyon is a free and open source software for monitoring and controlling
-computers across multiple platforms. Veyon supports you in teaching in digital
-learning environments, performing virtual trainings or giving remote support.
+本仓库根就是整个 `G:\veyon`，全部项目都在同一个仓库里：
 
-The following features are available in Veyon:
+```
+G:\veyon\  (= 仓库根)
+├── README.md            ← 本文件：项目总入口
+├── LICENSE              GNU GPL v2 全文（与 veyon/COPYING 相同）
+├── NOTICE.md            版权、许可、修改声明、商标、隐私与无担保声明
+├── .gitignore           排除生成物 / 本机配置 / 发布产物
+│
+├── veyon\               桌面端（上游 Veyon 源码 + 课守插件）
+│   ├── README.md         仓库首页总入口（桌面端视角）
+│   ├── COPYING           上游 GPL v2 全文
+│   ├── plugins\classroom\ 课守插件源码及说明
+│   ├── docs\             全套协议与说明文档
+│   ├── scripts\          发布包打包脚本及说明
+│   ├── .github\workflows\ 发布构建流水线
+│   ├── mobile\           Android 工程的**历史提交副本**（请勿在此修改）
+│   └── core\, master\, server\  对上游的最小扩展点
+│
+└── mobile\              ← Android 教室端 App（**唯一权威工程**，Android Studio 打开此目录）
+```
 
-  * Overview: monitor all computers in one or multiple locations or classrooms
-  * Remote access: view or control computers to watch and support users
-  * Demo: broadcast the teacher's screen in realtime (fullscreen/window)
-  * Screen lock: draw attention to what matters right now
-  * Communication: send text messages to students
-  * Start and end lessons: log in and log out users all at once
-  * Screenshots: record learning progress and document infringements
-  * Programs & websites: launch programs and open website URLs remotely
-  * Teaching material: distribute and open documents, images and videos easily
-  * Administration: power on/off and reboot computers remotely
+> **`mobile/` 与 `veyon/mobile/` 的关系**：后者是先前推送到旧 fork 时留下的副本，
+> 仅为保留历史而存在，**不再维护**；所有 Android 改动请在根 `mobile/` 进行。
+> 本仓库保留了上游 Veyon 的完整提交历史（详见 `git log`）。
 
+---
 
-## License
+## 2. 三类发布产物
 
-Copyright (c) 2004-2026 Tobias Junghans / Veyon Solutions.
+| 产物 | 运行位置 | 内容 |
+|---|---|---|
+| **教师端** | 教师机 Windows | Veyon Master + Configurator + 课守插件 + Bridge 服务 + 预设配置 |
+| **学生端** | 学生机 Windows（UWF 还原） | Veyon Service / Server / Worker + 课守插件 + 预设安全配置 |
+| **APP** | Android 11+ 手机/平板 | 课守教室端（网段发现、密钥同步、班级数据、控制指令、期末表、词云） |
 
-See the file COPYING for the GNU GENERAL PUBLIC LICENSE.
+产物命名、内容清单、校验与安装步骤见
+[`veyon/docs/CLASSKEEP-RELEASE.md`](veyon/docs/CLASSKEEP-RELEASE.md)。
 
+> 仓库内**不提交预编译二进制**。三类产物由
+> [发布工作流](veyon/.github/workflows/classkeep-release.yml) 在推送 `v*` tag 时于云端构建并发布；
+> 也可在有工具链的机器上用 [`scripts/package-classkeep.ps1`](veyon/scripts/package-classkeep.ps1) 本地打包。
+> Android 端已在本机实测编译通过（`:app:assembleDebug` + 单元测试全部成功）；
+> 桌面端需要 Qt 6 / QCA / LibVNC / CMake，当前开发机不具备这些工具链。
 
-## Installation and configuration
+---
 
-Please refer to the official Veyon Administrator Manual at https://docs.veyon.io/en/latest/admin/index.html
-for information on the installation and configuration of Veyon.
+## 3. 快速开始
 
+### 桌面端（需要 Qt 6 / QCA / LibVNC / CMake / Windows SDK）
 
-## Usage
+```powershell
+cd veyon
+cmake -S . -B build -DWITH_QT6=ON
+cmake --build build --config Release
+```
 
-Please refer to the official Veyon User Manual at https://docs.veyon.io/en/latest/user/index.html
-for information on how to use Veyon.
+### Android（JDK 21+ 与 Android SDK；本机 `JAVA_HOME` 需指向 JDK 根目录，不要带 `\bin`）
 
+```powershell
+$env:JAVA_HOME = 'E:\jdk-23.0.2'
+$env:ANDROID_HOME = 'G:\Andorid'
+cd mobile
+.\gradlew.bat :app:assembleDebug :app:testDebugUnitTest
+```
 
-## Veyon on Linux
+### 打发布包
 
-### Downloading sources
+```powershell
+cd veyon
+.\scripts\package-classkeep.ps1 -Version 1.0.0 `
+    -TeacherDir <教师端编译输出> -StudentDir <学生端编译输出> `
+    -ApkPath <app-debug.apk> -OutputDir dist
+```
 
-First grab the latest sources by cloning the Git repository and fetching all submodules:
+---
 
-	git clone --recursive https://github.com/veyon/veyon.git && cd veyon
+## 4. 文档索引（全部说明文件）
 
+### 法律与合规（部署前请先读）
 
-### Installing dependencies
+| 文档 | 内容 |
+|---|---|
+| [`LICENSE`](LICENSE) | GNU GPL v2 全文 |
+| [`NOTICE.md`](NOTICE.md) | 版权归属、许可、修改声明、商标、隐私与无担保声明 |
+| [`veyon/docs/CLASSKEEP-LICENSE.md`](veyon/docs/CLASSKEEP-LICENSE.md) | 衍生作品与分发义务详解 |
+| [`veyon/docs/CLASSKEEP-THIRD-PARTY.md`](veyon/docs/CLASSKEEP-THIRD-PARTY.md) | 第三方组件与许可清单、分发核对清单 |
+| [`veyon/docs/CLASSKEEP-PRIVACY.md`](veyon/docs/CLASSKEEP-PRIVACY.md) | **数据采集范围与合规义务**（监控类软件必读） |
 
-Requirements for Debian-based distributions:
+### 技术与使用
 
-- Build tools: g++ libc6-dev make cmake dpkg-dev
-- Qt5: qtbase5-dev qtbase5-private-dev qtbase5-dev-tools qttools5-dev qttools5-dev-tools
-- X11: xorg-dev libxtst-dev libfakekey-dev
-- libjpeg: libjpeg-dev provided by libjpeg-turbo8-dev or libjpeg62-turbo-dev
-- zlib: zlib1g-dev
-- OpenSSL: libssl-dev
-- PAM: libpam0g-dev
-- procps: libprocps-dev
-- LZO: liblzo2-dev
-- QCA: libqca-qt5-2-dev
-- LDAP: libldap2-dev
-- SASL: libsasl2-dev
+| 文档 | 内容 |
+|---|---|
+| [`veyon/README.md`](veyon/README.md) | 桌面端仓库首页总入口 |
+| [`veyon/docs/CLASSKEEP.md`](veyon/docs/CLASSKEEP.md) | 功能总览、架构通道图、目录结构、构建、数据流 |
+| [`veyon/docs/CLASSKEEP-PROTOCOL.md`](veyon/docs/CLASSKEEP-PROTOCOL.md) | **协议规范**：命令/参数全量数值表、HTTP 路由、认证算法、UDP 发现、数据格式、兼容性铁律 |
+| [`veyon/docs/CLASSKEEP-DEPLOY.md`](veyon/docs/CLASSKEEP-DEPLOY.md) | 部署、每堂课流程、UWF 与 Defender 注意、数据迁移、排障 |
+| [`veyon/docs/CLASSKEEP-RELEASE.md`](veyon/docs/CLASSKEEP-RELEASE.md) | 发布产物清单、命名、校验、安装 |
+| [`veyon/mobile/README.md`](veyon/mobile/README.md) | Android 教室端工程说明 |
+| [`veyon/plugins/classroom/README.md`](veyon/plugins/classroom/README.md) | 课守插件源码结构 |
+| [`veyon/scripts/README.md`](veyon/scripts/README.md) | 发布包打包脚本 |
 
-As root you can run
+---
 
-	apt install g++ libc6-dev make cmake qtbase5-dev qtbase5-private-dev \
-	            qtbase5-dev-tools qttools5-dev qttools5-dev-tools \
-	            xorg-dev libxtst-dev libfakekey-dev libjpeg-dev zlib1g-dev libssl-dev libpam0g-dev \
-	            libprocps-dev liblzo2-dev libqca-qt5-2-dev libldap2-dev \
-	            libsasl2-dev
+## 5. 关键约束
 
+- 学生机须为 **Windows 10/11 企业版、教育版或 IoT 企业版**（UWF 仅这些版本支持）。
+- 只用系统自带签名 API（`uwfmgr.exe` / `netsh.exe` / Core Audio COM / SetupAPI），
+  不写内核驱动、不做进程注入、不落临时脚本，Windows Defender 友好。
+- 课堂密钥每堂课轮换，同时用于学生端认证与手机端 Bridge 认证；密钥永不上网，只参与本地摘要。
+- 学生端默认零落盘，全部行为数据集中到教师机，按主机/日期/学生分别保存。
+- **本软件会采集学生行为数据**，部署方须先阅读 `CLASSKEEP-PRIVACY.md` 并履行告知、最小必要、
+  访问控制与定期删除义务；项目作者不接触任何实际数据，也不对部署行为承担责任。
 
+---
 
-Requirements for RedHat-based distributions:
+## 6. 状态
 
-- Build tools: gcc-c++ make cmake rpm-build
-- Qt5: qt5-devel qt5-qtbase-private-devel
-- X11: libXtst-devel libXrandr-devel libXinerama-devel libXcursor-devel libXrandr-devel libXdamage-devel libXcomposite-devel libXfixes-devel libfakekey-devel
-- libjpeg: libjpeg-turbo-devel
-- zlib: zlib-devel
-- OpenSSL: openssl-devel
-- PAM: pam-devel
-- procps: procps-devel
-- LZO: lzo-devel
-- QCA: qca-devel qca-qt5-devel
-- LDAP: openldap-devel
-- SASL: cyrus-sasl-devel
+- Android 端：`assembleDebug` 与 `testDebugUnitTest` 已在本机实测通过。
+- 桌面端：代码经静态复核，**尚未真实编译**（开发机缺 Qt/CMake 等工具链）。
+- 首次在有完整工具链的机器上编译如遇报错，请通过仓库 Issues 反馈。
 
-As root you can run
+---
 
-	dnf install gcc-c++ make cmake rpm-build qt5-devel libXtst-devel libXrandr-devel libXinerama-devel libXcursor-devel \
-             libXrandr-devel libXdamage-devel libXcomposite-devel libXfixes-devel libjpeg-turbo-devel zlib-devel \
-             openssl-devel pam-devel procps-devel lzo-devel qca-devel qca-qt5-devel openldap-devel cyrus-sasl-devel
-
-
-### Configuring and building sources
-
-Run the following commands:
-
-	mkdir build
-	cd build
-	cmake ..
-	make -j4
-
-NOTE: If you want to build a .deb or .rpm package for this software, instead of the provided cmake command, you should use:
-
-	cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-
-to install package files in /usr instead of /usr/local.
-
-If some requirements are not fullfilled, CMake will inform you about it and
-you will have to install the missing software before continuing.
-
-You can now generate a package (.deb or .rpm depending what system you are in).
-
-For generating a package you can run
-
-	fakeroot make package
-
-Then you'll get something like veyon_x.y.z_arch.deb or veyon-x.y.z.arch.rpm
-
-Alternatively you can install the built binaries directly (not recommended for
-production systems) by running the following command as root:
-
-	make install
-
-### Arch linux
-
-A PKGBUILD can be found in the [AUR](https://aur.archlinux.org/packages/veyon/).
-
-### PPA
-
-This PPA contains official Veyon packages for Ubuntu suitable for use both on desktop computers and ARM boards (e.g. Raspberry Pi). Even though only packages for LTS releases are available they should work for subsequent non-LTS releases as well.
-
-	sudo add-apt-repository ppa:veyon/stable
-	sudo apt-get update
-
-## Join development
-
-If you are interested in Veyon, its programming, artwork, testing or something like that, you're welcome to participate in the development of Veyon!
-
-Before starting the implementation of a new feature, please always open an issue at https://github.com/veyon/veyon/issues to start a discussion about your intended implementation. There may be different ideas, improvements, hints or maybe an already ongoing work on this feature.
-
-## Join translation team
-
-Veyon and its documentation are translated at the Transifex platform. Please go to https://app.transifex.com/veyon-solutions/veyon and join the corresponding translation team. Please DO NOT submit pull requests for modified translation files since this would require manual Transifex synchronizations on our side.
-
-## More information
-
-* https://veyon.io/
-* https://docs.veyon.io/
+GitHub：<https://github.com/zk26/ClassKeep> · 上游：<https://github.com/veyon/veyon>
+许可与归属疑问见 [`NOTICE.md`](NOTICE.md)。

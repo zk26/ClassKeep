@@ -1,0 +1,177 @@
+name: ClassKeep Release
+
+# Builds all three release artifacts (teacher, student, Android app) and
+# publishes them to GitHub Releases. See docs/CLASSKEEP-RELEASE.md.
+#
+# The Windows job needs Veyon's third-party C++ dependencies (QCA, LibVNC,
+# libjpeg, LZO, zlib, OpenSSL). If they are unavailable the job fails loudly
+# rather than uploading a partial package; use scripts/package-classkeep.ps1
+# locally in that case and attach the artifacts manually.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without the v prefix (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+
+env:
+  QT_VERSION: '6.8.*'
+
+jobs:
+  # ---------------------------------------------------------------- Android
+  android:
+    name: Android classroom app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build and test
+        working-directory: mobile
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest --no-daemon
+
+      - name: Collect APK
+        shell: bash
+        run: |
+          APK=$(find mobile/app/build/outputs -name '*.apk' -type f | head -n 1)
+          test -n "$APK" || { echo "No APK produced"; exit 1; }
+          cp "$APK" ClassKeep-Mobile.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: classkeep-mobile
+          path: ClassKeep-Mobile.apk
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- Windows
+  windows:
+    name: Teacher + student packages
+    needs: android
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: classkeep-mobile
+          path: artifacts
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrEmpty($v)) { $v = $env:GITHUB_REF_NAME -replace '^v', '' }
+          if ([string]::IsNullOrEmpty($v)) { $v = '1.0.0' }
+          "value=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+
+      # Veyon on Windows needs these. Adjust the triplet/ports for your environment.
+      - name: Install C++ dependencies
+        shell: pwsh
+        run: |
+          vcpkg install `
+            zlib:x64-windows openssl:x64-windows libjpeg-turbo:x64-windows `
+            lzo:x64-windows libvncserver:x64-windows qca:x64-windows `
+            --triplet x64-windows
+
+      - name: Configure
+        shell: pwsh
+        run: >
+          cmake -S veyon -B build -DWITH_QT6=ON
+          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Stage teacher/student binaries
+        shell: pwsh
+        run: |
+          $teacher = 'build\stage\teacher'
+          $student = 'build\stage\student'
+          New-Item -ItemType Directory -Force -Path $teacher, $student | Out-Null
+          Get-ChildItem -Path build -Recurse -File -Include *.exe,*.dll |
+            Where-Object { $_.FullName -notmatch '\\stage\\' } |
+            ForEach-Object {
+              Copy-Item $_.FullName -Destination $teacher -Force
+              Copy-Item $_.FullName -Destination $student -Force
+            }
+          if (-not (Test-Path (Join-Path $teacher 'classroom.dll'))) {
+            throw 'classroom.dll was not built - refusing to create a partial release.'
+          }
+
+      - name: Package all three artifacts
+        shell: pwsh
+        run: |
+          .\veyon\scripts\package-classkeep.ps1 `
+            -Version '${{ steps.ver.outputs.value }}' `
+            -TeacherDir 'build\stage\teacher' `
+            -StudentDir 'build\stage\student' `
+            -ApkPath 'artifacts\ClassKeep-Mobile.apk' `
+            -OutputDir dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: classkeep-release-assets
+          path: dist/*
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- Release
+  release:
+    name: Publish GitHub Release
+    needs: windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: classkeep-release-assets
+          path: dist
+
+      - name: Verify all three artifacts exist
+        shell: bash
+        run: |
+          set -e
+          ls dist/ClassKeep-Teacher-*.zip
+          ls dist/ClassKeep-Student-*.zip
+          ls dist/ClassKeep-Mobile-*.apk
+          ls dist/SHA256SUMS.txt
+          while read -r hash file; do
+            [ -z "$file" ] && continue
+            echo "$hash  $file" | sha256sum -c -
+          done < dist/SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: 课守 ClassKeep ${{ github.ref_name }}
+          body_path: dist/RELEASE-NOTES.md
+          files: |
+            dist/ClassKeep-Teacher-*.zip
+            dist/ClassKeep-Student-*.zip
+            dist/ClassKeep-Mobile-*.apk
+            dist/SHA256SUMS.txt
+            dist/RELEASE-NOTES.md
+          fail_on_unmatched_files: true

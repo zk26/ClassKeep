@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">课守</string>
+    <string name="app_name_en">ClassKeep</string>
+
+    <string name="status_connected">已连接</string>
+    <string name="status_offline">离线</string>
+    <string name="status_discovering">正在网段内查找教师机…</string>
+
+    <string name="hint_ip">教师机 IP</string>
+    <string name="hint_key">本堂课密钥（与学生机相同）</string>
+    <string name="hint_port">桥接端口</string>
+    <string name="sync_now">立即同步</string>
+    <string name="work_offline">离线工作</string>
+
+    <string name="section_connection">连接</string>
+    <string name="section_snapshot">班级概况</string>
+    <string name="section_activity">最近活动</string>
+    <string name="section_audio_network">声音与网络</string>
+    <string name="section_screen_input">屏幕与输入</string>
+    <string name="section_uwf">还原保护</string>
+
+    <string name="label_class">班级：%1$s</string>
+    <string name="label_base_score">基础分：%1$s</string>
+    <string name="label_rules">规则已发布：%1$s</string>
+    <string name="label_stats">节次 %1$d · 记录 %2$d · 学生 %3$d</string>
+    <string name="label_revision">本地版本 %1$s · %2$s</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    <string name="dash">-</string>
+
+    <string name="cmd_mute">静音</string>
+    <string name="cmd_unmute">取消静音</string>
+    <string name="cmd_block_internet">断网</string>
+    <string name="cmd_allow_internet">恢复网络</string>
+    <string name="cmd_silence">肃静页</string>
+    <string name="cmd_hide_silence">收起肃静</string>
+    <string name="cmd_usb_block">禁用 USB 输入</string>
+    <string name="cmd_usb_restore">恢复 USB 输入</string>
+    <string name="cmd_remote">远程控制</string>
+    <string name="cmd_demo">分组投屏</string>
+    <string name="cmd_uwf_query">查询状态</string>
+    <string name="cmd_uwf_disable">关闭还原</string>
+    <string name="cmd_uwf_enable">开启还原</string>
+    <string name="cmd_report">导出期末表</string>
+    <string name="cmd_wordcloud">查看词云</string>
+
+    <string name="msg_no_ip">请先填写教师机 IP</string>
+    <string name="msg_no_key">请先填写本堂课密钥</string>
+    <string name="msg_found_need_key">已找到教师机，请输入本堂课密钥后同步</string>
+    <string name="msg_no_key_server">教师机尚未生成本堂课密钥，请先在教师端「开始新课堂」</string>
+    <string name="msg_sync_disabled">教师机已关闭自动同步</string>
+    <string name="msg_syncing">正在与 %1$s:%2$d 同步…</string>
+    <string name="msg_synced">同步完成，版本 %1$d · 班级 %2$s</string>
+    <string name="msg_not_found">未找到教师机，保留本地数据</string>
+    <string name="msg_denied">密钥被拒绝，换新课后请更新密钥</string>
+    <string name="msg_offline">已断开，本地数据保留</string>
+    <string name="msg_command_ok">指令 %1$s 已下发</string>
+    <string name="msg_command_rejected">指令 %1$s 被拒绝</string>
+    <string name="msg_no_activity">暂无活动记录</string>
+    <string name="msg_report_saved">期末表已保存：%1$s</string>
+    <string name="msg_report_failed">导出失败：%1$s</string>
+    <string name="msg_wordcloud_failed">词云获取失败：%1$s</string>
+</resources>
