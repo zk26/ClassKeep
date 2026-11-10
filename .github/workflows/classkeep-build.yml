@@ -58,6 +58,7 @@ jobs:
 
       - name: Configure
         run: |
+          set -o pipefail
           cmake -S veyon -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DWITH_QT6=OFF \
@@ -69,15 +70,18 @@ jobs:
             -DWITH_UNITY_BUILD=OFF \
             -DWITH_STACK_PROTECTION=OFF \
             -DWITH_TESTS=OFF \
-            -DWITH_CORE_ONLY=OFF 2>&1 | tee configure.log
+            -DWITH_CORE_ONLY=OFF \
+            -DCMAKE_SKIP_INSTALL_RULES=ON 2>&1 | tee configure.log
 
       - name: Build
-        run: cmake --build build --parallel 4 2>&1 | tee build.log
+        run: |
+          set -o pipefail
+          cmake --build build --parallel 4 2>&1 | tee build.log
 
       - name: Verify the ClassKeep plugin was produced
         run: |
           set -e
-          find build -name 'classroom*.so' -o -name 'classroom*.dll' | tee plugin-paths.txt
+          find build \( -name 'classroom*.so' -o -name 'classroom*.dll' \) -print | tee plugin-paths.txt
           test -s plugin-paths.txt || { echo 'classroom plugin was not built'; exit 1; }
 
       - name: Upload compile logs
@@ -104,7 +108,13 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest ships an Android SDK already. Do NOT use setup-android@v3:
+      # it tries to replace the preinstalled cmdline-tools with an older pinned
+      # version and fails on `sdkmanager --licenses`. Let AGP auto-download the
+      # platforms it needs after accepting licenses with the preinstalled tool.
+      - name: Accept Android SDK licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
 
       - name: Build and test
         working-directory: mobile

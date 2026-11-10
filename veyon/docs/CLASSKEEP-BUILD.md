@@ -64,9 +64,19 @@ cmake -S veyon -B build -G Ninja \
   -DWITH_QT6=OFF -DWITH_BUNDLED_LIBVNC=ON \
   -DWITH_WEBAPI=OFF -DWITH_TRANSLATIONS=OFF \
   -DWITH_LTO=OFF -DWITH_PCH=OFF -DWITH_UNITY_BUILD=OFF \
-  -DWITH_STACK_PROTECTION=OFF -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF
+  -DWITH_STACK_PROTECTION=OFF -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF \
+  -DCMAKE_SKIP_INSTALL_RULES=ON
 cmake --build build --parallel 4
 ```
+
+`-DCMAKE_SKIP_INSTALL_RULES=ON` 是必需的：bundled LibVNC 的 `vncclient` / `vncserver`
+把源码目录写进了 `INTERFACE_INCLUDE_DIRECTORIES`，Veyon 的 `install(TARGETS ...)`
+会在 generate 阶段直接报 `... is prefixed in the source directory` 并拒绝生成 `build.ninja`。
+只做编译验证时跳过 install 规则即可，不需要改上游源码。
+
+> CI 里所有 `... | tee xxx.log` 的步骤都加了 `set -o pipefail`，否则 `tee` 的退出码
+> 会掩盖 cmake/ninja 的失败（第一次运行就踩过这个坑，日志里出现
+> `ninja: error: loading 'build.ninja'` 却把 Build 步骤标成 success）。
 
 参数解释：
 
@@ -187,7 +197,11 @@ cd G:\veyon
 | `Qt6::GuiPrivate` / `Qt6::HttpServer` 找不到 | Qt 模块不全，或 Windows 下用了 Qt5 | Linux 用 `WITH_QT6=OFF`；Windows 装 `qt6-httpserver` 与 qtbase 私有头 |
 | MSVC 报 `D9002 ignoring unknown option -Wno-attributes` | 用了 Visual Studio 生成器 | 必须 `-G Ninja` + MinGW GCC |
 | `WITH_BUNDLED_LIBVNC=ON` 后 `ClassroomSelfTest` 不构建 | `CMakeLists.txt:199` 会强制 `WITH_TESTS=OFF` | 想跑自检需 `-DWITH_BUNDLED_LIBVNC=OFF` 且系统 LibVNC ≥ 0.9.14 |
+| `INTERFACE_INCLUDE_DIRECTORIES ... is prefixed in the source directory` | bundled LibVNC 的 include 路径与 Veyon `install(TARGETS)` 冲突 | 加 `-DCMAKE_SKIP_INSTALL_RULES=ON`（只编译不安装） |
+| `ninja: error: loading 'build.ninja': No such file or directory` | 上一条 CMake 错误导致未生成构建文件 | 看 `configure.log`；同时确认 `tee` 步骤有 `set -o pipefail` |
+| `sdkmanager failed with exit code 1`（Android CI） | `android-actions/setup-android@v3` 覆盖 runner 预装的 cmdline-tools 版本 | 去掉该 action，用 runner 自带 SDK + `sdkmanager --licenses`，让 AGP 自动装 platform |
 | `classroom.dll` 没生成 | `-DWITH_CORE_ONLY=ON` 跳过了 `plugins/` | 设为 OFF；`plugins/CMakeLists.txt` 是 GLOB，改插件后需重新跑 CMake |
+| 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
 
 ---
 

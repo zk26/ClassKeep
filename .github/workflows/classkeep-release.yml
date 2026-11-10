@@ -42,7 +42,11 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest ships an Android SDK; setup-android@v3 replaces its
+      # cmdline-tools with an older pinned version and fails on licenses.
+      - name: Accept Android SDK licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
 
       - name: Build and test
         working-directory: mobile
