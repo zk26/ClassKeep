@@ -98,8 +98,8 @@ private:
 	QStringList selectedIps() const;
 	QStringList onlineIps() const;
 	static QString ipOfInterface( const class ComputerControlInterface* controlInterface );
-	void appendTeacherEvent( const QString& type, const QString& detail, const QString& ip = {},
-							 const QString& seat = {}, const QString& student = {} );
+	void appendTeacherEvent( const QString& type, const QString& detail, const QString& ip = QString{},
+							 const QString& seat = QString{}, const QString& student = QString{} );
 
 	void refreshLogs();
 	void openLogFolder();

@@ -72,7 +72,7 @@ public:
 	bool addEntry( const ClassroomScoreEntry& entry );
 	bool removeEntry( const QString& entryId );
 
-	int total( const QString& seat, const QString& upToLessonId = {} ) const;
+	int total( const QString& seat, const QString& upToLessonId = QString{} ) const;
 	QVector<ClassroomScoreEntry> entriesForCell( const QString& lessonId, const QString& seat ) const;
 	QVector<ClassroomScoreEntry> entriesForStudent( const QString& seat ) const;
 

@@ -1438,7 +1438,7 @@ void ClassroomMasterDialog::setupSystemTab()
 		layout->addLayout( row );
 	};
 
-	const auto send = [this]( Command command, bool enabled = true, const QString& text = {} ) {
+	const auto send = [this]( Command command, bool enabled = true, const QString& text = QString{} ) {
 		auto message = Classroom::message( command );
 		message.addArgument( Argument::Enabled, enabled );
 		message.addArgument( Argument::Ip, m_teacherIp->text().trimmed() );
@@ -1446,7 +1446,7 @@ void ClassroomMasterDialog::setupSystemTab()
 		sendToAll( message );
 	};
 
-	const auto feature = [this]( const QString& uid, bool start, const QVariantMap& arguments = {} ) {
+	const auto feature = [this]( const QString& uid, bool start, const QVariantMap& arguments = QVariantMap{} ) {
 		VeyonCore::featureManager().controlFeature( Feature::Uid{ uid },
 			start ? FeatureProviderInterface::Operation::Start : FeatureProviderInterface::Operation::Stop,
 			arguments, m_master.allComputerControlInterfaces() );

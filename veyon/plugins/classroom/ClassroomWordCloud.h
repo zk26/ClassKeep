@@ -35,9 +35,9 @@ public:
 
 	static QStringList defaultStopWords();
 	static QVector<Word> tokenize( const QStringList& lines,
-								   const QStringList& extraKeywords = {},
+								   const QStringList& extraKeywords = QStringList{},
 								   int maxWords = 60,
-								   const QStringList& extraStopWords = {} );
+								   const QStringList& extraStopWords = QStringList{} );
 	static QVector<PlacedWord> layout( const QVector<Word>& words, int width = 900, int height = 560 );
 	static QByteArray toSvg( const QVector<Word>& words, int width = 900, int height = 560 );
 	static QPixmap toPixmap( const QVector<Word>& words, int width = 900, int height = 560 );

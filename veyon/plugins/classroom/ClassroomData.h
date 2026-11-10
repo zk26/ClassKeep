@@ -119,7 +119,7 @@ public:
 	QString studentsPath() const;
 
 	bool append( const ClassroomEvent& event );
-	QVector<ClassroomEvent> load( const QDate& from, const QDate& to, const QString& machine = {} ) const;
+	QVector<ClassroomEvent> load( const QDate& from, const QDate& to, const QString& machine = QString{} ) const;
 	QStringList machines() const;
 	int purgeExpired( int days );
 
