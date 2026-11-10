@@ -1,0 +1,171 @@
+# 课守 ClassKeep — 全部功能验收总表
+
+本文件把需求讨论中**逐条列出过的每一项功能**与当前实现一一对照，作为验收总账。
+仓库：<https://github.com/zk26/ClassKeep> · 许可 **GPL-2.0-or-later**。
+
+状态说明：
+
+| 标记 | 含义 |
+|---|---|
+| ✅ | 代码完成，且已被 Linux/Qt6/GCC 与 Windows/MinGW 编译覆盖 |
+| ◐ | 代码完成，但依赖特定运行环境，尚未在真实机房联调 |
+| ❌ | 未实现（明确列出，不含糊） |
+
+---
+
+## A. 课堂身份与连接（第一轮 ①②）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| A1 | 教师端**按 IP 快速登录学生**，每堂课/考试 IP 都不同 | ✅ | `ClassroomMasterDialog.cpp` → `assignByIp()` / `quickLogin()` / `batchLogin()` / `registerComputers()` | 「课堂与登录」页 → 按 IP 一键登录 / IP+座位+姓名快速登录 |
+| A2 | 班级对应学生名单，按班级记录行为 | ✅ | `ClassroomRoster`（`ClassroomData.h/.cpp`）、`classes.json`、CSV 导入导出 | 班级下拉框 + 名单表格 |
+| A3 | IP 不在 Veyon 电脑目录也能下发 | ✅ | `sendToIp()` → `m_directInterfaces` 临时直连接口 + 重试队列 | 自动；另有「同步 IP 到目录」按钮 |
+| A4 | 无管理员权限时也能工作 | ✅ | 直连通道独立于 HKLM 目录写入；不可写时弹提示 | 自动 |
+| A5 | 学生机**密钥绑定后不能退出**（超管登录环境） | ◐ | `ClassroomClient.cpp` → `setLocked()` / `requestQuit()`；`ClassroomPlugin.cpp` worker 看门狗（5 秒） | 悬浮窗右键「退出客户端」需超管凭据或密钥 |
+| A6 | 退出需超级管理员账号 | ◐ | `PlatformUserFunctions::authenticate()` + 失败记日志 | 同上 |
+| A7 | 学生自助登录（座位号 + 姓名 + 本堂密钥） | ✅ | `ClassroomClient.cpp` → `handleLogin()` | 学生端悬浮条 |
+| A8 | 每堂课换密钥 | ✅ | `startNewSession()` 无条件 `generateKey()`（16 位十六进制 / 64bit 熵） | 「开始新课堂」 |
+| A9 | 密钥加密落盘、兼容旧明文 | ✅ | `ClassroomSecrets.h/.cpp`（Veyon `CryptoCore` RSA） | 自动 |
+| A10 | 教师发现不对可**强制退出 / 换学生 / 批量操作** | ✅ | `ForceLogout` / `SwitchUser` / 批量登录与锁定 | 「课堂与登录」页 |
+| A11 | 换课清身份、补传离线事件、多教师端上下文 | ✅ | `startNewSession()` 先 `ForceLogout`；server 补传队列（上限 5000）；`QVector<MessageContext>` | 自动 |
+
+> A5/A6 标 ◐：纯用户态无法 100% 阻止 SYSTEM 权限的进程终止，当前靠「密钥 + 超管凭据 + 服务看门狗 + 留痕」四层。彻底防杀需驱动级保护，**本项目刻意不做**（Defender 友好）。
+
+---
+
+## B. 全数据监控、日志与分层（第一轮 ③、第二轮 ②）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| B1 | 全数据行为监控（前台窗口标题、进程名、浏览器判定、登录/退出/AI 提问等） | ✅ | `ClassroomMonitor`（`ClassroomClient.cpp`）、`ReportEvent` 链路 | 自动，5 秒采样 |
+| B2 | **每台学生机独立日志** | ✅ | 教师机 `machines/<主机名>/<日期>.jsonl`、`students/<班级>/<座位-姓名>/`、`events/` | 「行为日志」页按机器/学生筛选 |
+| B3 | **学生端一般不放数据**（UWF 下不丢） | ✅ | 学生端零落盘，全部经 `ReportEvent` 上报教师机 | 自动 |
+| B4 | 多堂课**动态**决定分层（非一堂课定） | ✅ | `ClassroomData.cpp` 兴趣画像 + 半衰期加权；关键词表可编辑 | 「兴趣分析」页：兴趣分布、课堂次数、趋势、分层建议、CSV 导出 |
+| B5 | **每个学生词云** | ✅ | `ClassroomWordCloud.h/.cpp`：中文 2–4gram、长词加权、停用词、螺旋布局；`toSvg()` / `toPixmap()` 零 QtSvg 依赖 | 「Score & reports」页选班级+座位，可导出 SVG |
+| B6 | 日志筛选 / 导出 CSV / 清理过期 | ✅ | 「行为日志」页 | 日期/班级/学生/机器/关键词 |
+| B7 | 状态索引与 IO 优化 | ✅ | `identityStates()` / `lastActivities()` 增量索引、目录缓存 | 自动 |
+
+> 上网行为目前基于**前台窗口标题 + 进程名 + 浏览器识别**，不抓取 URL 或网络包。要精确 URL 需浏览器扩展或 UI Automation（未做）。
+
+---
+
+## C. AI 助手（第一轮 ④）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| C1 | 可配置**本地 AI 接口或网络地址** | ✅ | `ClassroomAiClient.h/.cpp`、`ClassroomConfiguration.h`、Configurator 页 | 「AI 设置」页 / Veyon Configurator → ClassKeep |
+| C2 | OpenAI 兼容协议（`model`/`messages`/`stream:false`），可填密钥、模型、系统提示词、超时 | ✅ | 同上 | 同上，带**测试连接**与推送 |
+| C3 | 学生端 **AI 悬浮按钮 → 直接聊天** | ✅ | `ClassroomAiChatWidget`（可拖动、置顶） | 学生端悬浮条「AI assistant」 |
+| C4 | 登录状态悬浮 | ✅ | `ClassroomClientWidget` 悬浮条常驻 | 自动 |
+| C5 | AI 提问进日志 | ✅ | `EventType::ai()` | 自动 |
+| C6 | **保持原风格** | ✅ | Feature 动态注册到原工具栏、Configurator 插件页、`Configuration::Proxy`、`tr()`、`:/core/icon*.png`、ToolButton/QSplitter | — |
+
+---
+
+## D. 积分制与期末报表（第二轮 ⑤⑥）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| D1 | 基础分 **100** | ✅ | `ClassroomScore.h/.cpp` → `ClassroomScoreRules::baseScore` | 教师端可改 |
+| D2 | 学生端**积分查询 + 积分明细**（直接查询，不需规则） | ✅ | `QueryScore` → `ScoreReply` → `ClassroomScoreView` | 学生端悬浮条「Score」 |
+| D3 | **积分规则**：老师端设置好学生才能查看，否则是空的 | ✅ | `published` 门控，未发布时 HTML 连标题都不生成 | 「Score & reports」页 → 发布规则 |
+| D4 | 明细格式：**加粗 / 下划线 / 改颜色 / 改字体 / 改字号 / 插入图片** | ✅ | `ClassroomScorePanel.cpp` `QTextEdit` 工具栏；`inlineImages()` 转 base64 data URI 精确内联 | 「Score & reports」页富文本编辑器 |
+| D5 | 每天都能在教师端操作和查看 | ✅ | 节次按日期 + 教学内容建立，表格实时刷新 | 「Score & reports」页 |
+| D6 | **期末导出每班情况表**（一节课一格，多次加分写同一格） | ✅ | `ClassroomTermReport.h/.cpp` → SpreadsheetML `.xls` + CSV | 「Score & reports」页导出 |
+| D7 | 表格列式：`M.d 教学内容` + `目前总积分` + **独立出勤列** + `期末总积分` | ✅ | 同上（√ / 迟到 / 缺勤 / 请假 由留痕推断，不再把缺勤打勾） | 同上 |
+| D8 | 累计分按**课程日期**而非录入顺序 | ✅ | `total()` 用 `std::stable_sort` | 自动 |
+| D9 | Excel 工作表名合法化、规则富文本转纯文本 | ✅ | `sheetName()` + 正则去标签 | 自动 |
+
+---
+
+## E. 系统控制与 UWF（第二轮 ①③⑧⑨）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| E1 | **原生 Win10 Defender 友好** | ✅ | 只用系统自带签名 API：`uwfmgr.exe`、WMI、WFP 用户态、Core Audio COM、SetupAPI；**无驱动、无进程注入、无临时 .ps1、无自签证书** | 设计约束 |
+| E2 | UWF **状态查询** | ◐ | `ClassroomSystem.cpp` → `uwfState()`：`uwfmgr get-config` + WMI 交叉复核 | 「System & devices」→ UWF 查询 |
+| E3 | UWF **关闭 / 打开** | ◐ | `setUwfFilter()`（`filter enable/disable`，重启生效） | UWF 关闭+重启 / 开启+重启 |
+| E4 | UWF **状态监听** | ◐ | 30 秒低频轮询 + `UwfStatusReport` 上报到教师机日志 | 自动 |
+| E5 | **远程装软件** | ◐ | 复用 Veyon `FileTransfer` + `StartApp`；`softwareInstallCommand()` 识别静默参数 | 「System & devices」→ 分发并安装 |
+| E6 | 参考 `G:\UWFTool` 但**不照搬**、延续节约风格 | ✅ | 只借鉴 `uwfmgr` 子命令与「关保护→重启→安装→恢复」流程概念，**未复制任何代码/脚本/资源**，且全部收敛在一个插件 + 一条 FeatureMessage | 见 `CLASSKEEP-LICENSE.md` |
+| E7 | **USB 禁止输入拦截**（禁用输入但保留桌面显示） | ✅ | 复用 Veyon `InputDevicesLock` + `LockWidget::Mode::DesktopVisible` | 「System & devices」→ USB 拦截/恢复 |
+| E8 | 网关**静音 / 启用** | ◐ | Core Audio `IAudioEndpointVolume::SetMute` | 「System & devices」→ 静音/取消 |
+| E9 | **WFP InternetGuard 断网**（保留教师机 IP 例外） | ◐ | WFP 用户态 `FWPM_LAYER_ALE_AUTH_CONNECT_V4` | 「System & devices」→ 断网/放行 |
+| E10 | **Ctrl + 双击缩略图远控** | ✅ | `ComputerMonitoringWidget.cpp` 判 `Qt::ControlModifier` → `RemoteControl` | 教师端缩略图 |
+| E11 | **分组投屏 / 多选控屏** | ✅ | 复用 demo 插件 `ShareUserScreen*` / `FullScreenDemo` UID | 「System & devices」→ 分组投屏 / 广播 |
+| E12 | **肃静页面** | ✅ | `ClassroomSilencePage` 全屏置顶 | 「System & devices」→ 显示/隐藏 |
+| E13 | 学生**呼叫老师** | ✅ | `CallTeacher` → 教师端 `showCall()` 提示 | 学生端悬浮条「Call teacher」 |
+
+> E2–E5、E8–E9 标 ◐：代码已编译，但 `uwfmgr` / Core Audio / WFP 依赖真实 Windows 企业版/教育版/IoT + UWF 环境，未在机房验证。
+
+---
+
+## F. 手机端与数据同步（第二轮 ④⑦ + 密钥认证）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| F1 | **Android 教室端 App**（只做教室端，控制教师机内容） | ✅ | `mobile/` 原生 Kotlin + XML View + Material3，**零第三方网络/JSON/加密库** | APK，见 Releases |
+| F2 | iOS 工程 | ❌ | — | 协议为标准 HTTP/JSON + UDP + SHA-256，可直接复用 |
+| F3 | 参考 `Monitoring-Center` 但不复制 | ✅ | 只借鉴「移动驱动 Veyon Feature」理念，**从零编写**，未复制代码/界面/资源 | 见 `CLASSKEEP-LICENSE.md` |
+| F4 | **网段内发现教师机**，找到才同步、没找到不操作 | ✅ | `Discovery.kt`：UDP 主动探测 + 周期广播 + MulticastLock；30 秒节流 | App 自动 |
+| F5 | **手动同步按钮** | ✅ | `MainActivity.kt` → 立即同步；另有手动 IP / 端口 / 密钥输入 | App |
+| F6 | 手机端也存数据（离线副本） | ✅ | `CacheStore.kt` → SharedPreferences，保存密钥、端口、统计、最近活动 | 自动 |
+| F7 | 数据主库在教师机、按 `revision` 增量同步 | ✅ | `ClassroomBridge.cpp` → `revision()` / `/api/classroom/sync` | 自动 + 手动 |
+| F8 | **复用课堂密钥做 Bridge 认证**（不是裸奔） | ✅ | C++ `ClassroomSecrets::sessionToken()` ↔ Kotlin `ClassKeepCrypto.token()`，`SHA-256("veyon-classroom:<key>:<nonce>")`；双端同一基准断言 | App 输入「本堂课密钥」 |
+| F9 | 广播**不携带密钥**，只带 60 秒轮换的挑战值 | ✅ | `ClassroomProtocol.h` → `CLASSKEEP:` 前缀；`announcementPayload()` | 自动 |
+| F10 | 换课旧设备立即失效、10 次失败锁 60 秒、常量时间比较 | ✅ | `setSettings()` 轮换 nonce、`noteAuthFailure()`、`authorized()` | 自动 |
+| F11 | App 控制指令（静音/断网/肃静/USB/远控/投屏/UWF 等 13 项） | ✅ | `/api/classroom/command` → `handleCommand()` → FeatureMessage / 原生 Feature | App 控制网格 |
+| F12 | 期末表导出 `.xls`、词云 WebView 查看 | ✅ | `BridgeClient.kt` → `report()` / `wordCloud()` | App |
+| F13 | 401 明确提示「可能换了新课，检查密钥」 | ✅ | `UnauthorizedError` / `MainActivity.kt` | App |
+
+---
+
+## G. 工程、协议与合规（后续补充要求）
+
+| # | 需求 | 状态 | 实现位置 |
+|---|---|---|---|
+| G1 | 改名 **中文「课守」/ 英文 ClassKeep** | ✅ | 插件元信息、标题、Android `app_name`、包名 `top.ikee002.classkeep`、数据目录 `%APPDATA%/ClassKeep`、广播前缀 |
+| G2 | 删除 RN 残留，**移植到你的 Kotlin 项目** | ✅ | `mobile/` 只剩 Android 工程；7 个 Kotlin 文件 |
+| G3 | **每一个说明文件都写清楚、不要有纠纷** | ✅ | 根 `README.md`、`NOTICE.md`、`LICENSE`、`veyon/README.md`、8 份 docs、`plugins/classroom/README.md`、`scripts/README.md`、`mobile/README.md`、`veyon/mobile/README.md`（历史副本声明） |
+| G4 | 法律与合规文档 | ✅ | `LICENSE`(GPL v2 全文)、`NOTICE.md`、`CLASSKEEP-LICENSE.md`、`CLASSKEEP-THIRD-PARTY.md`、`CLASSKEEP-PRIVACY.md` |
+| G5 | **协议规范**写死兼容铁律 | ✅ | `CLASSKEEP-PROTOCOL.md`：全量枚举数值表、HTTP 路由、认证公式与基准向量、UDP 报文、数据格式、「只追加不插入/重排」 |
+| G6 | 明确「两份 `mobile/`」与历史副本关系 | ✅ | 根 README、`veyon/mobile/README.md` |
+| G7 | **Releases 三类产物全都有** | ✅ | `v1.1.0`：教师端 ZIP / 学生端 ZIP / APP APK + 校验 + 说明，**GitHub Actions 真实编译** |
+| G8 | GitHub 真实编译路线 | ✅ | `classkeep-build.yml`(Linux/Qt6)、`classkeep-windows.yml`(MinGW)、`classkeep-release.yml`(三产物)；`CLASSKEEP-BUILD.md` |
+| G9 | 打包脚本与自检 | ✅ | `scripts/package-classkeep.ps1`、`package-presets.ps1`、`release-notes-template.md`、`ClassroomSelfTest.cpp`、`ClassKeepUnitTest.kt` |
+
+---
+
+## H. 明确未完成 / 限制（不含糊）
+
+| # | 事项 | 原因 / 下一步 |
+|---|---|---|
+| H1 | **iOS 工程** | 只提供了 Kotlin/Android 工程。协议纯标准，后续建 SwiftUI + URLSession + NWUDP 可直接复用，无需改教师机 |
+| H2 | **真实机房联调** | UWF 开关/监听、Core Audio 静音、WFP 断网、远程装软件、超管防退出均只经过编译验证，需在企业版/教育版 + UWF 学生机上实测 |
+| H3 | **精确 URL 采集** | 当前基于窗口标题/进程名/浏览器判定；如需 URL 需浏览器扩展或 UI Automation |
+| H4 | **UWF 自动状态机** | 目前是分步手动（查询 → 关闭+重启 → 分发安装 → 开启+重启），刻意不做全自动，避免 UWFTool 文档里「忘恢复保护」的严重坑 |
+| H5 | APK 为 **debug 签名** | 内测包；正式分发需自行签名 |
+| H6 | 桌面端「完整全量编译」不可行 | 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都编不过（缺 `<QUuid>`、`qApp` 类型），CI 用 `--target classroom ...` 精确列出目标绕开 |
+| H7 | 学生机是超管登录，纯用户态无法 100% 防杀进程 | 见 A5 备注 |
+
+---
+
+## I. 使用入口速查
+
+**教师端**（工具栏「课守 ClassKeep」→ 控制台）
+
+| 页签 | 能做什么 |
+|---|---|
+| 课堂与登录 | 班级名单 / CSV / 按 IP 登录 / 批量登录 / 换密钥 / 同步 IP 到目录 |
+| 行为日志 | 按日期·班级·学生·机器·关键词筛选、导出 CSV、清理过期 |
+| 兴趣分析 | 多堂课动态兴趣分布、趋势、分层建议、导出 |
+| AI 设置 | 本地/网络地址、密钥、模型、系统提示词、超时、测试连接、推送 |
+| Score & reports | 每日积分录入、富文本明细、规则发布、每生词云、期末 `.xls`/`.csv` 导出、呼叫处理 |
+| System & devices | 静音 / 断网 / USB / 肃静 / 远控 / 分组投屏 / 广播 / UWF / 装软件 / Bridge / 手动同步 |
+
+**学生端悬浮条**：登录（座位号+姓名+密钥）、AI assistant、Score、Call teacher、受保护退出。
+
+**手机 App**：自动发现 / 手动 IP·端口·本堂课密钥 / 立即同步 / 班级快照 / 13 项控制 / 期末表导出 / 词云 / 活动日志 / 离线缓存。
+
+**编译与发布**：见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md) 与 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md)。
+部署与合规：见 [`CLASSKEEP-DEPLOY.md`](CLASSKEEP-DEPLOY.md) 与 [`CLASSKEEP-PRIVACY.md`](CLASSKEEP-PRIVACY.md)。

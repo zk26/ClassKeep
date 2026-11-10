@@ -38,6 +38,7 @@
 > | [`../README.md`](../README.md) | **仓库总入口**（整个项目的目录结构与全部说明索引） |
 > | [`../NOTICE.md`](../NOTICE.md) | 版权归属、修改声明、商标、隐私与无担保声明 |
 > | [`../LICENSE`](../LICENSE) | GNU GPL v2 全文 |
+> | [docs/CLASSKEEP-FEATURES.md](docs/CLASSKEEP-FEATURES.md) | **全部功能验收总表**（逐条对照需求 / 实现位置 / 入口 / 未完成项） |
 > | [docs/CLASSKEEP.md](docs/CLASSKEEP.md) | 功能总览、架构、目录结构与构建 |
 > | [docs/CLASSKEEP-BUILD.md](docs/CLASSKEEP-BUILD.md) | **真实编译方案**（GitHub Actions / MinGW / 排错） |
 > | [docs/CLASSKEEP-PROTOCOL.md](docs/CLASSKEEP-PROTOCOL.md) | FeatureMessage 命令表、Bridge HTTP/UDP 协议、认证算法、数据文件格式 |

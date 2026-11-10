@@ -8,7 +8,8 @@
 > [`CLASSKEEP-PRIVACY.md`](CLASSKEEP-PRIVACY.md) 履行告知与数据保护义务，
 > 再阅读 [`CLASSKEEP-LICENSE.md`](CLASSKEEP-LICENSE.md)、[`../../NOTICE.md`](../../NOTICE.md)
 > 与 [`CLASSKEEP-THIRD-PARTY.md`](CLASSKEEP-THIRD-PARTY.md) 确认许可与分发要求。
-> 完整文档索引见仓库根 [`../../README.md`](../../README.md)。
+> 完整文档索引见仓库根 [`../../README.md`](../../README.md)；
+> **逐条需求对照**见 [`CLASSKEEP-FEATURES.md`](CLASSKEEP-FEATURES.md)。
 
 ---
 

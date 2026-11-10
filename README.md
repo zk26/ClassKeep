@@ -118,6 +118,7 @@ cd veyon
 | 文档 | 内容 |
 |---|---|
 | [`veyon/README.md`](veyon/README.md) | 桌面端仓库首页总入口 |
+| [`veyon/docs/CLASSKEEP-FEATURES.md`](veyon/docs/CLASSKEEP-FEATURES.md) | **全部功能验收总表**：两轮需求逐条对照、实现位置、使用入口、未完成项 |
 | [`veyon/docs/CLASSKEEP.md`](veyon/docs/CLASSKEEP.md) | 功能总览、架构通道图、目录结构、构建、数据流 |
 | [`veyon/docs/CLASSKEEP-BUILD.md`](veyon/docs/CLASSKEEP-BUILD.md) | **真实编译方案**：GitHub Actions 编译验证、本机 MinGW 编译、CI 出 Windows 产物、排错表 |
 | [`veyon/docs/CLASSKEEP-PROTOCOL.md`](veyon/docs/CLASSKEEP-PROTOCOL.md) | **协议规范**：命令/参数全量数值表、HTTP 路由、认证算法、UDP 发现、数据格式、兼容性铁律 |
