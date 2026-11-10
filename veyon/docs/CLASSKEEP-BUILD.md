@@ -76,9 +76,16 @@ cmake -S veyon -B build -G Ninja \
   -DWITH_WEBAPI=OFF -DWITH_TRANSLATIONS=OFF \
   -DWITH_LTO=OFF -DWITH_PCH=OFF -DWITH_UNITY_BUILD=OFF \
   -DWITH_STACK_PROTECTION=OFF -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF \
-  -DCMAKE_SKIP_INSTALL_RULES=ON
+  -DCMAKE_SKIP_INSTALL_RULES=ON \
+  -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"
 cmake --build build --parallel 4
 ```
+
+`-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"` 用于 Ubuntu 22.04 的 GCC 11+：
+Qt5 的 `qsizepolicy.h` 会触发 `deprecated-enum-enum-conversion` 警告，
+而 Veyon 全局开了 `-Wall -Werror`（`SetDefaultTargetProperties.cmake:16`），
+导致连**上游自己的 `AboutDialog.cpp`** 都编不过。Debian 11 的 GCC 10 没有这个警告，
+所以上游 CI 不需要它。这是环境差异，不是课守代码的问题。
 
 `-DCMAKE_SKIP_INSTALL_RULES=ON` 是必需的：bundled LibVNC 的 `vncclient` / `vncserver`
 把源码目录写进了 `INTERFACE_INCLUDE_DIRECTORIES`，Veyon 的 `install(TARGETS ...)`
@@ -213,6 +220,7 @@ cd G:\veyon
 | `sdkmanager failed with exit code 1`（Android CI） | `android-actions/setup-android@v3` 覆盖 runner 预装的 cmdline-tools 版本 | 去掉该 action，用 runner 自带 SDK + `sdkmanager --licenses`，让 AGP 自动装 platform |
 | `classroom.dll` 没生成 | `-DWITH_CORE_ONLY=ON` 跳过了 `plugins/` | 设为 OFF；`plugins/CMakeLists.txt` 是 GLOB，改插件后需重新跑 CMake |
 | `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里） | clone 了 KDE kldap 最新 master（Qt6-only），但 `WITH_QT6=OFF` 需要 Qt5 版本 | 按上游 v4.11.4 的 gitlink SHA 精确检出 `kldap-qt5`（见上文 fetch 脚本） |
+| `qsizepolicy.h: bitwise operation between different enumeration types ... [-Werror=deprecated-enum-enum-conversion]` | Ubuntu 22.04 的 GCC 11+ 对 Qt5 头文件产生新警告，被 Veyon 的 `-Werror` 放大；连上游 `AboutDialog.cpp` 都失败 | 加 `-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"`，或改用 Debian 11 / GCC 10 容器 |
 | 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
 
 ---
