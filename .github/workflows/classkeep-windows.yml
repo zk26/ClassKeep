@@ -99,32 +99,43 @@ jobs:
             -DCMAKE_SKIP_INSTALL_RULES=ON \
             -DCMAKE_CXX_FLAGS="-include cmath" 2>&1 | tee configure.log
 
-      # Build only what we ship. classroom pulls in veyon-core, so all Windows-only
-      # code (UWF / Core Audio / WFP / SetupAPI) is compiled here.
+      # Build exactly what we ship. classroom pulls in veyon-core, so all
+      # Windows-only code (UWF / Core Audio / WFP / SetupAPI) is compiled here.
+      # All Veyon executables only link veyon-core; plugins are loaded at
+      # runtime, so we do NOT need a full build (which would hit the broken
+      # upstream filetransfer plugin).
       - name: Build classroom plugin + Veyon executables
         shell: msys2 {0}
         run: |
           set -o pipefail
-          cmake --build build --target classroom --parallel 4 2>&1 | tee build.log
+          cmake --build build --parallel 4 --target \
+            classroom \
+            veyon-master veyon-configurator veyon-cli \
+            veyon-service veyon-server veyon-worker 2>&1 | tee build.log
 
-      - name: Collect Windows binaries
-        shell: pwsh
+      - name: Collect Windows binaries and runtime DLLs
+        shell: msys2 {0}
         run: |
-          $ErrorActionPreference = 'Stop'
-          $bin = 'dist-windows'
-          New-Item -ItemType Directory -Force -Path $bin | Out-Null
-          $built = Get-ChildItem -Path build -Recurse -File -Include *.exe,*.dll -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -notmatch 'CMakeFiles' }
-          foreach ($f in $built) { Copy-Item -LiteralPath $f.FullName -Destination $bin -Force }
-          # Runtime DLLs from the UCRT64 toolchain
-          $ucrt = 'C:\msys64\ucrt64\bin'
-          if (Test-Path $ucrt) {
-            Get-ChildItem -LiteralPath $ucrt -File -Filter '*.dll' |
-              Where-Object { $_.Name -match '^(Qt6|libqca|libgcc|libstdc\+\+|libwinpthread|libcrypto|libssl|libjpeg|libpng|liblzo|libvnc|libldap|liblber|libsasl|zlib1)' } |
-              ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $bin -Force }
-          }
-          Get-ChildItem -LiteralPath $bin -File | Select-Object Name, @{N='KB';E={[math]::Round($_.Length/1KB,1)}} | Format-Table -AutoSize
-          if (-not (Test-Path (Join-Path $bin 'classroom.dll'))) { throw 'classroom.dll was not produced' }
+          set -e
+          bin=dist-windows
+          mkdir -p "$bin/platforms" "$bin/styles" "$bin/tls" "$bin/imageformats"
+          find build -type f \( -name 'veyon-*.exe' -o -name 'veyon-*.dll' -o -name 'classroom.dll' \) \
+            ! -path '*CMakeFiles*' -exec cp '{}' "$bin/" \;
+          cp /ucrt64/bin/Qt6*.dll "$bin/" 2>/dev/null || true
+          for pat in libqca libgcc libstdc++ libwinpthread libcrypto libssl libjpeg libpng16 \
+                     liblzo2 libvncclient libvncserver libldap liblber libsasl zlib1 libssp \
+                     libbrotli libfreetype libharfbuzz libicu libpcre2 libzstd libdouble-conversion; do
+            cp /ucrt64/bin/$pat*.dll "$bin/" 2>/dev/null || true
+          done
+          for sub in platforms styles tls imageformats; do
+            cp /ucrt64/share/qt6/plugins/$sub/*.dll "$bin/$sub/" 2>/dev/null || \
+              cp /ucrt64/lib/qt6/plugins/$sub/*.dll "$bin/$sub/" 2>/dev/null || true
+          done
+          echo '--- collected ---'
+          ls -1 "$bin" | head -70
+          test -f "$bin/classroom.dll"     || { echo 'classroom.dll missing'; exit 1; }
+          test -f "$bin/veyon-master.exe"  || { echo 'veyon-master.exe missing'; exit 1; }
+          test -f "$bin/veyon-service.exe" || { echo 'veyon-service.exe missing'; exit 1; }
 
       - uses: actions/upload-artifact@v6
         with:
