@@ -51,10 +51,19 @@
 
 ## 构建与自检
 
-```powershell
-cmake -S ../.. -B ../../build -DWITH_QT6=ON -DWITH_TESTS=ON
-cmake --build ../../build --config Release
+完整构建方案见 [`../../docs/CLASSKEEP-BUILD.md`](../../docs/CLASSKEEP-BUILD.md)。
+Veyon 4.11.4 **只能用 MinGW-w64/GCC 编译**（MSVC 不可行）。
+
+```bash
+# Windows / MinGW
+cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_TESTS=ON -DWITH_CORE_ONLY=OFF
+cmake --build build
 ```
 
+最快的编译验证是 GitHub Actions 的 `ClassKeep Build Check`（Linux/Qt5/GCC 全量编译）。
+
 Windows 下 `ClassroomSystem.cpp` 需要 Windows SDK（`mmdeviceapi.h` / `endpointvolume.h`）；
-Linux/macOS 下相关功能走 `#else` 分支返回 `false`，不影响编译。
+Linux/macOS 下相关功能走 `#else` 分支返回 `false`，不影响编译——
+**注意这也意味着 Linux 编译无法验证 UWF / Core Audio / WFP 这些 Windows 专属实现**。
+另外 `-DWITH_BUNDLED_LIBVNC=ON` 会强制关闭 `WITH_TESTS`，跑 `ClassroomSelfTest` 时需保持 OFF
+并使用系统 LibVNC ≥ 0.9.14。

@@ -26,12 +26,19 @@
 
 ### 桌面端
 
-```powershell
-cmake -S . -B build -DWITH_QT6=ON
-cmake --build build --config Release
+桌面端**只能用 MinGW-w64 / GCC 编译**（Veyon CMake 硬编码 GCC 参数，MSVC 不可行）。
+完整依赖与命令见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。最简形式：
+
+```bash
+cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
+cmake --build build
 ```
 
+若只想先验证代码能否编译，直接用 GitHub Actions 的 **ClassKeep Build Check**（Linux/Qt5/GCC），
+无需在本机装整套 MinGW 工具链。
+
 按 Veyon 官方方式安装，确保教师机与学生机都带 `classroom` 插件。
+学生机与教师机使用同一套二进制，差别只在安装组件与预设配置。
 Veyon Service 以 `LocalSystem` 运行，因此 `uwfmgr.exe`、`netsh.exe`、`shutdown.exe` 无需额外提权或 UAC。
 
 ### 手机端

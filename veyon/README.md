@@ -39,6 +39,7 @@
 > | [`../NOTICE.md`](../NOTICE.md) | 版权归属、修改声明、商标、隐私与无担保声明 |
 > | [`../LICENSE`](../LICENSE) | GNU GPL v2 全文 |
 > | [docs/CLASSKEEP.md](docs/CLASSKEEP.md) | 功能总览、架构、目录结构与构建 |
+> | [docs/CLASSKEEP-BUILD.md](docs/CLASSKEEP-BUILD.md) | **真实编译方案**（GitHub Actions / MinGW / 排错） |
 > | [docs/CLASSKEEP-PROTOCOL.md](docs/CLASSKEEP-PROTOCOL.md) | FeatureMessage 命令表、Bridge HTTP/UDP 协议、认证算法、数据文件格式 |
 > | [docs/CLASSKEEP-DEPLOY.md](docs/CLASSKEEP-DEPLOY.md) | 教师机/学生机/手机端部署、UWF 与 Defender 注意事项 |
 > | [docs/CLASSKEEP-RELEASE.md](docs/CLASSKEEP-RELEASE.md) | 发布产物清单与打包规范 |

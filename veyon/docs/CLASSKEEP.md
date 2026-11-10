@@ -108,15 +108,25 @@ veyon/mobile/                 历史提交副本，仅为保留旧 fork 结构�
 
 ### 4.1 桌面端（Windows）
 
-沿用 Veyon 官方构建流程，需要 Qt 6（兼容 5.15）、QCA、LibVNC、CMake、MSVC/MinGW、Windows SDK。
+> **完整构建方案见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)**。下面只是要点摘要。
 
-```powershell
-cmake -S . -B build -DWITH_QT6=ON
-cmake --build build --config Release
-```
+Veyon 4.11.4 的 CMake **只能用 MinGW-w64 / GCC 编译**（硬编码 `-Wno-attributes`、
+`-fno-exceptions`、`-Wl,-no-undefined`、`-mwindows`、`-lws2_32`，
+且 `windows-binaries` target 依赖 MinGW 前缀与 Unix shell 命令）。
+**MSVC + vcpkg 不可行**，QCA 也没有 vcpkg port（`find_package(Qca-qt6 REQUIRED)`）。
 
-`plugins/classroom/` 会被 `plugins/CMakeLists.txt` 的 GLOB 自动发现，无需手工注册。
-开启自检：`-DWITH_TESTS=ON`，目标 `ClassroomSelfTest`（Linux 无显示环境时自动设置 `QT_QPA_PLATFORM=offscreen`）。
+需要：Qt6-MinGW（含 `Core5Compat`、`GuiPrivate`、`HttpServer`、`WebSockets`、`LinguistTools`）、
+自编的 QCA-Qt6（`Qca-qt6Config.cmake`）、LibVNC ≥ 0.9.14、
+OpenSSL / zlib / libjpeg / libpng / LZO / SASL / LDAP / interception、CMake ≥ 3.18、Ninja、NSIS。
+上游 Windows 构建是在 Linux 容器里用 `x86_64-w64-mingw32` 交叉编译，其镜像私有且无 Dockerfile。
+
+最快获得「真实编译结果」的方式不是本机装这一整套，而是
+**GitHub Actions 的 [`.github/workflows/classkeep-build.yml`](../../.github/workflows/classkeep-build.yml)**
+（Linux/Qt5/GCC 全量编译，能验证除 Windows 专属分支外的全部 C++ 文件）。
+
+`plugins/classroom/` 会被 `plugins/CMakeLists.txt` 的 GLOB 自动发现，无需手工注册；
+但 `-DWITH_CORE_ONLY=ON` 会跳过整个 `plugins/`，必须保持 OFF。
+自检 `-DWITH_TESTS=ON` 生成 `ClassroomSelfTest`；注意 `-DWITH_BUNDLED_LIBVNC=ON` 会强制关闭 `WITH_TESTS`。
 
 ### 4.2 Android
 

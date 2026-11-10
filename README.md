@@ -68,12 +68,17 @@ G:\veyon\  (= 仓库根)
 
 ## 3. 快速开始
 
-### 桌面端（需要 Qt 6 / QCA / LibVNC / CMake / Windows SDK）
+### 桌面端（**只能 MinGW-w64/GCC**，MSVC 不可行）
+
+完整方案见 [`veyon/docs/CLASSKEEP-BUILD.md`](veyon/docs/CLASSKEEP-BUILD.md)。
+本机装 Qt6-MinGW + 自编 QCA-Qt6 + LibVNC 等依赖较重；**推荐先推代码到 `main`，
+由 [GitHub Actions 编译工作流](.github/workflows/classkeep-build.yml) 做真实编译验证**
+（<https://github.com/zk26/ClassKeep/actions> → ClassKeep Build Check → Run workflow）。
 
 ```powershell
-cd veyon
-cmake -S . -B build -DWITH_QT6=ON
-cmake --build build --config Release
+# 有完整 MinGW 工具链时（简写，详见 CLASSKEEP-BUILD.md）
+cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
+cmake --build build
 ```
 
 ### Android（JDK 21+ 与 Android SDK；本机 `JAVA_HOME` 需指向 JDK 根目录，不要带 `\bin`）
@@ -114,6 +119,7 @@ cd veyon
 |---|---|
 | [`veyon/README.md`](veyon/README.md) | 桌面端仓库首页总入口 |
 | [`veyon/docs/CLASSKEEP.md`](veyon/docs/CLASSKEEP.md) | 功能总览、架构通道图、目录结构、构建、数据流 |
+| [`veyon/docs/CLASSKEEP-BUILD.md`](veyon/docs/CLASSKEEP-BUILD.md) | **真实编译方案**：GitHub Actions 编译验证、本机 MinGW 编译、CI 出 Windows 产物、排错表 |
 | [`veyon/docs/CLASSKEEP-PROTOCOL.md`](veyon/docs/CLASSKEEP-PROTOCOL.md) | **协议规范**：命令/参数全量数值表、HTTP 路由、认证算法、UDP 发现、数据格式、兼容性铁律 |
 | [`veyon/docs/CLASSKEEP-DEPLOY.md`](veyon/docs/CLASSKEEP-DEPLOY.md) | 部署、每堂课流程、UWF 与 Defender 注意、数据迁移、排障 |
 | [`veyon/docs/CLASSKEEP-RELEASE.md`](veyon/docs/CLASSKEEP-RELEASE.md) | 发布产物清单、命名、校验、安装 |

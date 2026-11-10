@@ -1,0 +1,125 @@
+name: ClassKeep Build Check
+
+# Real compilation of the C++/Qt desktop code and the Android app.
+# See docs/CLASSKEEP-BUILD.md for the rationale and the Windows (MinGW) route.
+#
+# IMPORTANT: workflows must live at the REPOSITORY ROOT .github/workflows/.
+# Files under veyon/.github/workflows/ are inert and never triggered.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ------------------------------------------------------------------ desktop
+  desktop-linux:
+    name: Compile desktop (Linux / Qt5 / GCC)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # Upstream Veyon builds with Qt5 + bundled LibVNC on Debian/Ubuntu.
+      # Qt6 + MSVC is NOT a valid combination for this CMake project:
+      # it hardcodes GCC flags (-Wno-attributes, -fno-exceptions, -Wl,-no-undefined,
+      # -lws2_32, -mwindows) and its Windows installer target needs a MinGW prefix.
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+            build-essential cmake ninja-build git ca-certificates pkg-config \
+            qtbase5-dev qtbase5-private-dev qtbase5-dev-tools \
+            qttools5-dev qttools5-dev-tools \
+            libqca-qt5-2-dev libqca-qt5-2-plugins \
+            libssl-dev zlib1g-dev libjpeg-dev libpng-dev liblzo2-dev \
+            libpam0g-dev libprocps-dev libldap2-dev libsasl2-dev \
+            libfakekey-dev xorg-dev libvncserver-dev \
+            libpipewire-0.3-dev libspa-0.2-dev \
+            libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+
+      # The repository root has no .gitmodules (the Veyon tree is a subdirectory),
+      # so actions/checkout with submodules:recursive cannot fetch these.
+      # Clone them explicitly at the paths CMake expects.
+      - name: Fetch Veyon 3rdparty sources
+        run: |
+          set -e
+          base=veyon/3rdparty
+          clone() { if [ ! -d "$base/$1/.git" ]; then git clone --depth 1 "$2" "$base/$1"; fi; }
+          clone libvncserver https://github.com/veyon/libvncserver.git
+          clone x11vnc       https://github.com/veyon/x11vnc.git
+          clone libfakekey   https://github.com/veyon/libfakekey.git
+          clone kldap-qt5    https://invent.kde.org/pim/kldap.git
+          clone kldap        https://invent.kde.org/pim/kldap.git
+
+      - name: Configure
+        run: |
+          cmake -S veyon -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DWITH_QT6=OFF \
+            -DWITH_BUNDLED_LIBVNC=ON \
+            -DWITH_WEBAPI=OFF \
+            -DWITH_TRANSLATIONS=OFF \
+            -DWITH_LTO=OFF \
+            -DWITH_PCH=OFF \
+            -DWITH_UNITY_BUILD=OFF \
+            -DWITH_STACK_PROTECTION=OFF \
+            -DWITH_TESTS=OFF \
+            -DWITH_CORE_ONLY=OFF 2>&1 | tee configure.log
+
+      - name: Build
+        run: cmake --build build --parallel 4 2>&1 | tee build.log
+
+      - name: Verify the ClassKeep plugin was produced
+        run: |
+          set -e
+          find build -name 'classroom*.so' -o -name 'classroom*.dll' | tee plugin-paths.txt
+          test -s plugin-paths.txt || { echo 'classroom plugin was not built'; exit 1; }
+
+      - name: Upload compile logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: classkeep-desktop-build-logs
+          path: |
+            configure.log
+            build.log
+            plugin-paths.txt
+          if-no-files-found: warn
+
+  # ------------------------------------------------------------------ Android
+  android:
+    name: Compile + test Android app
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build and test
+        working-directory: mobile
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest --no-daemon
+
+      - name: Collect APK
+        run: |
+          APK=$(find mobile/app/build/outputs -name '*.apk' -type f | head -n 1)
+          test -n "$APK" || { echo 'No APK produced'; exit 1; }
+          cp "$APK" ClassKeep-Mobile.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: classkeep-mobile
+          path: ClassKeep-Mobile.apk
+          if-no-files-found: error
