@@ -60,6 +60,7 @@ G:\veyon\  (= 仓库根)
 > | `package` | Windows | 组装教师端 / 学生端 ZIP + 校验 |
 >
 > **自 v1.1.0 起三类产物全部是真实编译的**，不含占位包或伪造二进制。
+> 当前最新为 **[v1.2.0](https://github.com/zk26/ClassKeep/releases/tag/v1.2.0)**，包含签到、座位网格快捷加减分、期末明细表与新图标。
 > `v1.0.0` 曾附带 `-preset` 部署配置包（当时 CI 尚未支持 Windows 编译），现已由完整二进制包取代；
 > `package-presets.ps1` 仍保留用于无工具链环境的离线配置部署。
 > Windows 编译路线见 [`CLASSKEEP-BUILD.md` 路线 D](veyon/docs/CLASSKEEP-BUILD.md)。

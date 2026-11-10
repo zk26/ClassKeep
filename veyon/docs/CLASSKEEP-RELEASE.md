@@ -133,6 +133,7 @@ LDAP/SASL 是 `openldap` / `cyrus-sasl`）；3rdparty 按上游 v4.11.4 的 gitl
 > 版本历史：`v1.0.0` 附带的是 `-preset` 部署配置包；自 `v1.1.0` 起，
 > **教师端 / 学生端 / APP 三类产物全部由 GitHub Actions 真实编译**，
 > `SHA256SUMS.txt` 覆盖三者。不含任何占位包、空包或伪造二进制。
+> `v1.2.0` 起新增签到、座位网格快捷加减分、期末明细表与 `ClassKeep_logo.png` 图标。
 
 ---
 

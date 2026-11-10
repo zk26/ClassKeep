@@ -137,7 +137,7 @@
 | G4 | 法律与合规文档 | ✅ | `LICENSE`(GPL v2 全文)、`NOTICE.md`、`CLASSKEEP-LICENSE.md`、`CLASSKEEP-THIRD-PARTY.md`、`CLASSKEEP-PRIVACY.md` |
 | G5 | **协议规范**写死兼容铁律 | ✅ | `CLASSKEEP-PROTOCOL.md`：全量枚举数值表、HTTP 路由、认证公式与基准向量、UDP 报文、数据格式、「只追加不插入/重排」 |
 | G6 | 明确「两份 `mobile/`」与历史副本关系 | ✅ | 根 README、`veyon/mobile/README.md` |
-| G7 | **Releases 三类产物全都有** | ✅ | `v1.1.0`：教师端 ZIP / 学生端 ZIP / APP APK + 校验 + 说明，**GitHub Actions 真实编译** |
+| G7 | **Releases 三类产物全都有** | ✅ | 当前 `v1.2.0`（11.73 MB APK + 两个 46.19 MB Windows ZIP + 校验 + 说明），**GitHub Actions 真实编译**；`v1.1.0` 起改为完整二进制包 |
 | G8 | GitHub 真实编译路线 | ✅ | `classkeep-build.yml`(Linux/Qt6)、`classkeep-windows.yml`(MinGW)、`classkeep-release.yml`(三产物)；`CLASSKEEP-BUILD.md` |
 | G9 | 打包脚本与自检 | ✅ | `scripts/package-classkeep.ps1`、`package-presets.ps1`、`release-notes-template.md`、`ClassroomSelfTest.cpp`、`ClassKeepUnitTest.kt` |
 
