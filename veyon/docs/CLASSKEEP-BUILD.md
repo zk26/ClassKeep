@@ -53,11 +53,22 @@ sudo apt-get install -y build-essential cmake ninja-build git pkg-config \
   libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 
 # 3rdparty（根仓库没有 .gitmodules，必须显式 clone）
-git clone --depth 1 https://github.com/veyon/libvncserver.git veyon/3rdparty/libvncserver
-git clone --depth 1 https://github.com/veyon/x11vnc.git       veyon/3rdparty/x11vnc
-git clone --depth 1 https://github.com/veyon/libfakekey.git   veyon/3rdparty/libfakekey
-git clone --depth 1 https://invent.kde.org/pim/kldap.git      veyon/3rdparty/kldap-qt5
-git clone --depth 1 https://invent.kde.org/pim/kldap.git      veyon/3rdparty/kldap
+# 必须检出上游 veyon/veyon v4.11.4 锁定的 commit，直接 clone HEAD 会编译失败：
+# 当前 KDE kldap master 是 Qt6-only，Qt5 构建会报 `Qt::Literals` / `_L1` / `QLatin1StringView` 未定义。
+fetch() {
+  git init -q "veyon/3rdparty/$1"
+  git -C "veyon/3rdparty/$1" remote add origin "$2"
+  git -C "veyon/3rdparty/$1" fetch -q --depth 1 origin "$3"
+  git -C "veyon/3rdparty/$1" checkout -q FETCH_HEAD
+}
+fetch libvncserver https://github.com/veyon/libvncserver.git 30860286c0f55674a846df9cab458da9afd1735b
+fetch x11vnc       https://github.com/veyon/x11vnc.git       c1e38369e2c601df7ab894c378df0cc2380a1ede
+fetch libfakekey   https://github.com/veyon/libfakekey.git    7ad885912efb2131e80914e964d5e635b0d07b40
+fetch kldap-qt5    https://invent.kde.org/pim/kldap.git      27bf9afbf5fb0bc587e7d707c3ea10845dcfdf34
+
+# 这些 SHA 来自 https://api.github.com/repos/veyon/veyon/git/trees/v4.11.4?recursive=1
+# 其余三个（kldap / qthttpserver / ultravnc）只在 Qt6 / WebAPI / Windows 构建里用到。
+```
 
 cmake -S veyon -B build -G Ninja \
   -DCMAKE_BUILD_TYPE=Debug \
@@ -201,6 +212,7 @@ cd G:\veyon
 | `ninja: error: loading 'build.ninja': No such file or directory` | 上一条 CMake 错误导致未生成构建文件 | 看 `configure.log`；同时确认 `tee` 步骤有 `set -o pipefail` |
 | `sdkmanager failed with exit code 1`（Android CI） | `android-actions/setup-android@v3` 覆盖 runner 预装的 cmdline-tools 版本 | 去掉该 action，用 runner 自带 SDK + `sdkmanager --licenses`，让 AGP 自动装 platform |
 | `classroom.dll` 没生成 | `-DWITH_CORE_ONLY=ON` 跳过了 `plugins/` | 设为 OFF；`plugins/CMakeLists.txt` 是 GLOB，改插件后需重新跑 CMake |
+| `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里） | clone 了 KDE kldap 最新 master（Qt6-only），但 `WITH_QT6=OFF` 需要 Qt5 版本 | 按上游 v4.11.4 的 gitlink SHA 精确检出 `kldap-qt5`（见上文 fetch 脚本） |
 | 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
 
 ---

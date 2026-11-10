@@ -44,17 +44,27 @@ jobs:
 
       # The repository root has no .gitmodules (the Veyon tree is a subdirectory),
       # so actions/checkout with submodules:recursive cannot fetch these.
-      # Clone them explicitly at the paths CMake expects.
-      - name: Fetch Veyon 3rdparty sources
+      # Pin every 3rdparty checkout to the exact gitlink recorded in upstream
+      # veyon/veyon v4.11.4. Cloning HEAD breaks the build: e.g. current KDE
+      # kldap master is Qt6-only and fails against Qt5 (`Qt::Literals` / `_L1`).
+      - name: Fetch Veyon 3rdparty sources (pinned to v4.11.4)
         run: |
           set -e
           base=veyon/3rdparty
-          clone() { if [ ! -d "$base/$1/.git" ]; then git clone --depth 1 "$2" "$base/$1"; fi; }
-          clone libvncserver https://github.com/veyon/libvncserver.git
-          clone x11vnc       https://github.com/veyon/x11vnc.git
-          clone libfakekey   https://github.com/veyon/libfakekey.git
-          clone kldap-qt5    https://invent.kde.org/pim/kldap.git
-          clone kldap        https://invent.kde.org/pim/kldap.git
+          mkdir -p "$base"
+          fetch() {
+            name=$1; url=$2; sha=$3
+            if [ -d "$base/$name/.git" ]; then return 0; fi
+            git init -q "$base/$name"
+            git -C "$base/$name" remote add origin "$url"
+            git -C "$base/$name" fetch -q --depth 1 origin "$sha" \
+              || git -C "$base/$name" fetch -q origin "$sha"
+            git -C "$base/$name" checkout -q FETCH_HEAD
+          }
+          fetch libvncserver https://github.com/veyon/libvncserver.git 30860286c0f55674a846df9cab458da9afd1735b
+          fetch x11vnc       https://github.com/veyon/x11vnc.git       c1e38369e2c601df7ab894c378df0cc2380a1ede
+          fetch libfakekey   https://github.com/veyon/libfakekey.git    7ad885912efb2131e80914e964d5e635b0d07b40
+          fetch kldap-qt5    https://invent.kde.org/pim/kldap.git      27bf9afbf5fb0bc587e7d707c3ea10845dcfdf34
 
       - name: Configure
         run: |
