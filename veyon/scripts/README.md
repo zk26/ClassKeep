@@ -47,18 +47,19 @@ RELEASE-NOTES.md
 
 ## 注意
 
-- 脚本**不编译任何东西**，只打包已有产物。桌面端需 Qt 6 / QCA / LibVNC / CMake；
-  Android 需 JDK 21+ 与 Android SDK，构建方式见 [`../docs/CLASSKEEP.md`](../docs/CLASSKEEP.md)。
+- 脚本**不编译任何东西**，只打包已有产物。CI 的 `windows` job 会把编译好的
+  `.exe` / `.dll` 分别复制成 `teacher` / `student` 两个目录传给本脚本；
+  Android APK 由 `android` job 提供。构建方式见 [`../docs/CLASSKEEP-BUILD.md`](../docs/CLASSKEEP-BUILD.md)。
 - 生成的 `install-*.ps1` 是部署模板，需按学校实际路径与账户审查后再运行。
 - 分发 ZIP 时请同时附上 `LICENSE` / `NOTICE.md` / `COPYING` 与完整源码获取方式（GPL 要求）。
-- 自动构建与发布由 [`../.github/workflows/classkeep-release.yml`](../.github/workflows/classkeep-release.yml) 完成，
+- 自动构建与发布由 [`../../.github/workflows/classkeep-release.yml`](../../.github/workflows/classkeep-release.yml) 完成，
   本脚本用于本地或离线打包。
 
-## `package-presets.ps1`（部署预设包）
+## `package-presets.ps1`（部署预设包，备选）
 
-在没有 Qt / QCA / LibVNC / CMake 的机器上，**无法编译桌面端二进制**。
-该脚本不改变这一事实，而是产出**真实可用的部署预设包**：配置模板、安装辅助脚本、
-全套文档、`LICENSE` / `NOTICE.md` / `COPYING`。
+`v1.0.0` 时 CI 尚不能编译 Windows 二进制，该脚本用于产出**真实可用的部署预设包**：
+配置模板、安装辅助脚本、全套文档、`LICENSE` / `NOTICE.md` / `COPYING`。
+自 `v1.1.0` 起 Release 已改为发布完整二进制包，本脚本保留给无工具链环境做离线配置部署。
 
 ```powershell
 .\veyon\scripts\package-presets.ps1 -Version 1.0.0 -OutputDir dist

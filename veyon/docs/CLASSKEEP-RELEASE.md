@@ -16,20 +16,20 @@
 
 版本格式 `vMAJOR.MINOR.PATCH`（示例 `v1.0.0`），与 `mobile/app/build.gradle.kts` 的 `versionName` 保持一致。
 
-| 产物 | 文件名 | 格式 |
+| 产物 | 文件名 | 构建来源 |
 |---|---|---|
-| 教师端（完整二进制包） | `ClassKeep-Teacher-<ver>-win64.zip` | ZIP，需 Qt/QCA/LibVNC/CMake 编译 |
-| 学生端（完整二进制包） | `ClassKeep-Student-<ver>-win64.zip` | ZIP，同上 |
-| 教师端（部署预设包） | `ClassKeep-Teacher-<ver>-win64-preset.zip` | ZIP，**不含二进制**，配置/脚本/文档/许可 |
-| 学生端（部署预设包） | `ClassKeep-Student-<ver>-win64-preset.zip` | ZIP，**不含二进制** |
-| APP | `ClassKeep-Mobile-<ver>.apk` | Android APK |
-| 校验 | `SHA256SUMS.txt` | 纯文本 |
-| 发布说明 | `RELEASE-NOTES.md` | Markdown（同时写入 Release 正文） |
+| 教师端 | `ClassKeep-Teacher-<ver>-win64.zip` | `ClassKeep Release` → `windows` job（MSYS2 UCRT64 + Qt6/MinGW） |
+| 学生端 | `ClassKeep-Student-<ver>-win64.zip` | 同上：同一套二进制，注入不同的预设配置与安装脚本 |
+| APP | `ClassKeep-Mobile-<ver>.apk` | `ClassKeep Release` → `android` job（Ubuntu + JDK 21） |
+| 校验 | `SHA256SUMS.txt` | 覆盖上述三类产物 |
+| 发布说明 | `RELEASE-NOTES.md` | 由 `scripts/release-notes-template.md` 生成 |
 
-> `-preset` 后缀表示「部署预设包」，由 `scripts/package-presets.ps1` 生成，
-> 供无法编译桌面端二进制的环境使用。它**不是占位包**：内含可直接使用的配置模板、
-> 安装脚本、完整文档与许可文件；包内 `README.txt` 首行明确标注不含可执行文件。
-> 完整二进制包由 `scripts/package-classkeep.ps1` 或 CI 产出，两者不得混用命名。
+**三类产物都是真实编译的，不含占位包、空包或伪造二进制。**
+
+> 历史说明：`v1.0.0` 曾附带 `-preset` 部署配置包（当时 CI 尚未支持 Windows 编译），
+> 由 `scripts/package-presets.ps1` 生成，内含配置模板、安装脚本、文档与许可文件，但**明确标注不含可执行文件**。
+> 自 `v1.1.0` 起改由上面的完整二进制包取代；`package-presets.ps1` 仍保留，供无工具链环境做离线配置部署。
+> 命名上 `-win64.zip` 与 `-win64-preset.zip` 严格区分，不得混用。
 
 GitHub 还会自动附带 `Source code (zip)` / `(tar.gz)`，无需手工上传。
 
@@ -111,32 +111,28 @@ app-release.apk（或 unsigned debug APK，见下）
 
 ## 3. 构建来源
 
-产物由 [`.github/workflows/classkeep-release.yml`](../.github/workflows/classkeep-release.yml) 在推送 `v*` tag 时构建：
+产物由 [`../../.github/workflows/classkeep-release.yml`](../../.github/workflows/classkeep-release.yml)
+在推送 `v*` tag 或手动 `Run workflow` 时构建：
 
 | Job | Runner | 产出 |
 |---|---|---|
-| `android` | `ubuntu-latest` + JDK 21 + Android SDK | `ClassKeep-Mobile-<ver>.apk` |
-| `windows` | `windows-latest` + Qt 6 + QCA/LibVNC + CMake | 教师端 / 学生端两份 ZIP |
-| `release` | `ubuntu-latest` | 汇总 artifacts、生成 `SHA256SUMS.txt`、创建 Release 并上传全部 assets |
+| `android` | `ubuntu-24.04` + JDK 21 + Android SDK | `ClassKeep-Mobile-<ver>.apk` |
+| `windows` | `windows-latest` + MSYS2 **UCRT64** + Qt6/MinGW | 真实编译的 `.exe` / `.dll`（含 `classroom.dll`）+ Qt6/CRT 运行时 |
+| `package` | `windows-latest` | 用 `package-classkeep.ps1` 组装教师端/学生端 ZIP + `SHA256SUMS.txt` |
+| `release` | `ubuntu-24.04` | 校验后创建 Release 并上传全部 assets |
 
-Windows job 需要先备好 Veyon 的第三方依赖（QCA、LibVNC、libjpeg、LZO、zlib、OpenSSL 等）。
-workflow 中已写明依赖准备方式与可替换的缓存路径；若 CI 依赖不全，`windows` job 会明确失败而不会产出残缺包。
+Windows 依赖由 `msys2/setup-msys2@v2` 在 UCRT64 下安装（QCA 包名是 `qca-qt6`，
+LDAP/SASL 是 `openldap` / `cyrus-sasl`）；3rdparty 按上游 v4.11.4 的 gitlink SHA 精确检出。
+详见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md) 路线 D。
 
-> **本仓库当前不包含预编译二进制**（`dist/`、`*.apk`、发布 ZIP 均已由根 `.gitignore` 排除）。
+另外 [`../../.github/workflows/classkeep-windows.yml`](../../.github/workflows/classkeep-windows.yml)
+可单独手动触发，只做 Windows 编译验证（产出 `classkeep-windows-binaries` artifact）。
+
+> 仓库内**不提交预编译二进制**（`dist/`、`*.apk`、发布 ZIP 均由根 `.gitignore` 排除）。
 >
-> **v1.0.0 Release 现状（三类产物全部有内容）**：
->
-> | 产物 | 文件 | 说明 |
-> |---|---|---|
-> | APP | `ClassKeep-Mobile-1.0.0.apk` | 本机实测编译，`assembleDebug` + 单测通过；debug 内测包 |
-> | 教师端 | `ClassKeep-Teacher-1.0.0-win64-preset.zip` | 部署预设包（配置/脚本/文档/许可） |
-> | 学生端 | `ClassKeep-Student-1.0.0-win64-preset.zip` | 部署预设包 |
-> | 校验 / 说明 | `SHA256SUMS.txt`、`RELEASE-NOTES.md` | 覆盖全部已上传产物 |
->
-> **完整二进制 ZIP 仍未附带**：开发机缺 Qt 6 / QCA / LibVNC / CMake，无法本地编译桌面端。
-> 这两类由 CI 产出，或按上一节在有工具链的机器上用 `scripts/package-classkeep.ps1` 生成后追加到该 Release。
-> **不提供任何占位包、空包或伪造二进制**；预设包已明确标注不含可执行文件，
-> 所有产物状态在 Release 说明中逐项列出。
+> 版本历史：`v1.0.0` 附带的是 `-preset` 部署配置包；自 `v1.1.0` 起，
+> **教师端 / 学生端 / APP 三类产物全部由 GitHub Actions 真实编译**，
+> `SHA256SUMS.txt` 覆盖三者。不含任何占位包、空包或伪造二进制。
 
 ---
 

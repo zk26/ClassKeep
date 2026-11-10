@@ -51,18 +51,18 @@ G:\veyon\  (= 仓库根)
 [`veyon/docs/CLASSKEEP-RELEASE.md`](veyon/docs/CLASSKEEP-RELEASE.md)。
 
 > 仓库内**不提交预编译二进制**。三类产物由
-> [发布工作流](veyon/.github/workflows/classkeep-release.yml) 在推送 `v*` tag 时于云端构建并发布；
-> 也可在有工具链的机器上用 [`scripts/package-classkeep.ps1`](veyon/scripts/package-classkeep.ps1) 本地打包。
+> [发布工作流](.github/workflows/classkeep-release.yml) 在推送 `v*` tag 或手动触发时于云端**真实编译并发布**：
 >
-> **[v1.0.0 Release](https://github.com/zk26/ClassKeep/releases/tag/v1.0.0) 三类产物全部有内容**：
-> 本机实测编译的 `ClassKeep-Mobile-1.0.0.apk`（debug 内测包）、
-> `ClassKeep-Teacher-1.0.0-win64-preset.zip`、`ClassKeep-Student-1.0.0-win64-preset.zip`，
-> 以及 `SHA256SUMS.txt` / `RELEASE-NOTES.md`。
+> | Job | 环境 | 产出 |
+> |---|---|---|
+> | `android` | Ubuntu 24.04 + JDK 21 | `ClassKeep-Mobile-<ver>.apk` |
+> | `windows` | Windows + MSYS2 UCRT64 + Qt6/MinGW | `veyon-master.exe` / `veyon-service.exe` / `classroom.dll` 等 |
+> | `package` | Windows | 组装教师端 / 学生端 ZIP + 校验 |
 >
-> 两个 `-preset` 包是**部署预设包**（配置模板、安装脚本、全套文档与许可文件），
-> 包内首行明确标注**不含 Veyon / 课守二进制**——开发机缺 Qt 6 / QCA / LibVNC / CMake，
-> 无法本地编译桌面端。完整二进制 ZIP 由 CI 或 `scripts/package-classkeep.ps1` 在有工具链的机器上补上。
-> **不含任何占位包、空包或伪造二进制**，Release 说明中逐项标注了每类产物的状态。
+> **自 v1.1.0 起三类产物全部是真实编译的**，不含占位包或伪造二进制。
+> `v1.0.0` 曾附带 `-preset` 部署配置包（当时 CI 尚未支持 Windows 编译），现已由完整二进制包取代；
+> `package-presets.ps1` 仍保留用于无工具链环境的离线配置部署。
+> Windows 编译路线见 [`CLASSKEEP-BUILD.md` 路线 D](veyon/docs/CLASSKEEP-BUILD.md)。
 
 ---
 
@@ -143,9 +143,12 @@ cd veyon
 
 ## 6. 状态
 
-- Android 端：`assembleDebug` 与 `testDebugUnitTest` 已在本机实测通过。
-- 桌面端：代码经静态复核，**尚未真实编译**（开发机缺 Qt/CMake 等工具链）。
-- 首次在有完整工具链的机器上编译如遇报错，请通过仓库 Issues 反馈。
+- Android 端：本机与 GitHub Actions 均实测通过（`assembleDebug` + `testDebugUnitTest`）。
+- 桌面端 Linux/Qt6/GCC：**ClassKeep Build Check 全绿**，`classroom.so` 编译链接成功。
+- 桌面端 Windows/Qt6/MinGW：**ClassKeep Windows Build 全绿**，`classroom.dll` 与
+  `veyon-master.exe` / `veyon-service.exe` 等全部编译成功，UWF / Core Audio / WFP 专属代码已过编译器。
+- 仍未完成：在真实 UWF 学生机上的**安装联调**与功能验证（需实际机房环境）。
+- 编译或部署如遇报错，请通过仓库 Issues 反馈。
 
 ---
 

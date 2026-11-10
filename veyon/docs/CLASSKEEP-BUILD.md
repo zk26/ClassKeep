@@ -22,7 +22,7 @@
 | Workflow | 作用 | 当前状态 |
 |---|---|---|
 | **ClassKeep Build Check** | Linux/Qt6/GCC 全量验证课守插件，产出 `classroom.so` | ✅ 已跑通，两个 job 全绿 |
-| **ClassKeep Windows Build** | MSYS2 UCRT64/MinGW 产出真实 Windows `.exe`/`.dll` | 见路线 D |
+| **ClassKeep Windows Build** | MSYS2 UCRT64/MinGW 产出真实 Windows `.exe`/`.dll` | ✅ 已跑通 |
 | **ClassKeep Release** | 汇总 APK + 教师端/学生端包，自动发 Release | 见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) |
 
 ---
@@ -156,8 +156,20 @@ workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Bui
   这里改为显式 `--target classroom` 并自行收集 DLL。
 - `classroom` 目标会连带编译 `veyon-core`，因此 **UWF / Core Audio / WFP 这些 Windows 专属实现会被真正编译**。
 
-产出 `classroom.dll` 后，即可用 `scripts/package-classkeep.ps1` 组装教师端 / 学生端 ZIP
-（详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md)）。
+实际产出（已验证）：
+
+```
+classroom.dll                       课守插件（含 UWF / Core Audio / WFP 实现）
+veyon-core.dll
+veyon-master.exe / veyon-configurator.exe / veyon-cli.exe     教师端
+veyon-service.exe / veyon-server.exe / veyon-worker.exe       学生端
+Qt6*.dll / libqca-qt6.dll / libvncclient.dll / CRT 运行时
+platforms/ styles/ tls/ imageformats/                       Qt 插件
+```
+
+`classkeep-release.yml` 内联了同一套 Windows 编译步骤，把上述产物分别复制成
+`teacher/` 与 `student/` 两个目录，再用 `scripts/package-classkeep.ps1`
+组装教师端 / 学生端 ZIP（详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md)）。
 
 ---
 

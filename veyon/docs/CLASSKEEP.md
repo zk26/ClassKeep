@@ -156,8 +156,12 @@ cd mobile
 
 - **Android 端已实测编译通过**：`:app:assembleDebug` 与 `:app:testDebugUnitTest` 均 `BUILD SUCCESSFUL`，
   产出 `app-debug.apk`；本机需 JDK 21+（实测 JDK 23）与 Android SDK。
-- **桌面端尚未真实编译**：开发机缺 Qt 6 / QCA / LibVNC / CMake，代码仅经静态复核。
-  首次在有完整工具链的机器上编译如遇报错请通过 Issues 反馈。
+- **桌面端 Linux/Qt6/GCC 已真实编译通过**：`ClassKeep Build Check` 产出 `classroom.so`。
+- **桌面端 Windows/Qt6/MinGW 已真实编译通过**：`ClassKeep Windows Build` 产出 `classroom.dll` 与
+  教师端/学生端全部 `.exe`，UWF / Core Audio / WFP 的 Windows 专属实现均已过编译器。
+  详见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。
+- 开发机本身仍缺 Qt/CMake 工具链；以上编译均在 GitHub Actions 上完成。
+- 尚未完成：真实 UWF 学生机上的安装联调与功能验证（需实际机房环境）。
 - UWF 仅存在于 Windows 10/11 **企业版、教育版、IoT 企业版**；专业版/家庭版不支持。
 - `uwfmgr filter enable/disable` 是「排队到下次会话」，必须**重启**才生效，且不能用「关机再开机」代替（快速启动）。
 - Bridge 认证依赖每堂课密钥；教师机未生成密钥时所有数据/控制接口 fail-closed 返回 401。
