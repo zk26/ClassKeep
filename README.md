@@ -53,8 +53,11 @@ G:\veyon\  (= 仓库根)
 > 仓库内**不提交预编译二进制**。三类产物由
 > [发布工作流](veyon/.github/workflows/classkeep-release.yml) 在推送 `v*` tag 时于云端构建并发布；
 > 也可在有工具链的机器上用 [`scripts/package-classkeep.ps1`](veyon/scripts/package-classkeep.ps1) 本地打包。
-> Android 端已在本机实测编译通过（`:app:assembleDebug` + 单元测试全部成功）；
-> 桌面端需要 Qt 6 / QCA / LibVNC / CMake，当前开发机不具备这些工具链。
+>
+> **[v1.0.0 Release](https://github.com/zk26/ClassKeep/releases/tag/v1.0.0)** 已附带本机实测编译的
+> `ClassKeep-Mobile-1.0.0.apk`（debug 内测包）、`SHA256SUMS.txt` 与发布说明。
+> 教师端与学生端 ZIP **暂未附带**（开发机缺 Qt 6 / QCA / LibVNC / CMake，无法本地编译），
+> 由 CI 或上述打包脚本补上；Release 说明中已逐项标注状态，**不含任何占位或伪造产物**。
 
 ---
 

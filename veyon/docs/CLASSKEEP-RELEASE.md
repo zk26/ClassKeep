@@ -115,8 +115,13 @@ app-release.apk（或 unsigned debug APK，见下）
 Windows job 需要先备好 Veyon 的第三方依赖（QCA、LibVNC、libjpeg、LZO、zlib、OpenSSL 等）。
 workflow 中已写明依赖准备方式与可替换的缓存路径；若 CI 依赖不全，`windows` job 会明确失败而不会产出残缺包。
 
-> **本仓库当前不包含预编译二进制**。开发机若无 Qt/CMake 或 JDK 21/Android SDK，
-> 请用 CI 产出，或在装有工具链的机器上执行 `scripts/package-classkeep.ps1` 后手动上传 Release。
+> **本仓库当前不包含预编译二进制**（`dist/`、`*.apk`、发布 ZIP 均已由根 `.gitignore` 排除）。
+>
+> **v1.0.0 Release 现状**：已附带本机实测编译的 `ClassKeep-Mobile-1.0.0.apk`（debug 内测包）、
+> `SHA256SUMS.txt` 与 `RELEASE-NOTES.md`；教师端与学生端 ZIP **尚未附带**，因为开发机缺
+> Qt 6 / QCA / LibVNC / CMake，无法本地编译。这两类由 CI 产出，或按上一节在有工具链的机器上
+> 用 `scripts/package-classkeep.ps1` 生成后手动上传到该 Release。
+> **不提供任何占位包、空包或伪造产物**；缺失的产物在 Release 说明中明确标注状态。
 
 ---
 
