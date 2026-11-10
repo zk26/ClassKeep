@@ -18,26 +18,28 @@ permissions:
 jobs:
   # ------------------------------------------------------------------ desktop
   desktop-linux:
-    name: Compile desktop (Linux / Qt5 / GCC)
-    runs-on: ubuntu-22.04
+    name: Compile desktop (Linux / Qt6 / GCC)
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
-      # Upstream Veyon builds with Qt5 + bundled LibVNC on Debian/Ubuntu.
-      # Qt6 + MSVC is NOT a valid combination for this CMake project:
-      # it hardcodes GCC flags (-Wno-attributes, -fno-exceptions, -Wl,-no-undefined,
-      # -lws2_32, -mwindows) and its Windows installer target needs a MinGW prefix.
+      # Qt6 is MANDATORY: several upstream plugins (filetransfer) are Qt6-only
+      # (QUuid completeness, QCoreApplication::setQuitOnLastWindowClosed).
+      # The Qt5 route from the old Debian 11 CI fails on those files in 4.11.4.
+      # MSVC is NOT an option: this CMake hardcodes GCC flags and its Windows
+      # installer target needs a MinGW prefix. Package list matches upstream
+      # .ci/linux.ubuntu.24.04/Dockerfile.
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
             build-essential cmake ninja-build git ca-certificates pkg-config \
-            qtbase5-dev qtbase5-private-dev qtbase5-dev-tools \
-            qttools5-dev qttools5-dev-tools \
-            libqca-qt5-2-dev libqca-qt5-2-plugins \
+            qt6-base-dev qt6-5compat-dev qt6-l10n-tools qt6-tools-dev \
+            qt6-declarative-dev qt6-httpserver-dev qt6-websockets-dev \
+            libqca-qt6-dev libqca-qt6-plugins \
             libssl-dev zlib1g-dev libjpeg-dev libpng-dev liblzo2-dev \
-            libpam0g-dev libprocps-dev libldap2-dev libsasl2-dev \
+            libpam0g-dev libproc2-dev libldap2-dev libsasl2-dev \
             libfakekey-dev xorg-dev libvncserver-dev \
             libpipewire-0.3-dev libspa-0.2-dev \
             libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
@@ -45,8 +47,8 @@ jobs:
       # The repository root has no .gitmodules (the Veyon tree is a subdirectory),
       # so actions/checkout with submodules:recursive cannot fetch these.
       # Pin every 3rdparty checkout to the exact gitlink recorded in upstream
-      # veyon/veyon v4.11.4. Cloning HEAD breaks the build: e.g. current KDE
-      # kldap master is Qt6-only and fails against Qt5 (`Qt::Literals` / `_L1`).
+      # veyon/veyon v4.11.4. Cloning HEAD pulls a different kldap revision and
+      # breaks the build. Qt6 builds use `kldap`, Qt5 builds `kldap-qt5`.
       - name: Fetch Veyon 3rdparty sources (pinned to v4.11.4)
         run: |
           set -e
@@ -64,14 +66,14 @@ jobs:
           fetch libvncserver https://github.com/veyon/libvncserver.git 30860286c0f55674a846df9cab458da9afd1735b
           fetch x11vnc       https://github.com/veyon/x11vnc.git       c1e38369e2c601df7ab894c378df0cc2380a1ede
           fetch libfakekey   https://github.com/veyon/libfakekey.git    7ad885912efb2131e80914e964d5e635b0d07b40
-          fetch kldap-qt5    https://invent.kde.org/pim/kldap.git      27bf9afbf5fb0bc587e7d707c3ea10845dcfdf34
+          fetch kldap        https://invent.kde.org/pim/kldap.git      2002b2c4ec81d05eb0fc5b2106ef112d404f5cea
 
       - name: Configure
         run: |
           set -o pipefail
           cmake -S veyon -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DWITH_QT6=OFF \
+            -DWITH_QT6=ON \
             -DWITH_BUNDLED_LIBVNC=ON \
             -DWITH_WEBAPI=OFF \
             -DWITH_TRANSLATIONS=OFF \

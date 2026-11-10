@@ -27,7 +27,7 @@
 
 | Job | 环境 | 做什么 |
 |---|---|---|
-| `desktop-linux` | `ubuntu-22.04` + 上游 Debian 11 那套 Qt5/QCA 依赖 | **全量编译 Veyon + 课守插件**，产出 `classroom.so` 与完整编译日志 |
+| `desktop-linux` | `ubuntu-24.04` + 上游 Ubuntu 24.04 那套 **Qt6**/QCA 依赖 | **全量编译 Veyon + 课守插件**，产出 `classroom.so` 与完整编译日志 |
 | `android` | `ubuntu-latest` + JDK 21 | `:app:assembleDebug` + `:app:testDebugUnitTest`（本机已验证可行） |
 
 ### 你现在的操作
@@ -41,20 +41,24 @@
 
 ### 它用的确切配置
 
+> **Qt6 是必需的**。Veyon 4.11.4 的 `plugins/filetransfer` 是 Qt6-only
+> （`QUuid` 完整性、`QCoreApplication::setQuitOnLastWindowClosed`），
+> Qt5 路线会在那里失败。依赖清单照搬上游 `.ci/linux.ubuntu.24.04/Dockerfile`。
+
 ```bash
-# 依赖（与上游 .ci/linux.debian.11/Dockerfile 一致）
+# 依赖（Ubuntu 24.04 / noble，Qt6）
 sudo apt-get install -y build-essential cmake ninja-build git pkg-config \
-  qtbase5-dev qtbase5-private-dev qtbase5-dev-tools qttools5-dev qttools5-dev-tools \
-  libqca-qt5-2-dev libqca-qt5-2-plugins \
+  qt6-base-dev qt6-5compat-dev qt6-l10n-tools qt6-tools-dev \
+  qt6-declarative-dev qt6-httpserver-dev qt6-websockets-dev \
+  libqca-qt6-dev libqca-qt6-plugins \
   libssl-dev zlib1g-dev libjpeg-dev libpng-dev liblzo2-dev \
-  libpam0g-dev libprocps-dev libldap2-dev libsasl2-dev \
+  libpam0g-dev libproc2-dev libldap2-dev libsasl2-dev \
   libfakekey-dev xorg-dev libvncserver-dev \
   libpipewire-0.3-dev libspa-0.2-dev \
   libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 
 # 3rdparty（根仓库没有 .gitmodules，必须显式 clone）
-# 必须检出上游 veyon/veyon v4.11.4 锁定的 commit，直接 clone HEAD 会编译失败：
-# 当前 KDE kldap master 是 Qt6-only，Qt5 构建会报 `Qt::Literals` / `_L1` / `QLatin1StringView` 未定义。
+# 必须检出上游 veyon/veyon v4.11.4 锁定的 commit，直接 clone HEAD 会拉到不同版本的 kldap 而编译失败。
 fetch() {
   git init -q "veyon/3rdparty/$1"
   git -C "veyon/3rdparty/$1" remote add origin "$2"
@@ -64,32 +68,30 @@ fetch() {
 fetch libvncserver https://github.com/veyon/libvncserver.git 30860286c0f55674a846df9cab458da9afd1735b
 fetch x11vnc       https://github.com/veyon/x11vnc.git       c1e38369e2c601df7ab894c378df0cc2380a1ede
 fetch libfakekey   https://github.com/veyon/libfakekey.git    7ad885912efb2131e80914e964d5e635b0d07b40
-fetch kldap-qt5    https://invent.kde.org/pim/kldap.git      27bf9afbf5fb0bc587e7d707c3ea10845dcfdf34
+fetch kldap        https://invent.kde.org/pim/kldap.git      2002b2c4ec81d05eb0fc5b2106ef112d404f5cea
 
-# 这些 SHA 来自 https://api.github.com/repos/veyon/veyon/git/trees/v4.11.4?recursive=1
-# 其余三个（kldap / qthttpserver / ultravnc）只在 Qt6 / WebAPI / Windows 构建里用到。
+# SHA 来源：https://api.github.com/repos/veyon/veyon/git/trees/v4.11.4?recursive=1
+# Qt5 路线才用 kldap-qt5(27bf9afb...)；qthttpserver / ultravnc 只在 WebAPI(Qt5回退) / Windows 里用。
 ```
 
+```bash
 cmake -S veyon -B build -G Ninja \
   -DCMAKE_BUILD_TYPE=Debug \
-  -DWITH_QT6=OFF -DWITH_BUNDLED_LIBVNC=ON \
+  -DWITH_QT6=ON -DWITH_BUNDLED_LIBVNC=ON \
   -DWITH_WEBAPI=OFF -DWITH_TRANSLATIONS=OFF \
   -DWITH_LTO=OFF -DWITH_PCH=OFF -DWITH_UNITY_BUILD=OFF \
   -DWITH_STACK_PROTECTION=OFF -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF \
   -DCMAKE_SKIP_INSTALL_RULES=ON \
-  -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion -include cmath"
+  -DCMAKE_CXX_FLAGS="-include cmath"
 cmake --build build --parallel 4
 ```
 
-`-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion -include cmath"` 用于 Ubuntu 22.04 的 GCC 11+：
+`-DCMAKE_CXX_FLAGS="-include cmath"` 是因为上游 `core/src/Toast.cpp` 用了 `floor()` / `ceil()`
+却没包含 `<cmath>`，旧 Qt 会间接带入、新 Qt/GCC 不会——属于上游的环境差异，不是课守代码问题。
 
-- Qt5 的 `qsizepolicy.h` 会触发 `deprecated-enum-enum-conversion` 警告，而 Veyon 全局开了
-  `-Wall -Werror`（`SetDefaultTargetProperties.cmake:16`），连**上游自己的 `AboutDialog.cpp`** 都编不过；
-- 上游 `core/src/Toast.cpp` 用了 `floor()` / `ceil()` 却没包含 `<cmath>`，旧 Qt 会间接带入，新 GCC 不会。
-
-Debian 11 / GCC 10 两者都不会出现，所以上游 CI 不需要这些豁免。
-**这是环境差异，不是课守代码的问题**；若还有类似的 Qt5/GCC 版本差异，最省事的做法是
-把 job 换成 `container: debian:bullseye`（与上游 `.ci/linux.debian.11/Dockerfile` 完全一致）。
+**Qt5 路线已实测失败，不要再试**：Ubuntu 22.04 + Qt5 会依次遇到
+`qsizepolicy.h` 的 `-Werror=deprecated-enum-enum-conversion`、`Toast.cpp` 缺 `<cmath>`、
+kldap master 的 Qt6-only 符号，最后卡在 `plugins/filetransfer`（Qt6-only API）。
 
 `-DCMAKE_SKIP_INSTALL_RULES=ON` 是必需的：bundled LibVNC 的 `vncclient` / `vncserver`
 把源码目录写进了 `INTERFACE_INCLUDE_DIRECTORIES`，Veyon 的 `install(TARGETS ...)`
@@ -102,10 +104,10 @@ Debian 11 / GCC 10 两者都不会出现，所以上游 CI 不需要这些豁免
 
 参数解释：
 
-- `WITH_QT6=OFF`：Windows 平台插件强制 Qt6，但**Linux 构建不进入该插件**，Qt5 依赖在 Ubuntu 上最齐全（上游 debian.11 CI 就是 Qt5）。
-- `WITH_BUNDLED_LIBVNC=ON`：免掉系统 `libvncserver >= 0.9.14`（Ubuntu 22.04 版本偏低）。
+- `WITH_QT6=ON`：**必须**。`plugins/filetransfer` 等上游插件是 Qt6-only；Windows 平台插件还无条件 `find_package(Qt6 GuiPrivate)`。
+- `WITH_BUNDLED_LIBVNC=ON`：免掉系统 `libvncserver >= 0.9.14`（发行版自带版本偏低）。
   注意它会连带把 `WITH_TESTS` 置 OFF（`CMakeLists.txt:199`），所以 `ClassroomSelfTest` 在这个配置下不会构建。
-- `WITH_WEBAPI=OFF` / `WITH_TRANSLATIONS=OFF`：免 `Qt5HttpServer` 与 LinguistTools；课守 Bridge 只用 `QTcpServer/QUdpSocket`，不依赖 WebAPI。
+- `WITH_WEBAPI=OFF` / `WITH_TRANSLATIONS=OFF`：免 `Qt6::HttpServer` 与 LinguistTools 的额外要求；课守 Bridge 只用 `QTcpServer/QUdpSocket`，不依赖 WebAPI。
 - `WITH_UNITY_BUILD=OFF`：让每个 `.cpp` 单独编译，最容易暴露真实错误。
 - `WITH_CORE_ONLY=OFF`：**必须**，否则整个 `plugins/`（含课守）都不会构建。
 
@@ -213,17 +215,18 @@ cd G:\veyon
 
 | 报错 | 原因 | 处理 |
 |---|---|---|
-| `Could not find a package configuration file provided by "Qca-qt6"` | QCA-Qt6 未装 / 不在 `CMAKE_PREFIX_PATH` | 路线 B 第 2.2 步；或路线 A 用 Qt5 的 `libqca-qt5-2-dev` |
+| `Could not find a package configuration file provided by "Qca-qt6"` | QCA-Qt6 未装 / 不在 `CMAKE_PREFIX_PATH` | 路线 A 装 `libqca-qt6-dev`；路线 B 见第 2.2 步自编 |
 | `LibVNCServer or LibVNCClient not found` | 系统 LibVNC < 0.9.14 | `-DWITH_BUNDLED_LIBVNC=ON` + clone `3rdparty/libvncserver` |
 | `Cannot find source file .../3rdparty/kldap...` | 子模块为空 | 显式 clone（根仓库没有 `.gitmodules`） |
-| `Qt6::GuiPrivate` / `Qt6::HttpServer` 找不到 | Qt 模块不全，或 Windows 下用了 Qt5 | Linux 用 `WITH_QT6=OFF`；Windows 装 `qt6-httpserver` 与 qtbase 私有头 |
+| `Qt6::GuiPrivate` / `Qt6::HttpServer` 找不到 | Qt6 模块不全 | 装 `qt6-base-private-dev` / `qt6-httpserver-dev`；或 `-DWITH_WEBAPI=OFF`。**不要退回 Qt5** |
 | MSVC 报 `D9002 ignoring unknown option -Wno-attributes` | 用了 Visual Studio 生成器 | 必须 `-G Ninja` + MinGW GCC |
 | `WITH_BUNDLED_LIBVNC=ON` 后 `ClassroomSelfTest` 不构建 | `CMakeLists.txt:199` 会强制 `WITH_TESTS=OFF` | 想跑自检需 `-DWITH_BUNDLED_LIBVNC=OFF` 且系统 LibVNC ≥ 0.9.14 |
 | `INTERFACE_INCLUDE_DIRECTORIES ... is prefixed in the source directory` | bundled LibVNC 的 include 路径与 Veyon `install(TARGETS)` 冲突 | 加 `-DCMAKE_SKIP_INSTALL_RULES=ON`（只编译不安装） |
 | `ninja: error: loading 'build.ninja': No such file or directory` | 上一条 CMake 错误导致未生成构建文件 | 看 `configure.log`；同时确认 `tee` 步骤有 `set -o pipefail` |
 | `sdkmanager failed with exit code 1`（Android CI） | `android-actions/setup-android@v3` 覆盖 runner 预装的 cmdline-tools 版本 | 去掉该 action，用 runner 自带 SDK + `sdkmanager --licenses`，让 AGP 自动装 platform |
 | `classroom.dll` 没生成 | `-DWITH_CORE_ONLY=ON` 跳过了 `plugins/` | 设为 OFF；`plugins/CMakeLists.txt` 是 GLOB，改插件后需重新跑 CMake |
-| `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里） | clone 了 KDE kldap 最新 master（Qt6-only），但 `WITH_QT6=OFF` 需要 Qt5 版本 | 按上游 v4.11.4 的 gitlink SHA 精确检出 `kldap-qt5`（见上文 fetch 脚本） |
+| `plugins/filetransfer`: `QUuid` incomplete / `QCoreApplication::setQuitOnLastWindowClosed` 不存在 | 上游该插件是 **Qt6-only**，Qt5 编不过 | 必须 `WITH_QT6=ON`；Qt5 路线在 4.11.4 不可行 |
+| `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里，仅 Qt5 路线） | clone 了 KDE kldap 最新 master 而非锁定版本 | 按 v4.11.4 的 gitlink SHA 精确检出；或直接用本方案的 Qt6 `kldap` |
 | `qsizepolicy.h: bitwise operation between different enumeration types ... [-Werror=deprecated-enum-enum-conversion]` | Ubuntu 22.04 的 GCC 11+ 对 Qt5 头文件产生新警告，被 Veyon 的 `-Werror` 放大；连上游 `AboutDialog.cpp` 都失败 | 加 `-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"`，或改用 Debian 11 / GCC 10 容器 |
 | 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
 
