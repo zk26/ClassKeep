@@ -176,62 +176,64 @@ platforms/ styles/ tls/ imageformats/                       Qt 插件
 ## 2. 路线 B：本机 Windows 编译出真正的教师端 / 学生端
 
 需要 **MSYS2 + MinGW-w64 GCC**（不是 Visual Studio）。
+**最简单的做法是照抄路线 D 的 workflow**——那份配置已在 GitHub Actions 上实测跑通，
+直接在本机 MSYS2 UCRT64 里执行同样的命令即可。
 
-### 2.1 准备工具链
-
-```powershell
-# 1) 安装 MSYS2（https://www.msys2.org/），然后：
-C:\msys64\usr\bin\pacman.exe -Syu
-C:\msys64\usr\bin\pacman.exe -S --needed `
-  mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja `
-  mingw-w64-x86_64-qt6-base mingw-w64-x86_64-qt6-5compat `
-  mingw-w64-x86_64-qt6-tools mingw-w64-x86_64-qt6-translations `
-  mingw-w64-x86_64-qt6-httpserver mingw-w64-x86_64-qt6-websockets `
-  mingw-w64-x86_64-openssl mingw-w64-x86_64-zlib `
-  mingw-w64-x86_64-libjpeg-turbo mingw-w64-x86_64-libpng mingw-w64-x86_64-lzo `
-  mingw-w64-x86_64-libvncserver mingw-w64-x86_64-cyrus-sasl `
-  mingw-w64-x86_64-openldap mingw-w64-x86_64-pkgconf `
-  git make nsis
-```
-
-### 2.2 QCA-Qt6（最麻烦的一步，必须自己做）
-
-Veyon 要 `find_package(Qca-qt6 REQUIRED)` + `target_link_libraries(... qca-qt6)`，
-**MSYS2 没有现成的 `mingw-w64-x86_64-qca-qt6` 包**。需要用同一套 Qt6/MinGW 从源码编译 QCA：
+### 2.1 准备工具链（UCRT64）
 
 ```bash
-git clone https://invent.kde.org/utilities/qca.git
-cd qca && mkdir build && cd build
-/mingw64/bin/qt-cmake .. -G Ninja -DQT6=ON -DBUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/mingw64
-ninja && ninja install
-# 确认生成 /mingw64/lib/cmake/Qca-qt6/Qca-qt6Config.cmake
-#        以及 /mingw64/bin/libqca-qt6.dll、/mingw64/lib/qca-qt6/crypto/libqca-ossl.dll
+# 用 MSYS2 UCRT64 终端（不是 MINGW64）：QCA / LibVNC 只发布到 ucrt64 / clang64
+pacman -Syu
+pacman -S --needed \
+  git base-devel \
+  mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake \
+  mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf \
+  mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-5compat \
+  mingw-w64-ucrt-x86_64-qt6-tools mingw-w64-ucrt-x86_64-qt6-httpserver \
+  mingw-w64-ucrt-x86_64-qt6-websockets \
+  mingw-w64-ucrt-x86_64-qca-qt6 \
+  mingw-w64-ucrt-x86_64-libvncserver mingw-w64-ucrt-x86_64-openssl \
+  mingw-w64-ucrt-x86_64-zlib mingw-w64-ucrt-x86_64-libjpeg-turbo \
+  mingw-w64-ucrt-x86_64-libpng mingw-w64-ucrt-x86_64-lzo2 \
+  mingw-w64-ucrt-x86_64-openldap mingw-w64-ucrt-x86_64-cyrus-sasl
 ```
+
+> 实测踩过的坑：包名是 **`qca-qt6` / `openldap` / `cyrus-sasl` / `lzo2`**，
+> 不是 `qca` / `libldap` / `libsasl` / `lzo`；MSYS2 也没有 `qt-cmake` wrapper，
+> 用普通 `cmake -DCMAKE_PREFIX_PATH=/ucrt64` 即可。
+
+### 2.2 QCA-Qt6 不需要自己编译
+
+早期判断有误：MSYS2 UCRT64 **有现成的 `mingw-w64-ucrt-x86_64-qca-qt6` 包**，
+它会提供 `Qca-qt6Config.cmake`、`libqca-qt6.dll` 与 `crypto/libqca-ossl.dll`。
+只有在使用非 MSYS2 的 Qt6（例如官方 Qt 安装器）时才需要从源码编 QCA。
 
 ### 2.3 补齐 3rdparty 并编译
 
-```bash
-cd /g/veyon
-# 与路线 A 相同，另加 Windows 专用：
-git clone --depth 1 https://github.com/veyon/ultravnc.git veyon/3rdparty/ultravnc
-# ... 其余同路线 A
+按路线 A/D 的 `fetch()` 脚本检出上游 v4.11.4 锁定的 3rdparty
+（Windows 另需 `ultravnc`、`qthttpserver`），然后在 UCRT64 终端：
 
+```bash
 cmake -S veyon -B build -G Ninja \
-  -DCMAKE_C_COMPILER=/mingw64/bin/gcc -DCMAKE_CXX_COMPILER=/mingw64/bin/g++ \
-  -DCMAKE_PREFIX_PATH=/mingw64 \
-  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-  -DWITH_QT6=ON -DWITH_BUNDLED_LIBVNC=OFF \
+  -DCMAKE_PREFIX_PATH=/ucrt64 \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DWITH_QT6=ON -DWITH_BUNDLED_LIBVNC=ON \
   -DWITH_WEBAPI=OFF -DWITH_TRANSLATIONS=OFF \
   -DWITH_LTO=OFF -DWITH_PCH=OFF -DWITH_UNITY_BUILD=OFF \
-  -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF
-cmake --build build --parallel 4
+  -DWITH_STACK_PROTECTION=OFF -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF \
+  -DCMAKE_SKIP_INSTALL_RULES=ON \
+  -DCMAKE_CXX_FLAGS="-include cmath"
+cmake --build build --parallel 4 --target \
+  classroom veyon-master veyon-configurator veyon-cli \
+  veyon-service veyon-server veyon-worker
 ```
 
-> `windows-binaries` / `create-windows-installer` 这两个 target 依赖 `${MINGW_PREFIX}`、
-> `/usr/lib/gcc/<target>/<ver>-posix` 等写死的交叉编译路径（`WindowsInstaller.cmake:6`），
-> 在原生 MSYS2 下路径不同，**建议先只做 `cmake --build build` 拿到 `classroom.dll`**，
-> 运行时 DLL 按 `WindowsInstaller.cmake:29-62` 的清单手工收集，再用
-> `scripts/package-classkeep.ps1` 组装教师端/学生端 ZIP。
+> **不要跑全量 `cmake --build build`**（会撞上损坏的上游 `filetransfer` 插件），
+> 也不要用 `windows-binaries` / `create-windows-installer` target：
+> `WindowsInstaller.cmake` 写死了 Linux 交叉编译路径（`${MINGW_PREFIX}`、
+> `/usr/lib/gcc/<target>/<ver>-posix`），原生 MSYS2 下不适用。
+> 运行时 DLL 与 Qt 插件的收集命令可直接照抄
+> [`classkeep-windows.yml`](../../.github/workflows/classkeep-windows.yml) 的 `Collect` 步骤。
 
 ### 2.4 组装产物
 

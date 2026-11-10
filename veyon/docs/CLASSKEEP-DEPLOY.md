@@ -31,8 +31,13 @@
 
 ```bash
 cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
-cmake --build build
+cmake --build build --target classroom veyon-master veyon-configurator \
+                    veyon-service veyon-server veyon-worker
 ```
+
+> 必须显式列出目标，**不要**跑全量 `cmake --build build`：
+> 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都编不过（缺 `<QUuid>`、`qApp` 类型）。
+> 详见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。
 
 若只想先验证代码能否编译，直接用 GitHub Actions 的 **ClassKeep Build Check**（Linux/Qt5/GCC），
 无需在本机装整套 MinGW 工具链。
