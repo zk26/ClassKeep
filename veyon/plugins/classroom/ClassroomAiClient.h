@@ -28,7 +28,7 @@ public:
 		QString systemPrompt;
 		int timeout = 60;
 
-		static Settings fromJson( const QJsonObject& object, const Settings& fallback = Settings{} );
+		static Settings fromJson( const QJsonObject& object, const Settings& fallback );
 		QJsonObject toJson() const;
 	};
 
