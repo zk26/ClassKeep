@@ -77,15 +77,19 @@ cmake -S veyon -B build -G Ninja \
   -DWITH_LTO=OFF -DWITH_PCH=OFF -DWITH_UNITY_BUILD=OFF \
   -DWITH_STACK_PROTECTION=OFF -DWITH_TESTS=OFF -DWITH_CORE_ONLY=OFF \
   -DCMAKE_SKIP_INSTALL_RULES=ON \
-  -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"
+  -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion -include cmath"
 cmake --build build --parallel 4
 ```
 
-`-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"` 用于 Ubuntu 22.04 的 GCC 11+：
-Qt5 的 `qsizepolicy.h` 会触发 `deprecated-enum-enum-conversion` 警告，
-而 Veyon 全局开了 `-Wall -Werror`（`SetDefaultTargetProperties.cmake:16`），
-导致连**上游自己的 `AboutDialog.cpp`** 都编不过。Debian 11 的 GCC 10 没有这个警告，
-所以上游 CI 不需要它。这是环境差异，不是课守代码的问题。
+`-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion -include cmath"` 用于 Ubuntu 22.04 的 GCC 11+：
+
+- Qt5 的 `qsizepolicy.h` 会触发 `deprecated-enum-enum-conversion` 警告，而 Veyon 全局开了
+  `-Wall -Werror`（`SetDefaultTargetProperties.cmake:16`），连**上游自己的 `AboutDialog.cpp`** 都编不过；
+- 上游 `core/src/Toast.cpp` 用了 `floor()` / `ceil()` 却没包含 `<cmath>`，旧 Qt 会间接带入，新 GCC 不会。
+
+Debian 11 / GCC 10 两者都不会出现，所以上游 CI 不需要这些豁免。
+**这是环境差异，不是课守代码的问题**；若还有类似的 Qt5/GCC 版本差异，最省事的做法是
+把 job 换成 `container: debian:bullseye`（与上游 `.ci/linux.debian.11/Dockerfile` 完全一致）。
 
 `-DCMAKE_SKIP_INSTALL_RULES=ON` 是必需的：bundled LibVNC 的 `vncclient` / `vncserver`
 把源码目录写进了 `INTERFACE_INCLUDE_DIRECTORIES`，Veyon 的 `install(TARGETS ...)`

@@ -82,7 +82,7 @@ jobs:
             -DWITH_TESTS=OFF \
             -DWITH_CORE_ONLY=OFF \
             -DCMAKE_SKIP_INSTALL_RULES=ON \
-            -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion" 2>&1 | tee configure.log
+            -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion -include cmath" 2>&1 | tee configure.log
 
       - name: Build
         run: |
