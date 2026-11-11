@@ -7,8 +7,10 @@
         <item name="android:colorBackground">@color/ck_background</item>
         <item name="android:textColorPrimary">@color/ck_title</item>
         <item name="android:textColorSecondary">@color/ck_body</item>
-        <item name="android:statusBarColor">@color/ck_primary_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <!-- targetSdk 35+ enforces edge-to-edge: statusBarColor is ignored and
+             the bar is transparent over a light background, so icons must be dark. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowBackground">@color/ck_background</item>
     </style>
 

@@ -104,6 +104,14 @@ class MainActivity : AppCompatActivity() {
             bottomBar,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeight),
         )
+        // targetSdk 35+ draws edge-to-edge. Keep content below the status bar
+        // instead of relying on fitsSystemWindows (whose behaviour varies).
+        val root = findViewById<LinearLayout>(R.id.root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(0, bars.top, 0, 0)
+            insets
+        }
         ViewCompat.setOnApplyWindowInsetsListener(barHost) { view, insets ->
             val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
             view.setPadding(

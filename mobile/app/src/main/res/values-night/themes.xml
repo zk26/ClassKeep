@@ -3,8 +3,13 @@
         <item name="colorPrimary">@color/ck_primary</item>
         <item name="colorPrimaryDark">@color/ck_primary_dark</item>
         <item name="colorAccent">@color/ck_accent</item>
+        <item name="colorSurface">@color/ck_card</item>
         <item name="android:colorBackground">@color/ck_background</item>
-        <item name="android:statusBarColor">@color/ck_primary_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:textColorPrimary">@color/ck_title</item>
+        <item name="android:textColorSecondary">@color/ck_body</item>
+        <!-- The palette is still light in night mode, so keep dark status icons. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">@color/ck_background</item>
     </style>
 </resources>
