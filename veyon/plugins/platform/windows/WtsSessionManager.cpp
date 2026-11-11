@@ -22,10 +22,11 @@
  *
  */
 
+// MinGW requires winsock2.h BEFORE windows.h (it defines AF_INET6 too).
+#include <winsock2.h>
 #include <windows.h>
 
 #include <sddl.h>
-#include <ws2tcpip.h>
 #include <wtsapi32.h>
 
 #include "WindowsCoreFunctions.h"

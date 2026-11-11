@@ -59,11 +59,13 @@ G:\veyon\  (= 仓库根)
 > | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
 > 三类产物全部真实编译，不含占位包或伪造二进制。
-> **当前最新为 [v1.3.0](https://github.com/zk26/ClassKeep/releases/tag/v1.3.0)**：
-> 用 `ntldd` 递归解析 PE 导入闭包，修好了旧版安装后报
-> `libbz2-1.dll` / `libmd4c.dll` / `libbrotli*.dll` 缺失的问题；
-> 桌面端与 Android 端统一使用 `ClassKeep_logo.png` 图标与「课守 ClassKeep」名称。
-> 旧的 ZIP / preset 包因无法启动已删除。
+> **当前最新为 [v1.4.0](https://github.com/zk26/ClassKeep/releases/tag/v1.4.0)**：
+> 沿用原有 `veyon-wcli.exe` 安装流程并补齐启动必需的平台/QCA 插件，
+> 修好了安装与卸载时的 `__fastfail` 崩溃框；桌面端与 Android 端统一使用
+> `ClassKeep_logo.png` 图标与「课守 ClassKeep」名称。
+> 教师端支持座位拖拽排序（下次开机不变），APP 重做为 5 个底部标签并新增
+> `.key` 文件导入、学生加减分、周课表与平板适配。
+> 旧版 ZIP / preset 包与有缺陷的 Release 已删除。
 > Windows 编译路线见 [`CLASSKEEP-BUILD.md` 路线 D](veyon/docs/CLASSKEEP-BUILD.md)。
 
 ---
@@ -129,6 +131,7 @@ makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
 | [`veyon/docs/CLASSKEEP-PROTOCOL.md`](veyon/docs/CLASSKEEP-PROTOCOL.md) | **协议规范**：命令/参数全量数值表、HTTP 路由、认证算法、UDP 发现、数据格式、兼容性铁律 |
 | [`veyon/docs/CLASSKEEP-DEPLOY.md`](veyon/docs/CLASSKEEP-DEPLOY.md) | 部署、每堂课流程、UWF 与 Defender 注意、数据迁移、排障 |
 | [`veyon/docs/CLASSKEEP-RELEASE.md`](veyon/docs/CLASSKEEP-RELEASE.md) | 发布产物清单、命名、校验、安装 |
+| [`veyon/docs/CLASSKEEP-UI.md`](veyon/docs/CLASSKEEP-UI.md) | APP 交互与视觉规范（去阴影、同心圆角、动效顺序、平板适配验收清单） |
 | [`mobile/README.md`](mobile/README.md) | Android 教室端工程说明 |
 | [`veyon/plugins/classroom/README.md`](veyon/plugins/classroom/README.md) | 课守插件源码结构 |
 | [`veyon/scripts/README.md`](veyon/scripts/README.md) | 依赖闭包收集、NSIS 安装器与图标生成脚本 |

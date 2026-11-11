@@ -44,6 +44,7 @@
 > | [docs/CLASSKEEP-PROTOCOL.md](docs/CLASSKEEP-PROTOCOL.md) | FeatureMessage 命令表、Bridge HTTP/UDP 协议、认证算法、数据文件格式 |
 > | [docs/CLASSKEEP-DEPLOY.md](docs/CLASSKEEP-DEPLOY.md) | 教师机/学生机/手机端部署、UWF 与 Defender 注意事项 |
 > | [docs/CLASSKEEP-RELEASE.md](docs/CLASSKEEP-RELEASE.md) | 发布产物清单与打包规范 |
+> | [docs/CLASSKEEP-UI.md](docs/CLASSKEEP-UI.md) | APP 交互与视觉规范、平板适配验收清单 |
 > | [docs/CLASSKEEP-PRIVACY.md](docs/CLASSKEEP-PRIVACY.md) | **数据采集范围与合规义务**（部署前必读） |
 > | [docs/CLASSKEEP-THIRD-PARTY.md](docs/CLASSKEEP-THIRD-PARTY.md) | 第三方组件与许可清单 |
 > | [docs/CLASSKEEP-LICENSE.md](docs/CLASSKEEP-LICENSE.md) | 许可证与衍生作品声明 |
