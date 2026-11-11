@@ -1487,7 +1487,7 @@ void ClassroomMasterDialog::refreshSeatGrid()
 		{
 			if( student.ip == ip )
 			{
-				controlInterface->setProperty( QStringLiteral("classkeepScore"),
+				controlInterface->setProperty( "classkeepScore",
 											   m_scorePanel->scoreForSeat( student.seat ) );
 				break;
 			}
