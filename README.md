@@ -59,12 +59,13 @@ G:\veyon\  (= 仓库根)
 > | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
 > 三类产物全部真实编译，不含占位包或伪造二进制。
-> **当前最新为 [v1.4.0](https://github.com/zk26/ClassKeep/releases/tag/v1.4.0)**：
-> 沿用原有 `veyon-wcli.exe` 安装流程并补齐启动必需的平台/QCA 插件，
-> 修好了安装与卸载时的 `__fastfail` 崩溃框；桌面端与 Android 端统一使用
-> `ClassKeep_logo.png` 图标与「课守 ClassKeep」名称。
-> 教师端支持座位拖拽排序（下次开机不变），APP 重做为 5 个底部标签并新增
-> `.key` 文件导入、学生加减分、周课表与平板适配。
+> **当前最新为 [v1.5.1](https://github.com/zk26/ClassKeep/releases/tag/v1.5.1)**：
+> 沿用原有 `veyon-wcli.exe` 安装流程并补齐启动必需的平台/QCA 插件；
+> 安装器现在会**自检服务是否真的 RUNNING** 并把返回码写入 `install.log`。
+> 桌面端**默认简体中文**（Configurator → General → Language 可切换），
+> 窗口标题/任务栏/启动页/配置器/关于/服务名与图标统一为「课守 ClassKeep」。
+> 教师端支持座位拖拽排序（下次开机不变）、监控缩略图显示姓名+当前分数、
+> 学生端卸载保护、常用功能置顶的小图标工具栏；APP 为 5 个底部标签。
 > 旧版 ZIP / preset 包与有缺陷的 Release 已删除。
 > Windows 编译路线见 [`CLASSKEEP-BUILD.md` 路线 D](veyon/docs/CLASSKEEP-BUILD.md)。
 

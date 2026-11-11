@@ -101,6 +101,7 @@ done
 echo "windows-platform.dll: PRESENT (VeyonCore can start)"
 echo "libqca-ossl.dll:      PRESENT (CryptoCore RSA available)"
 
+echo "translation catalogs: $(find "$PAYLOAD/translations" -type f -name '*.qm' | wc -l)"
 echo "payload files: $(find "$PAYLOAD" -type f | wc -l)"
 echo "plugin DLLs: $(find "$PAYLOAD/plugins" -type f -name '*.dll' | wc -l)"
 du -sh "$PAYLOAD"
