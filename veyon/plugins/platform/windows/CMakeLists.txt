@@ -80,5 +80,11 @@ target_link_libraries(windows-platform PRIVATE Qt6::GuiPrivate)
 # in the .cpp files is sufficient for DsGetDcNameW / WTSQueryUserToken /
 # AF_INET6 / ConvertSidToStringSidW to be visible.
 target_compile_definitions(windows-platform PRIVATE ULTRAVNC_VEYON_SUPPORT)
-target_compile_options(windows-platform PRIVATE "-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation")
+# ClassKeep: this target also compiles the pinned upstream UltraVNC sources
+# (vnckeymap.cpp / authSSP.cpp). Modern GCC + Veyon's global -Wall -Werror
+# flag their legacy unused variables as hard errors. Scope the exemptions to
+# this target only; ClassKeep's own code keeps full warnings-as-errors.
+target_compile_options(windows-platform PRIVATE
+	"-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation;-Wno-unused-but-set-variable;-Wno-unused-variable;-Wno-deprecated-declarations;-Wno-sign-compare;-Wno-unused-result"
+)
 set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE SKIP_PRECOMPILE_HEADERS TRUE)
