@@ -65,7 +65,15 @@ SPDX-License-Identifier: GPL-2.0-or-later
 | Ollama 或其他 OpenAI 兼容推理服务 | 可选外部服务 | 由使用者自行部署与授权，与本仓库无关 |
 
 本仓库**不包含**任何第三方预编译库、内核驱动、字体或第三方图片素材。
-桌面端图标沿用 Veyon 自带资源；Android Studio 模板生成的默认图标资源已被移除。
+桌面端图标沿用 Veyon 自带资源（现已替换为 `ClassKeep_logo.png` 生成的图标）；
+Android Studio 模板生成的默认图标资源已被移除。
+
+`veyon/3rdparty/interception/include/interception.h` 是本分支**自行编写的最小兼容头**，
+仅用于替代上游私有 Windows 构建镜像里才存在的 `libinterception.a`，使必需的
+`windows-platform` 插件能在 MSYS2 下编译。它不包含 Interception 项目的任何代码、
+二进制或驱动；Interception 驱动本身为可选组件，默认不启用。
+随安装包分发的 Qt6 / QCA / OpenSSL / MinGW 运行时 DLL 的许可与分发义务见
+[`veyon/docs/CLASSKEEP-THIRD-PARTY.md`](veyon/docs/CLASSKEEP-THIRD-PARTY.md)。
 
 Android 启动图标由仓库根的 `ClassKeep_logo.png` 经 `mobile/tools/generate_icons.py` 生成。
 该图由**本仓库所有者提供**，作为「课守 ClassKeep」定制分支的视觉标识，权利归提供者所有；

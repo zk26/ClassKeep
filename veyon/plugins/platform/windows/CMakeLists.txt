@@ -62,12 +62,17 @@ build_veyon_plugin(windows-platform
 
 target_include_directories(windows-platform PRIVATE
 	../common
+	${CMAKE_SOURCE_DIR}/3rdparty/interception/include
 	${ultravnc_DIR}/addon/ms-logon/authSSP
 	${ultravnc_DIR}/winvnc/winvnc
 	${ultravnc_DIR}
 	)
 
-target_link_libraries(windows-platform PRIVATE -lws2_32 -lwtsapi32 -lnetapi32 -luserenv -limm32 -lntdll -linterception -liphlpapi -lsetupapi -lsecur32)
+# ClassKeep: upstream links -linterception, which only exists in Veyon's private
+# cross-build image (not in MSYS2, not in 3rdparty/interception/). The optional
+# driver API is stubbed in 3rdparty/interception/include/interception.h so the
+# mandatory windows-platform plugin can be built. See that header for details.
+target_link_libraries(windows-platform PRIVATE -lws2_32 -lwtsapi32 -lnetapi32 -luserenv -limm32 -lntdll -liphlpapi -lsetupapi -lsecur32)
 target_link_libraries(windows-platform PRIVATE Qt6::GuiPrivate)
 target_compile_definitions(windows-platform PRIVATE ULTRAVNC_VEYON_SUPPORT)
 target_compile_options(windows-platform PRIVATE "-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation")

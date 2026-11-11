@@ -35,8 +35,10 @@
 
 ## 2. 两个安装程序的差别
 
-沿用上游 `nsis/veyon.nsi.in` 的组件式安装流程：安装器会自动注册并启动
-Veyon Service、放行防火墙、启用 SAS。
+沿用上游 `nsis/veyon.nsi.in` 的组件式安装流程：安装器会注册并启动
+Veyon Service、放行防火墙。注册通过 Windows 自带的 `sc.exe` / `netsh` 完成，
+**不调用 `veyon-wcli.exe`**——该 CLI 在平台插件或 QCA 插件缺失时会 `qFatal`
+（UCRT `__fastfail`）并弹出「快速异常检测失败」对话框，阻塞安装与卸载。
 
 | ROLE | 组件页 | 安装的额外文件 |
 |---|---|---|
@@ -54,15 +56,20 @@ veyon-server.exe / veyon-service.exe / veyon-worker.exe
 veyon-configurator.exe / veyon-cli.exe / veyon-wcli.exe
 veyon-master.exe                    （教师端安装器才释放）
 veyon-core.dll + 全部 Qt6/CRT 运行时 DLL
-plugins/classroom.dll + 其它 Veyon 插件 DLL
+plugins/classroom.dll + windows-platform.dll + 其它 Veyon 插件 DLL
 platforms/qwindows.dll
-styles/ tls/ imageformats/ crypto/
+styles/ tls/ imageformats/ crypto/libqca-ossl.dll
 LICENSE.TXT / COPYING.TXT / README.TXT / ClassKeep.ico
 ```
 
 > 运行时 DLL 由 `scripts/collect_mingw_deps.py` 用 `ntldd` 递归解析 PE 导入闭包收集，
 > **不再使用文件名白名单**——白名单曾漏掉 `libbz2-1.dll`、`libmd4c.dll`、
 > `libbrotli*.dll` 等，导致安装后所有 EXE 报「找不到 DLL」。
+>
+> `collect-windows-runtime.sh` 还会**硬校验** `plugins/windows-platform.dll`、
+> `crypto/libqca-ossl.dll`（Qt6 版）、`libqca-qt6.dll`、`platforms/qwindows.dll`。
+> 前两者是 VeyonCore 启动必需件：缺失时 `PlatformPluginManager` / `CryptoCore`
+> 会 `qFatal`，表现为所有程序 `__fastfail` 崩溃（`v1.3.0` 的安装弹窗即由此引起）。
 
 ---
 

@@ -120,19 +120,29 @@ jobs:
       # demo, remote control, screen lock, VNC, etc. A full `cmake --build`
       # would hit the broken upstream filetransfer plugin, so compile targets
       # individually and skip only the ones that genuinely fail.
-      - name: Build upstream plugins
+      # MANDATORY. VeyonCore::initPlatformPlugin() qFatal()s when no
+      # `*-platform.dll` exists, which makes EVERY Veyon executable die with
+      # __fastfail at startup. Never allow this target to be silently skipped.
+      - name: Build mandatory Windows platform plugin
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          cmake --build build --parallel 4 --target windows-platform 2>&1 | tee windows-platform.log
+
+      - name: Build other upstream plugins (best effort)
         shell: msys2 {0}
         run: |
           set -o pipefail
           for target in authkeys builtindirectory demo desktopservices ldap \
                         powercontrol remoteaccess screenlock screenshot \
                         systemusergroups textmessage usersessioncontrol \
-                        windows-platform external-vnc-server headless-vnc-server \
+                        external-vnc-server headless-vnc-server \
                         ultravnc-builtin vnchooks; do
-            if cmake --build build --parallel 4 --target "$target" >> plugins.log 2>&1; then
+            if cmake --build build --parallel 4 --target "$target" > /tmp/plugin-one.log 2>&1; then
               echo "built:   $target"
             else
               echo "skipped: $target"
+              tail -n 12 /tmp/plugin-one.log || true
             fi
           done
 

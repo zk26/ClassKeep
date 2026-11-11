@@ -146,19 +146,28 @@ jobs:
             veyon-master veyon-configurator veyon-cli veyon-wcli \
             veyon-service veyon-server veyon-worker 2>&1 | tee build.log
 
-      - name: Build upstream plugins
+      # MANDATORY: without `windows-platform.dll` VeyonCore qFatal()s and every
+      # Veyon executable dies with __fastfail at startup.
+      - name: Build mandatory Windows platform plugin
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          cmake --build build --parallel 4 --target windows-platform 2>&1 | tee windows-platform.log
+
+      - name: Build other upstream plugins (best effort)
         shell: msys2 {0}
         run: |
           set -o pipefail
           for target in authkeys builtindirectory demo desktopservices ldap \
                         powercontrol remoteaccess screenlock screenshot \
                         systemusergroups textmessage usersessioncontrol \
-                        windows-platform external-vnc-server headless-vnc-server \
+                        external-vnc-server headless-vnc-server \
                         ultravnc-builtin vnchooks; do
-            if cmake --build build --parallel 4 --target "$target" >> plugins.log 2>&1; then
+            if cmake --build build --parallel 4 --target "$target" > /tmp/plugin-one.log 2>&1; then
               echo "built:   $target"
             else
               echo "skipped: $target"
+              tail -n 12 /tmp/plugin-one.log || true
             fi
           done
 

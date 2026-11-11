@@ -5,10 +5,16 @@
 Qt6 运行时 DLL、Qt 插件与 QCA 加密插件，以及 GPL 许可证。
 
 【安装方式】
-  沿用 Veyon 官方安装流程：安装器的「服务端」组件为必选，会自动注册并启动
-  Veyon Service、放行防火墙、启用 SAS。教师端安装器额外提供可选的
-  「教师控制台」组件（veyon-master.exe）；学生端安装器只有服务端组件，
+  沿用 Veyon 官方的组件式安装：「服务端」组件为必选，教师端额外提供可选的
+  「教师控制台」组件（veyon-master.exe）；学生端只有服务端组件，
   不会安装也不会出现 Master 选项。
+
+  服务注册使用 Windows 自带的 sc.exe（服务名 VeyonService，指向
+  veyon-service.exe，自动启动）并通过 netsh 放行防火墙，效果与上游
+  `veyon-wcli.exe service register` 一致。安装器与卸载器都**不调用
+  veyon-wcli.exe**——该 CLI 会在启动时构造完整 VeyonCore，任何平台插件或
+  QCA 加密插件缺失都会触发 qFatal / __fastfail 崩溃对话框，阻塞安装与卸载。
+  卸载时同样用 sc.exe 停止并删除服务、netsh 删除防火墙规则。
 
 【教师机】
   1. 安装时保持「教师控制台」勾选。

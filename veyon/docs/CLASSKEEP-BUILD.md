@@ -293,6 +293,9 @@ makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
 | `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里，仅 Qt5 路线） | clone 了 KDE kldap 最新 master 而非锁定版本 | 按 v4.11.4 的 gitlink SHA 精确检出；或直接用本方案的 Qt6 `kldap` |
 | `qsizepolicy.h: bitwise operation between different enumeration types ... [-Werror=deprecated-enum-enum-conversion]` | Ubuntu 22.04 的 GCC 11+ 对 Qt5 头文件产生新警告，被 Veyon 的 `-Werror` 放大；连上游 `AboutDialog.cpp` 都失败 | 加 `-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"`，或改用 Debian 11 / GCC 10 容器 |
 | 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
+| 安装/卸载弹「veyon-wcli.exe - 快速异常检测失败」，程序也全打不开 | `windows-platform.dll` 没编出来（`-linterception` 只存在于上游私有镜像），`VeyonCore::initPlatformPlugin()` 触发 `qFatal("no platform plugin available!")` → UCRT `__fastfail` | 用自制 `3rdparty/interception/include/interception.h` 桩替代 `-linterception`；把 `windows-platform` 设为**必需**构建目标；`collect-windows-runtime.sh` 硬校验该 DLL |
+| 同上但平台插件在，仍崩 | `crypto/libqca-ossl.dll` 缺失或挑到了 qca-qt5 版本，`CryptoCore.cpp:39` → `qFatal("RSA not supported!")` | 从精确路径 `/ucrt64/lib/qca-qt6/crypto/libqca-ossl.dll` 复制，并硬校验 |
+| `-linterception` 找不到（MSYS2 UCRT64） | 该库既不在上游 `3rdparty/interception/`（只有安装器 exe + bat），也不在 MSYS2 | 使用上述自制最小兼容头，去掉链接参数；Interception 驱动是可选的，默认不启用 |
 
 ---
 

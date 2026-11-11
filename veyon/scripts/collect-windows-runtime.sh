@@ -28,6 +28,12 @@ echo "== Veyon plugins =="
 find "$BUILD/plugins" -type f -name '*.dll' ! -path '*CMakeFiles*' \
   -exec cp '{}' "$PAYLOAD/plugins/" \;
 
+# PluginManager tries QPluginLoader on every *.dll in plugins/. Helper DLLs
+# (lib*.dll, vnchooks.dll) belong next to the executables, not here.
+for helper in "$PAYLOAD"/plugins/lib*.dll "$PAYLOAD"/plugins/vnchooks.dll; do
+  if [ -f "$helper" ]; then mv "$helper" "$PAYLOAD/"; fi
+done
+
 echo "== Qt plugins =="
 for sub in platforms styles tls imageformats; do
   for base in "$UCRT/share/qt6/plugins/$sub" "$UCRT/lib/qt6/plugins/$sub"; do
@@ -38,10 +44,23 @@ for sub in platforms styles tls imageformats; do
   done
 done
 
-echo "== QCA crypto plugin =="
-qca_ossl="$(find "$UCRT" -type f -name 'libqca-ossl.dll' 2>/dev/null | head -n 1 || true)"
-if [ -n "$qca_ossl" ]; then
-  cp "$qca_ossl" "$PAYLOAD/crypto/"
+echo "== QCA crypto plugin (Qt6 build ONLY) =="
+# A blind `find ... | head -1` can pick the qca-qt5 plugin, which a Qt6 process
+# cannot load: CryptoCore then qFatal("RSA not supported!") => __fastfail.
+# Use the exact upstream WindowsInstaller.cmake path first.
+qca_copied=0
+for qca in "$UCRT/lib/qca-qt6/crypto/libqca-ossl.dll" \
+           "$UCRT/share/qt6/plugins/crypto/libqca-ossl.dll" \
+           "$UCRT/lib/qt6/plugins/crypto/libqca-ossl.dll"; do
+  if [ -f "$qca" ]; then
+    cp "$qca" "$PAYLOAD/crypto/"
+    echo "  QCA from $qca"
+    qca_copied=1
+    break
+  fi
+done
+if [ "$qca_copied" -eq 0 ]; then
+  echo "WARNING: libqca-ossl.dll not found under $UCRT" >&2
 fi
 
 echo "== full runtime DLL closure =="
@@ -60,15 +79,19 @@ cp "$ROOT/veyon/COPYING" "$PAYLOAD/COPYING.TXT"
 cp "$ROOT/veyon/scripts/windows-install-readme.txt" "$PAYLOAD/README.TXT"
 cp "$ROOT/veyon/scripts/ClassKeep.ico" "$PAYLOAD/ClassKeep.ico"
 
-echo "== verify =="
+echo "== verify (startup-critical files included) =="
 for f in veyon-core.dll veyon-master.exe veyon-configurator.exe veyon-cli.exe \
          veyon-wcli.exe veyon-service.exe veyon-server.exe veyon-worker.exe \
-         plugins/classroom.dll platforms/qwindows.dll ClassKeep.ico; do
+         plugins/classroom.dll plugins/windows-platform.dll \
+         crypto/libqca-ossl.dll libqca-qt6.dll \
+         platforms/qwindows.dll ClassKeep.ico; do
   if [ ! -f "$PAYLOAD/$f" ]; then
     echo "MISSING REQUIRED FILE: $f" >&2
     exit 1
   fi
 done
+echo "windows-platform.dll: PRESENT (VeyonCore can start)"
+echo "libqca-ossl.dll:      PRESENT (CryptoCore RSA available)"
 
 echo "payload files: $(find "$PAYLOAD" -type f | wc -l)"
 echo "plugin DLLs: $(find "$PAYLOAD/plugins" -type f -name '*.dll' | wc -l)"

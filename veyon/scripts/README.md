@@ -26,15 +26,40 @@
 3. 若 `/ucrt64/bin/<name>` 存在且目标里没有，就复制进来；
 4. 重复直到一轮没有新增（系统 DLL 不在 `/ucrt64/bin`，由 Windows 提供，自动跳过）。
 
-## 安装器（沿用上游 Veyon 安装方式）
+## 安装器（沿用上游 Veyon 组件式安装）
 
-`classkeep-installer.nsi` 基于上游 `nsis/veyon.nsi.in`，保留组件页与
-「注册并启动 Veyon Service / 放行防火墙 / 启用 SAS」的安装流程：
+`classkeep-installer.nsi` 基于上游 `nsis/veyon.nsi.in` 的组件页结构：
 
 | ROLE | 组件页 |
 |---|---|
 | `teacher` | 「服务端（必选，只读）」+「教师控制台（可选，`veyon-master.exe`）」 |
 | `student` | **只有「服务端（必选，只读）」**；编译时就不包含 Master 段 |
+
+> **安装/卸载不调用 `veyon-wcli.exe`**。上游用它执行 `service register` 与
+> `config set`，但该 CLI 启动时会构造完整 `VeyonCore`，任何 `*-platform.dll`
+> 或 QCA `rsa` 插件缺失都会 `qFatal` → UCRT `__fastfail`
+> （截图中的「快速异常检测失败」对话框），把安装和卸载都卡住。
+> 本安装器改用 Windows 自带的 `sc.exe` 注册/删除 `VeyonService`、
+> `netsh advfirewall` 放行/删除防火墙规则，效果等价且不会弹崩溃框。
+
+## 启动必需件（缺一即崩）
+
+`collect-windows-runtime.sh` 会对以下文件做**硬校验**，缺一个就让 CI 失败，
+不再允许产出「装得上但一运行就崩」的安装包：
+
+| 文件 | 缺失后果 |
+|---|---|
+| `plugins/windows-platform.dll` | `PlatformPluginManager.cpp:46` → `qFatal("no platform plugin available!")`，**所有** Veyon exe 启动即 `__fastfail` |
+| `crypto/libqca-ossl.dll`（**必须是 Qt6 版**） | `CryptoCore.cpp:39` → `qFatal("RSA not supported!")`，同样 `__fastfail` |
+| `libqca-qt6.dll` | `veyon-core.dll` 无法加载 |
+| `platforms/qwindows.dll` | Qt 自身无法初始化 GUI |
+
+`windows-platform` 依赖上游私有镜像里才有的 `-linterception`，MSYS2 不提供。
+仓库提供了自制的最小兼容头
+[`../3rdparty/interception/include/interception.h`](../3rdparty/interception/include/interception.h)，
+让这个**必需**插件可以编译链接；Interception 驱动本身是可选的
+（`useInterceptionDriver()` 默认关闭），stub 不改变默认行为，也不含任何第三方代码。
+CI 已把 `windows-platform` 设为必需的独立构建步骤，不再静默跳过。
 
 编译（CI 自动执行，需在仓库根、脚本文件带 UTF-8 BOM）：
 
