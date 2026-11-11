@@ -501,7 +501,9 @@ namespace
 QString withClassKeepScore( const ComputerControlInterface::Pointer& controlInterface,
 							const QString& label )
 {
-	const auto score = controlInterface->property( "classkeepScore" );
+	// Qualify through QObject (the interface has a QUuid-keyed property overload).
+	const auto* object = static_cast<const QObject*>( controlInterface.data() );
+	const auto score = object->property( "classkeepScore" );
 	if( score.isValid() == false )
 	{
 		return label;

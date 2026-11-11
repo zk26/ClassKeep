@@ -1487,8 +1487,10 @@ void ClassroomMasterDialog::refreshSeatGrid()
 		{
 			if( student.ip == ip )
 			{
-				controlInterface->setProperty( "classkeepScore",
-											   m_scorePanel->scoreForSeat( student.seat ) );
+				// Qualify through QObject: ComputerControlInterface hides the
+				// base setProperty() with a QUuid-keyed overload of its own.
+				auto* object = static_cast<QObject*>( controlInterface.data() );
+				object->setProperty( "classkeepScore", m_scorePanel->scoreForSeat( student.seat ) );
 				break;
 			}
 		}
