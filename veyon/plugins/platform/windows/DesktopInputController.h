@@ -26,7 +26,13 @@
 
 #include <thread>
 
+// ClassKeep: QObject / Windows HANDLE were only available transitively on the
+// older toolchain used by upstream. Include them explicitly.
+#include <windows.h>
+
+#include <QAtomicInteger>
 #include <QMutex>
+#include <QObject>
 #include <QQueue>
 #include <QWaitCondition>
 

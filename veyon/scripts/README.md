@@ -35,12 +35,11 @@
 | `teacher` | 「服务端（必选，只读）」+「教师控制台（可选，`veyon-master.exe`）」 |
 | `student` | **只有「服务端（必选，只读）」**；编译时就不包含 Master 段 |
 
-> **安装/卸载不调用 `veyon-wcli.exe`**。上游用它执行 `service register` 与
-> `config set`，但该 CLI 启动时会构造完整 `VeyonCore`，任何 `*-platform.dll`
-> 或 QCA `rsa` 插件缺失都会 `qFatal` → UCRT `__fastfail`
-> （截图中的「快速异常检测失败」对话框），把安装和卸载都卡住。
-> 本安装器改用 Windows 自带的 `sc.exe` 注册/删除 `VeyonService`、
-> `netsh advfirewall` 放行/删除防火墙规则，效果等价且不会弹崩溃框。
+> 安装/卸载**沿用上游原有的 `veyon-wcli.exe`**
+> （`service register/unregister`、`config set`、`service start`）。
+> 该 CLI 启动时会构造完整 `VeyonCore`，任何 `*-platform.dll` 或 QCA `rsa`
+> 插件缺失都会 `qFatal` → UCRT `__fastfail`（「快速异常检测失败」对话框）。
+> 修复方式是**把启动必需件补齐并硬校验**（见下节），而不是绕开 CLI。
 
 ## 启动必需件（缺一即崩）
 

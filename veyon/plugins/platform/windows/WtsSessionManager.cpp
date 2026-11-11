@@ -22,8 +22,10 @@
  *
  */
 
-#include <sddl.h>
 #include <windows.h>
+
+#include <sddl.h>
+#include <ws2tcpip.h>
 #include <wtsapi32.h>
 
 #include "WindowsCoreFunctions.h"

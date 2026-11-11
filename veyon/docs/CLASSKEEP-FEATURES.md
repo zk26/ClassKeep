@@ -142,7 +142,7 @@
 | G9 | 安装器、依赖闭包与自检 | ✅ | `collect_mingw_deps.py`(ntldd 递归)、`collect-windows-runtime.sh`、`classkeep-installer.nsi`、`generate_windows_icons.py`、`ClassroomSelfTest.cpp`、`ClassKeepUnitTest.kt` |
 | G10 | **桌面端统一改名与换图标** | ✅ | `WindowsBuildHelpers.cmake` 产品名改 ClassKeep；Logo 生成 master/configurator/installer/uninstaller `.ico`；安装器与快捷方式显示「课守 ClassKeep 教师端/学生端」 |
 | G11 | **沿用上游组件式安装**，学生端不出现 Master | ✅ | `classkeep-installer.nsi` 基于 `nsis/veyon.nsi.in`：教师端「服务端(RO) + 教师控制台(可选)」，学生端只有「服务端(RO)」，自动注册/启动服务 |
-| G12 | 安装/卸载 **不再弹 `__fastfail` 崩溃框** | ✅ | 用 `sc.exe` / `netsh` 替代 `veyon-wcli.exe`；补齐并硬校验启动必需的 `windows-platform.dll` 与 Qt6 版 `libqca-ossl.dll`；用自制 `interception.h` 桩让平台插件可编译 |
+| G12 | 安装/卸载 **不再弹 `__fastfail` 崩溃框**（沿用原有 `veyon-wcli.exe`） | ✅ | 补齐并硬校验启动必需的 `windows-platform.dll` 与 Qt6 版 `libqca-ossl.dll`；用自制 `interception.h` 桩与 MinGW 头文件兼容修复让平台插件可编译；安装流程保持上游 wcli 不变 |
 
 ---
 

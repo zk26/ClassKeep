@@ -82,13 +82,11 @@ Section "课守 ClassKeep 服务端（必需）" SEC_SERVICE
   SetOverwrite on
   SetOutPath "$INSTDIR"
 
-  ; Upstream uses `veyon-wcli.exe service register/unregister` here. That CLI
-  ; constructs a full VeyonCore at startup and qFatal()s (Windows __fastfail
-  ; "快速异常检测失败" dialog) whenever the platform/QCA plugin is missing,
-  ; which blocked BOTH install and uninstall. Register the same Windows service
-  ; with the built-in sc.exe instead - no Qt process, no crash dialog.
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop VeyonService'
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" delete VeyonService'
+  ; Keep the ORIGINAL upstream Veyon installation flow via veyon-wcli.exe.
+  ; It requires a complete `plugins/windows-platform.dll` + Qt6 `libqca-ossl.dll`
+  ; at startup; collect-windows-runtime.sh hard-verifies both so the CLI can no
+  ; longer qFatal()/__fastfail while installing or uninstalling.
+  ExecWait '"$INSTDIR\veyon-wcli.exe" service unregister'
   Delete "$INSTDIR\*.dll"
   RmDir /r "$INSTDIR\plugins"
 
@@ -117,12 +115,13 @@ Section "课守 ClassKeep 服务端（必需）" SEC_SERVICE
   SetOutPath "$INSTDIR\tls"
   File /nonfatal "payload\tls\*.dll"
 
-  ; Same service name / binary / auto start as WindowsServiceControl.cpp.
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" create VeyonService binPath= "$INSTDIR\veyon-service.exe" start= auto DisplayName= "Veyon Service"'
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" description VeyonService "Veyon / ClassKeep Service"'
-  nsExec::ExecToLog '"$SYSDIR\netsh.exe" advfirewall firewall add rule name="ClassKeep Veyon Service" dir=in action=allow program="$INSTDIR\veyon-service.exe" enable=yes'
+  ; Original upstream sequence: register service, allow firewall exception,
+  ; enable SAS, then start the service.
+  ExecWait '"$INSTDIR\veyon-wcli.exe" service register'
+  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 1'
+  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Windows/SoftwareSASEnabled 1'
   WriteRegDWORD ${REG_ROOT} "SYSTEM\CurrentControlSet\Control\Lsa" "ForceGuest" "0"
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" start VeyonService'
+  ExecWait '"$INSTDIR\veyon-wcli.exe" service start'
 SectionEnd
 
 ; ------------------------------------------------------- Teacher console only
@@ -160,10 +159,10 @@ SectionEnd
 ; ------------------------------------------------------------------- Uninstall
 Section Uninstall
   ${INSTALL_TYPE}
-  ; No veyon-wcli here either - see the install section for the __fastfail reason.
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop VeyonService'
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" delete VeyonService'
-  nsExec::ExecToLog '"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="ClassKeep Veyon Service"'
+  ; Mirror the upstream uninstall sequence.
+  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Service/SoftwareSASEnabled 0'
+  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 0'
+  ExecWait '"$INSTDIR\veyon-wcli.exe" service unregister'
   Sleep 2000
 
   Delete "$INSTDIR\*.exe"

@@ -35,10 +35,11 @@
 
 ## 2. 两个安装程序的差别
 
-沿用上游 `nsis/veyon.nsi.in` 的组件式安装流程：安装器会注册并启动
-Veyon Service、放行防火墙。注册通过 Windows 自带的 `sc.exe` / `netsh` 完成，
-**不调用 `veyon-wcli.exe`**——该 CLI 在平台插件或 QCA 插件缺失时会 `qFatal`
-（UCRT `__fastfail`）并弹出「快速异常检测失败」对话框，阻塞安装与卸载。
+沿用上游 `nsis/veyon.nsi.in` 的组件式安装流程：安装器通过原有的
+`veyon-wcli.exe` 注册/启动 Veyon Service、放行防火墙、启用 SAS。
+该 CLI 在平台插件或 QCA 插件缺失时会 `qFatal`（UCRT `__fastfail`）并弹出
+「快速异常检测失败」对话框，因此 payload 必须包含且硬校验
+`windows-platform.dll` 与 Qt6 版 `libqca-ossl.dll`（见下节）。
 
 | ROLE | 组件页 | 安装的额外文件 |
 |---|---|---|

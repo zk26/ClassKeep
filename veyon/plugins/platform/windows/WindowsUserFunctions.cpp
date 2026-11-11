@@ -22,10 +22,14 @@
  *
  */
 
+// ClassKeep: dsgetdc.h / wtsapi32.h need windows.h first on newer MinGW-w64.
+#include <windows.h>
+
 #include <dsgetdc.h>
 #include <wtsapi32.h>
 
 #include <QBuffer>
+#include <QThread>
 
 #include "DesktopInputController.h"
 #include "VeyonConfiguration.h"

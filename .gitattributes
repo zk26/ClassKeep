@@ -1,0 +1,6 @@
+# Keep shell scripts LF on Windows checkouts; CRLF makes MSYS2 bash fail with
+# `\r: command not found` when CI runs collect-windows-runtime.sh.
+*.sh text eol=lf
+*.bash text eol=lf
+*.py text eol=lf
+*.nsi text eol=lf

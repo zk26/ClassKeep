@@ -22,6 +22,9 @@
  *
  */
 
+// ClassKeep: wtsapi32.h needs windows.h first on newer MinGW-w64.
+#include <windows.h>
+
 #include <wtsapi32.h>
 
 #include <QCoreApplication>
