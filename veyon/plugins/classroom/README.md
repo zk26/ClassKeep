@@ -61,7 +61,7 @@ cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_TESTS=ON -DWITH_CORE_ONLY=
 cmake --build build
 ```
 
-最快的编译验证是 GitHub Actions 的 `ClassKeep Build Check`（Linux/Qt5/GCC 全量编译）。
+最快的编译验证是 GitHub Actions 的 `ClassKeep Build Check`（Linux/Qt6/GCC）。
 
 Windows 下 `ClassroomSystem.cpp` 需要 Windows SDK（`mmdeviceapi.h` / `endpointvolume.h`）；
 Linux/macOS 下相关功能走 `#else` 分支返回 `false`，不影响编译——

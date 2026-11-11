@@ -120,14 +120,16 @@ Veyon 4.11.4 的 CMake **只能用 MinGW-w64 / GCC 编译**（硬编码 `-Wno-at
 且 `windows-binaries` target 依赖 MinGW 前缀与 Unix shell 命令）。
 **MSVC + vcpkg 不可行**，QCA 也没有 vcpkg port（`find_package(Qca-qt6 REQUIRED)`）。
 
-需要：Qt6-MinGW（含 `Core5Compat`、`GuiPrivate`、`HttpServer`、`WebSockets`、`LinguistTools`）、
-自编的 QCA-Qt6（`Qca-qt6Config.cmake`）、LibVNC ≥ 0.9.14、
-OpenSSL / zlib / libjpeg / libpng / LZO / SASL / LDAP / interception、CMake ≥ 3.18、Ninja、NSIS。
-上游 Windows 构建是在 Linux 容器里用 `x86_64-w64-mingw32` 交叉编译，其镜像私有且无 Dockerfile。
+推荐用 **MSYS2 UCRT64**：Qt6、`qca-qt6`、`openldap`、`cyrus-sasl`、`libvncserver`、
+`ntldd`、`nsis`、CMake、Ninja 都有现成的 pacman 包，不需要自编 QCA。
+上游官方 Windows 构建是在 Linux 容器里用 `x86_64-w64-mingw32` 交叉编译，镜像私有且不提供 Dockerfile。
 
-最快获得「真实编译结果」的方式不是本机装这一整套，而是
-**GitHub Actions 的 [`.github/workflows/classkeep-build.yml`](../../.github/workflows/classkeep-build.yml)**
-（Linux/Qt5/GCC 全量编译，能验证除 Windows 专属分支外的全部 C++ 文件）。
+最快获得「真实编译结果」的方式不是本机装这一整套，而是 GitHub Actions：
+
+| 工作流 | 环境 | 验证范围 |
+|---|---|---|
+| [`classkeep-build.yml`](../../.github/workflows/classkeep-build.yml) | Linux/Qt6/GCC | 除 Windows 专属分支外的全部 C++ 文件 + Android APK |
+| [`classkeep-windows.yml`](../../.github/workflows/classkeep-windows.yml) | Windows/MSYS2 UCRT64 | UWF / Core Audio / WFP 专属代码 + 两个 NSIS 安装 EXE |
 
 `plugins/classroom/` 会被 `plugins/CMakeLists.txt` 的 GLOB 自动发现，无需手工注册；
 但 `-DWITH_CORE_ONLY=ON` 会跳过整个 `plugins/`，必须保持 OFF。
