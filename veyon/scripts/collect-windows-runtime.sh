@@ -73,6 +73,14 @@ if [ -z "$PY" ]; then
 fi
 "$PY" "$ROOT/veyon/scripts/collect_mingw_deps.py" --payload "$PAYLOAD" --ucrt "$UCRT"
 
+echo "== Simplified Chinese translations =="
+# Built by the CI step `lrelease veyon/translations/veyon_zh_CN.ts`.
+# Without these the UI stays English even on a Chinese Windows install.
+mkdir -p "$PAYLOAD/translations"
+if [ -d "$ROOT/translations" ]; then
+  cp "$ROOT"/translations/*.qm "$PAYLOAD/translations/" 2>/dev/null || true
+fi
+
 echo "== documentation and icon =="
 cp "$ROOT/LICENSE" "$PAYLOAD/LICENSE.TXT"
 cp "$ROOT/veyon/COPYING" "$PAYLOAD/COPYING.TXT"
@@ -84,7 +92,7 @@ for f in veyon-core.dll veyon-master.exe veyon-configurator.exe veyon-cli.exe \
          veyon-wcli.exe veyon-service.exe veyon-server.exe veyon-worker.exe \
          plugins/classroom.dll plugins/windows-platform.dll \
          crypto/libqca-ossl.dll libqca-qt6.dll \
-         platforms/qwindows.dll ClassKeep.ico; do
+         platforms/qwindows.dll ClassKeep.ico translations/veyon_zh_CN.qm; do
   if [ ! -f "$PAYLOAD/$f" ]; then
     echo "MISSING REQUIRED FILE: $f" >&2
     exit 1

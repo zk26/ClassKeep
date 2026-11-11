@@ -39,7 +39,9 @@ MainToolBar::MainToolBar( QWidget* parent ) :
 	m_layout(findChild<QLayout *>())
 {
 	setExpanded();
-	setIconSize(QSize(32, 32));
+	// ClassKeep: smaller icons let the frequently used actions stay on the
+	// first row; less common ones wrap to a second row or land in the ">>" menu.
+	setIconSize(QSize(24, 24));
 
 	ToolButton::setToolTipsDisabled( m_mainWindow->masterCore().userConfig().noToolTips() );
 	ToolButton::setIconOnlyMode( m_mainWindow, m_mainWindow->masterCore().userConfig().toolButtonIconOnlyMode() );
@@ -70,13 +72,11 @@ void MainToolBar::setExpanded()
 {
 	if (m_layout)
 	{
+		// Allow the toolbar to wrap onto a second row when the window is narrow.
 		QMetaObject::invokeMethod(m_layout, "setExpanded", Qt::DirectConnection, Q_ARG(bool, true));
 
-		const auto button = findChild<QToolButton *>(QStringLiteral("qt_toolbar_ext_button"));
-		if (button)
-		{
-			button->setFixedSize(0, 0);
-		}
+		// ClassKeep: do NOT hide Qt's ">>" overflow button. Actions that still
+		// do not fit are collected there instead of vanishing off-screen.
 	}
 }
 

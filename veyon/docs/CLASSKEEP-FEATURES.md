@@ -148,6 +148,12 @@
 | G15 | **教师端网格拖拽排序**（下次开机不变）+ 手机按序生成卡片 | ✅ | `ClassroomSeatGrid` 拖放交换 → `seat-order-<班级>.json` 即时持久化 → Bridge `/seats` 按序返回 → APP 按序渲染 |
 | G16 | APP **课表功能**（参考 ClassBoard，不照搬）+ **平板适配** | ✅ | 零依赖 `TimetableStore`（周网格、当前节高亮、下一节提示、导入作息 JSON）；`sw600dp`/`sw720dp` 调整边距、格宽与卡片列数 |
 | G17 | UI 按交互规范重做（去阴影、同心圆角、常驻标签） | ✅ | `CLASSKEEP-UI.md` 记录验收清单；`UiKit.kt` / `BottomBar.kt` 落地，胶囊指示随选中项平滑移动 |
+| G18 | **教师端/学生端默认中文**，配置里可切换 | ✅ | CI 用 `lrelease` 生成 `veyon_zh_CN.qm` + Qt `qt*_zh_CN.qm` 装到 `translations/`；`TranslationLoader` 未配置时默认 `zh_CN`；Configurator → General → Language 可改 |
+| G19 | 窗口标题、任务栏、启动页、Configurator、关于、服务名统一改名换图标 | ✅ | `MainWindow.ui`×2、`AboutDialog`、`VeyonServiceControl`、`ServiceControlCommands`；`generate_windows_icons.py` 生成 `core/resources/icon*.png` 与 `master/resources/splash.png`（任务栏取 qrc 图，只换 .ico 无效） |
+| G20 | **安装后服务自检**：wcli 返回码 + 安装日志 + `sc query` 验证 + 失败兜底 | ✅ | `classkeep-installer.nsi` 捕获 `service register/start` 退出码写 `$INSTDIR\install.log`，未 RUNNING 时用 `sc.exe` 兜底并明确提示 |
+| G21 | Veyon Master 缩略图下显示 **姓名 + 当前分数** | ✅ | 插件按 IP 写 `classkeepScore` 动态属性到 `ComputerControlInterface`；`ComputerControlListModel` 拼接标签，零 ABI 改动 |
+| G22 | 学生端**卸载保护**：教师端可开启/解除 | ✅ | `SetUninstallProtection`(39) → worker 写 HKLM → `uninstall.exe` 检测并 Abort；教师端「System & devices」页两个按钮 |
+| G23 | Master 工具栏：图标缩小、常用置顶、不常用折叠 | ✅ | `MainToolBar` 32→24 并恢复 Qt `>>` 溢出按钮；`MainWindow::addFeaturesToToolBar` 按白名单分组 + 分隔线 |
 
 ---
 

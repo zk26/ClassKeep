@@ -1473,6 +1473,26 @@ void ClassroomMasterDialog::refreshSeatGrid()
 	if( m_seatGrid == nullptr ) { return; }
 	m_seatGrid->setClassName( currentClassName() );
 	m_seatGrid->setOnlineIps( onlineIps() );
+
+	// Publish every student's current score to the matching Veyon Master
+	// thumbnail. Both live in the same process, so a dynamic QObject property
+	// is enough - no cross-module ABI change and no file I/O.
+	const auto* classItem = m_roster.findClass( currentClassName() );
+	if( classItem == nullptr || m_scorePanel == nullptr ) { return; }
+
+	for( const auto& controlInterface : m_master.allComputerControlInterfaces() )
+	{
+		const auto ip = ipOfInterface( controlInterface.data() );
+		for( const auto& student : classItem->students )
+		{
+			if( student.ip == ip )
+			{
+				controlInterface->setProperty( QStringLiteral("classkeepScore"),
+											   m_scorePanel->scoreForSeat( student.seat ) );
+				break;
+			}
+		}
+	}
 }
 
 
@@ -1646,6 +1666,19 @@ void ClassroomMasterDialog::setupSystemTab()
 			sendToAll( message );
 			sendToAll( Classroom::message( Command::UwfRestart ) );
 			m_systemStatus->setText( tr( "UWF enable queued on all clients; reboot sent." ) );
+		} } } );
+	addRow( tr( "Uninstall protection:" ), {
+		{ tr( "Enable on all students" ), [this]() {
+			auto message = Classroom::message( Command::SetUninstallProtection );
+			message.addArgument( Argument::Enabled, true );
+			sendToAll( message );
+			m_systemStatus->setText( tr( "Student uninstall protection enabled." ) );
+		} },
+		{ tr( "Release" ), [this]() {
+			auto message = Classroom::message( Command::SetUninstallProtection );
+			message.addArgument( Argument::Enabled, false );
+			sendToAll( message );
+			m_systemStatus->setText( tr( "Student uninstall protection released." ) );
 		} } } );
 	addRow( tr( "Deploy:" ), {
 		{ tr( "Distribute and install" ), [this, feature]() {

@@ -48,6 +48,14 @@ bool TranslationLoader::load( const QString& resourceName )
 	{
 		configuredLocale = QLocale( configuredLocaleMatch.captured( 1 ) );
 	}
+	// ClassKeep: a fresh installation must come up in Simplified Chinese.
+	// An explicit choice in Configurator -> General -> Language still wins,
+	// because the regex above overwrites configuredLocale in that case.
+	// If zh_CN .qm files are absent, the existing system-locale fallback applies.
+	else
+	{
+		configuredLocale = QLocale( QStringLiteral("zh_CN") );
+	}
 
 	if( configuredLocale.language() != QLocale::English &&
 		VeyonCore::instance()->findChild<QTranslator *>( resourceName ) == nullptr )

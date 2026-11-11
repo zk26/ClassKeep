@@ -183,6 +183,22 @@ jobs:
       # A hand-written DLL whitelist produced installs that failed with
       # "libbz2-1.dll / libmd4c.dll not found". ntldd now walks the real PE
       # import closure so every required runtime DLL is shipped.
+      # Compile the .ts sources into .qm so the installed UI is Chinese by
+      # default (switchable in Configurator -> General -> Language).
+      - name: Build Simplified Chinese translations
+        shell: msys2 {0}
+        run: |
+          set -e
+          mkdir -p translations
+          LRELEASE="$(command -v lrelease || command -v lrelease-qt6 || true)"
+          if [ -z "$LRELEASE" ]; then
+            LRELEASE="$(find /ucrt64/bin -maxdepth 1 -name 'lrelease*' -type f 2>/dev/null | head -n 1)"
+          fi
+          if [ -z "$LRELEASE" ]; then echo 'lrelease not found' >&2; exit 1; fi
+          "$LRELEASE" veyon/translations/veyon_zh_CN.ts -qm translations/veyon_zh_CN.qm
+          find /ucrt64 -type f -name 'qt*_zh_CN.qm' -exec cp '{}' translations/ \; 2>/dev/null || true
+          ls -lh translations
+
       - name: Assemble self-contained runtime payload
         shell: msys2 {0}
         run: bash veyon/scripts/collect-windows-runtime.sh

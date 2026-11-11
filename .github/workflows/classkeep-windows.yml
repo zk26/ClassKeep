@@ -149,6 +149,23 @@ jobs:
       # A hand-written DLL whitelist caused missing libbz2 / libmd4c / libbrotli
       # errors at runtime. collect_mingw_deps.py instead walks the real PE import
       # closure with ntldd until every runtime DLL is present.
+      # The repo only ships .ts sources. Without compiled .qm files every
+      # desktop window stays English even on a Chinese Windows install.
+      - name: Build Simplified Chinese translations
+        shell: msys2 {0}
+        run: |
+          set -e
+          mkdir -p translations
+          LRELEASE="$(command -v lrelease || command -v lrelease-qt6 || true)"
+          if [ -z "$LRELEASE" ]; then
+            LRELEASE="$(find /ucrt64/bin -maxdepth 1 -name 'lrelease*' -type f 2>/dev/null | head -n 1)"
+          fi
+          if [ -z "$LRELEASE" ]; then echo 'lrelease not found' >&2; exit 1; fi
+          "$LRELEASE" veyon/translations/veyon_zh_CN.ts -qm translations/veyon_zh_CN.qm
+          # Qt's own widgets (File / View / Help ...) need their zh_CN catalog too.
+          find /ucrt64 -type f -name 'qt*_zh_CN.qm' -exec cp '{}' translations/ \; 2>/dev/null || true
+          ls -lh translations
+
       - name: Assemble self-contained runtime payload
         shell: msys2 {0}
         run: bash veyon/scripts/collect-windows-runtime.sh

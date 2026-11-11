@@ -14,6 +14,19 @@ Qt6 运行时 DLL、Qt 插件与 QCA 加密插件，以及 GPL 许可证。
   plugins/windows-platform.dll 与 crypto/libqca-ossl.dll，否则该 CLI 启动时
   会 qFatal / __fastfail；发布流水线已对这两个文件做硬校验。
 
+  安装器会捕获每一步的返回码写入本目录的 install.log，并用 sc query 确认
+  VeyonService 真的处于 RUNNING；未启动时会用系统服务控制兜底并弹出中文提示。
+  若看到「服务未能启动」，请把 install.log 交给管理员排查。
+
+【中文界面】
+  默认简体中文（translations/ 下的 .qm 文件）。要切换语言，打开
+  veyon-configurator.exe → General → Language，选择后重新打开程序。
+
+【卸载保护】
+  教师端控制台「System & devices」页可开启学生端卸载保护。开启后运行本目录的
+  uninstall.exe 会提示「教师端已开启卸载保护」并中止，必须由教师端点「解除」
+  后才能卸载。标志写在本机注册表，不依赖网络。
+
 【教师机】
   1. 安装时保持「教师控制台」勾选。
   2. 运行 veyon-configurator.exe 完成 Veyon 基础配置（认证密钥、网络端口等）。

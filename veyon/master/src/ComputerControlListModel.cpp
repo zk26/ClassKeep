@@ -22,6 +22,7 @@
  *
  */
 
+#include <QCoreApplication>
 #include <QPainter>
 
 #include "ComputerControlListModel.h"
@@ -492,6 +493,26 @@ QString ComputerControlListModel::computerToolTipRole( const ComputerControlInte
 
 
 
+namespace
+{
+// ClassKeep: the score is injected as a dynamic QObject property by the
+// classroom plugin (same process, no ABI change and no file I/O). When the
+// plugin is not loaded the label stays exactly as upstream renders it.
+QString withClassKeepScore( const ComputerControlInterface::Pointer& controlInterface,
+							const QString& label )
+{
+	const auto score = controlInterface->property( "classkeepScore" );
+	if( score.isValid() == false )
+	{
+		return label;
+	}
+
+	return QStringLiteral("%1 · %2").arg( label, QCoreApplication::translate(
+		"ComputerControlListModel", "%1 points" ).arg( score.toInt() ) );
+}
+}
+
+
 QString ComputerControlListModel::computerDisplayRole( const ComputerControlInterface::Pointer& controlInterface ) const
 {
 	if( displayRoleContent() != DisplayRoleContent::ComputerName &&
@@ -506,15 +527,16 @@ QString ComputerControlListModel::computerDisplayRole( const ComputerControlInte
 
 		if( displayRoleContent() == DisplayRoleContent::UserName )
 		{
-			return user;
+			return withClassKeepScore( controlInterface, user );
 		}
 
-		return QStringLiteral("%1 - %2").arg(user, controlInterface->computerName());
+		return withClassKeepScore( controlInterface,
+								   QStringLiteral("%1 - %2").arg(user, controlInterface->computerName()) );
 	}
 
 	if( displayRoleContent() != DisplayRoleContent::UserName )
 	{
-		return controlInterface->computerName();
+		return withClassKeepScore( controlInterface, controlInterface->computerName() );
 	}
 
 	return tr("[no user]");

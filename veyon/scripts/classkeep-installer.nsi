@@ -86,7 +86,9 @@ Section "课守 ClassKeep 服务端（必需）" SEC_SERVICE
   ; It requires a complete `plugins/windows-platform.dll` + Qt6 `libqca-ossl.dll`
   ; at startup; collect-windows-runtime.sh hard-verifies both so the CLI can no
   ; longer qFatal()/__fastfail while installing or uninstalling.
-  ExecWait '"$INSTDIR\veyon-wcli.exe" service unregister'
+  ; On a FIRST install wcli does not exist yet, so skip the unregister call.
+  IfFileExists "$INSTDIR\veyon-wcli.exe" 0 +2
+    nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" service unregister'
   Delete "$INSTDIR\*.dll"
   RmDir /r "$INSTDIR\plugins"
 
@@ -114,14 +116,73 @@ Section "课守 ClassKeep 服务端（必需）" SEC_SERVICE
   File /nonfatal "payload\styles\*.dll"
   SetOutPath "$INSTDIR\tls"
   File /nonfatal "payload\tls\*.dll"
+  ; Chinese UI by default; switchable in Veyon Configurator -> General -> Language.
+  SetOutPath "$INSTDIR\translations"
+  File "payload\translations\*.qm"
 
-  ; Original upstream sequence: register service, allow firewall exception,
-  ; enable SAS, then start the service.
-  ExecWait '"$INSTDIR\veyon-wcli.exe" service register'
-  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 1'
-  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Windows/SoftwareSASEnabled 1'
+  ; ------------------------------------------------------------------
+  ; ORIGINAL upstream sequence, but with return codes + a real self-check.
+  ; Previously ExecWait ignored every failure, so a crashed wcli silently
+  ; produced an "installed" app whose service never ran (127.0.0.1 refused).
+  ; ------------------------------------------------------------------
+  SetOutPath "$INSTDIR"
+  FileOpen $9 "$INSTDIR\install.log" w
+  FileWrite $9 "课守 ClassKeep ${VERSION} ${ROLE_CN} 安装日志$\r$\n"
+
+  nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" service register'
+  Pop $R0
+  Pop $1
+  DetailPrint "注册服务 (service register): exit=$R0"
+  FileWrite $9 "service register exit=$R0 output=$1$\r$\n"
+
+  nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 1'
+  Pop $0
+  Pop $1
+  FileWrite $9 "config FirewallExceptionEnabled exit=$0 output=$1$\r$\n"
+
+  nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" config set Windows/SoftwareSASEnabled 1'
+  Pop $0
+  Pop $1
+  FileWrite $9 "config SoftwareSASEnabled exit=$0 output=$1$\r$\n"
+
   WriteRegDWORD ${REG_ROOT} "SYSTEM\CurrentControlSet\Control\Lsa" "ForceGuest" "0"
-  ExecWait '"$INSTDIR\veyon-wcli.exe" service start'
+
+  nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" service start'
+  Pop $R1
+  Pop $1
+  DetailPrint "启动服务 (service start): exit=$R1"
+  FileWrite $9 "service start exit=$R1 output=$1$\r$\n"
+
+  ; Ask the Service Control Manager directly. findstr exits 0 only when the
+  ; service STATE line contains RUNNING, so $2 is our ground truth.
+  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query VeyonService | findstr RUNNING"'
+  Pop $2
+  Pop $3
+  FileWrite $9 "sc query RUNNING exit=$2 output=$3$\r$\n"
+
+  ; Fallback ONLY when the primary wcli path failed. Service name / binary /
+  ; autostart are identical to WindowsServiceFunctions.cpp.
+  ${If} $R0 != "0"
+  ${OrIf} $R1 != "0"
+  ${OrIf} $2 != "0"
+    DetailPrint "wcli 未能启动服务，改用系统服务控制兜底…"
+    FileWrite $9 "fallback: sc create + sc start$\r$\n"
+    nsExec::ExecToLog '"$SYSDIR\sc.exe" create VeyonService binPath= "$INSTDIR\veyon-service.exe" start= auto DisplayName= "ClassKeep Service"'
+    nsExec::ExecToLog '"$SYSDIR\sc.exe" start VeyonService'
+    nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query VeyonService | findstr RUNNING"'
+    Pop $2
+    Pop $3
+    FileWrite $9 "after fallback RUNNING exit=$2 output=$3$\r$\n"
+  ${EndIf}
+
+  ${If} $2 != "0"
+    FileWrite $9 "RESULT: service NOT running$\r$\n"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "服务未能启动，安装未完成。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员排查。$\r$\n常见原因：未以管理员运行、被安全软件拦截、或缺少运行库。"
+  ${Else}
+    FileWrite $9 "RESULT: service RUNNING$\r$\n"
+    DetailPrint "服务已正常运行 (VeyonService)"
+  ${EndIf}
+  FileClose $9
 SectionEnd
 
 ; ------------------------------------------------------- Teacher console only
@@ -159,10 +220,19 @@ SectionEnd
 ; ------------------------------------------------------------------- Uninstall
 Section Uninstall
   ${INSTALL_TYPE}
+  ; Student uninstall protection: the teacher console writes this HKLM flag.
+  ; Only a teacher-side "unlock" command can clear it (see ClassroomPlugin).
+  SetRegView 64
+  ReadRegDWORD $0 ${REG_ROOT} "SOFTWARE\ClassKeep\Student" "UninstallProtection"
+  ${If} $0 == 1
+    MessageBox MB_OK|MB_ICONSTOP "教师端已开启卸载保护，请联系教师端解除保护后再卸载。"
+    Abort
+  ${EndIf}
+
   ; Mirror the upstream uninstall sequence.
-  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Service/SoftwareSASEnabled 0'
-  ExecWait '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 0'
-  ExecWait '"$INSTDIR\veyon-wcli.exe" service unregister'
+  nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" config set Service/SoftwareSASEnabled 0'
+  nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 0'
+  nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" service unregister'
   Sleep 2000
 
   Delete "$INSTDIR\*.exe"
@@ -175,6 +245,8 @@ Section Uninstall
   RmDir /r "$INSTDIR\platforms"
   RmDir /r "$INSTDIR\styles"
   RmDir /r "$INSTDIR\tls"
+  RmDir /r "$INSTDIR\translations"
+  Delete "$INSTDIR\install.log"
   RmDir "$INSTDIR"
 
   Delete "$SMPROGRAMS\课守 ClassKeep\课守 ClassKeep 控制台.lnk"

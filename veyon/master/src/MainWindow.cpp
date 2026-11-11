@@ -29,7 +29,9 @@
 #include <QHostAddress>
 #include <QMenu>
 #include <QMessageBox>
+#include <QStringList>
 #include <QSplitter>
+#include <QVector>
 
 #include "AboutDialog.h"
 #include "AccessControlProvider.h"
@@ -463,6 +465,18 @@ void MainWindow::showAboutDialog()
 
 void MainWindow::addFeaturesToToolBar()
 {
+	// ClassKeep: put the everyday actions first. Everything else wraps onto a
+	// second row or goes into Qt's ">>" overflow menu. Names that are not in
+	// the list below simply land in the second group, so no feature is lost.
+	static const QStringList primaryNames{
+		QStringLiteral("monitoring"), QStringLiteral("demo"), QStringLiteral("lock"),
+		QStringLiteral("remoteview"), QStringLiteral("remoteaccess"),
+		QStringLiteral("textmessage"), QStringLiteral("screenshot"),
+		QStringLiteral("classroom"), QStringLiteral("classkeep")
+	};
+
+	QVector<Feature> primary;
+	QVector<Feature> secondary;
 	for( const auto& feature : m_master.features() )
 	{
 		if( feature.testFlag( Feature::Flag::Meta ) )
@@ -470,11 +484,23 @@ void MainWindow::addFeaturesToToolBar()
 			continue;
 		}
 
+		if( primaryNames.contains( feature.name(), Qt::CaseInsensitive ) )
+		{
+			primary.append( feature );
+		}
+		else
+		{
+			secondary.append( feature );
+		}
+	}
+
+	const auto addFeature = [this]( const Feature& feature )
+	{
 		auto btn = new ToolButton( QIcon( feature.iconUrl() ),
-										  feature.displayName(),
-										  feature.displayNameActive(),
-										  feature.description(),
-										  feature.shortcut() );
+									  feature.displayName(),
+									  feature.displayNameActive(),
+									  feature.description(),
+									  feature.shortcut() );
 		connect(btn, &QToolButton::clicked, this, [=, this] () {
 			m_master.runFeature( feature );
 			updateModeButtonGroup();
@@ -491,6 +517,19 @@ void MainWindow::addFeaturesToToolBar()
 			btn->setCheckable( true );
 			m_modeGroup->addButton( btn, buttonId( feature ) );
 		}
+	};
+
+	for( const auto& feature : primary )
+	{
+		addFeature( feature );
+	}
+	if( primary.isEmpty() == false && secondary.isEmpty() == false )
+	{
+		ui->toolBar->addSeparator();
+	}
+	for( const auto& feature : secondary )
+	{
+		addFeature( feature );
 	}
 }
 

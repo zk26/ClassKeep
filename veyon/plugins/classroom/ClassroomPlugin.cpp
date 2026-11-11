@@ -12,6 +12,7 @@
 #include <QHostInfo>
 #include <QJsonDocument>
 #include <QNetworkInterface>
+#include <QSettings>
 #include <QTimer>
 
 #include "ClassroomClient.h"
@@ -608,6 +609,23 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	case Command::StartCheckIn:
 		m_clientWidget->showCheckIn();
 		break;
+
+	case Command::SetUninstallProtection:
+	{
+		// The worker runs as LocalSystem from VeyonService, so HKLM is writable.
+		// The standalone uninstall.exe reads the same value and aborts when set.
+		const bool protect = message.argument( Argument::Enabled ).toBool();
+#ifdef Q_OS_WIN
+		QSettings settings( QStringLiteral("HKEY_LOCAL_MACHINE\\SOFTWARE\\ClassKeep\\Student"),
+							QSettings::Registry64Format );
+		settings.setValue( QStringLiteral("UninstallProtection"), protect ? 1 : 0 );
+		settings.sync();
+#endif
+		reportEvent( EventType::protection(),
+					 protect ? QStringLiteral("uninstall protection enabled by teacher")
+							 : QStringLiteral("uninstall protection cleared by teacher"), {} );
+		break;
+	}
 
 	case Command::ShowSilencePage:
 		m_clientWidget->setSilence( true, message.argument( Argument::Message ).toString() );

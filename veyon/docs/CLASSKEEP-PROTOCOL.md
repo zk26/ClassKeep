@@ -88,6 +88,12 @@
 | 36 | `SyncReply` | 保留 | 同上 | `SyncDataJson` |
 | 37 | `StartCheckIn` | M→S→W | 教师端「开始签到」，学生机弹出姓名输入框 | `ClassName` |
 | 38 | `CheckInReply` | W→S→M | 学生提交姓名，教师端按「座位号 → 名单姓名」比对 | `ClassName`、`Seat`、`Student`、`CheckInName`、`Host`、`Ip` |
+| 39 | `SetUninstallProtection` | M→S→W | 教师端开启/解除学生端卸载保护 | `Enabled` |
+
+> `SetUninstallProtection` 收到后，学生端 worker（以 `LocalSystem` 运行）写
+> `HKLM\SOFTWARE\ClassKeep\Student\UninstallProtection` = 1/0；独立的
+> `uninstall.exe` 启动时读同一 DWORD，为 1 则弹提示并 `Abort`。
+> 不需要卸载器联网，教师端离线时保护仍然有效。
 
 > 标注「保留」的命令已在协议中占位但尚未接线；收到时 `default` 分支返回 `false`，不会静默吞掉。
 >

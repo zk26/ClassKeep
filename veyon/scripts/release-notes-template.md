@@ -29,6 +29,20 @@
 - {VER} 修复手机端适配：底部导航栏改为固定高度、所有子控件使用显式高度，
   解决窄屏上胶囊被竖向拉满全屏、内容区变白屏的问题。
 
+## 桌面端本版更新
+
+- **服务自检（重要）**：安装器现在捕获 `veyon-wcli.exe service register/start`
+  的退出码并写入 `$INSTDIR\install.log`，再用 `sc query` 确认 `VeyonService`
+  处于 RUNNING；未启动时用系统服务控制兜底并弹出中文提示，不再出现
+  「装完了但 127.0.0.1 连不上」的静默失败。
+- **默认中文界面**：随包提供 `translations/veyon_zh_CN.qm` 与 Qt 中文翻译，
+  Configurator → General → Language 里可切换到其它语言。
+- **名称与图标全部统一**：窗口标题、任务栏、启动页、配置器、关于对话框、
+  服务显示名均为「课守 ClassKeep」；Qt 窗口图标改用 `ClassKeep_logo.png`。
+- **监控缩略图显示姓名 + 当前分数**；教师端「System & devices」页新增
+  学生端**卸载保护**开关（保护开启时卸载器会拒绝运行）。
+- Master 工具栏图标缩小，常用功能置顶、不常用功能折叠进 `>>` 菜单。
+
 ## 校验
 
 ```powershell

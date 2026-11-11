@@ -102,7 +102,11 @@ enum class Command
 
 	// attendance check-in (appended last: numeric values are the wire protocol)
 	StartCheckIn,
-	CheckInReply
+	CheckInReply,
+
+	// student uninstall protection (ALWAYS append: values are the wire protocol)
+	// Argument::Enabled carries on/off.
+	SetUninstallProtection
 };
 
 enum class Argument
@@ -203,6 +207,7 @@ inline QString remote()       { return QStringLiteral("remote"); }
 inline QString demo()         { return QStringLiteral("demo"); }
 inline QString checkIn()      { return QStringLiteral("check-in"); }
 inline QString quickScore()   { return QStringLiteral("quick-score"); }
+inline QString protection()   { return QStringLiteral("protection"); }
 }
 
 namespace SettingKey
