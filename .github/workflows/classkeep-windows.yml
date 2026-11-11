@@ -57,6 +57,9 @@ jobs:
             mingw-w64-ucrt-x86_64-lzo2
             mingw-w64-ucrt-x86_64-openldap
             mingw-w64-ucrt-x86_64-cyrus-sasl
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-nsis
+            mingw-w64-ucrt-x86_64-python
 
       - name: Fetch Veyon 3rdparty sources (pinned to v4.11.4)
         shell: bash
@@ -110,35 +113,49 @@ jobs:
           set -o pipefail
           cmake --build build --parallel 4 --target \
             classroom \
-            veyon-master veyon-configurator veyon-cli \
+            veyon-master veyon-configurator veyon-cli veyon-wcli \
             veyon-service veyon-server veyon-worker 2>&1 | tee build.log
 
-      - name: Collect Windows binaries and runtime DLLs
+      # Build every usable upstream plugin so the installed Master/Service keep
+      # demo, remote control, screen lock, VNC, etc. A full `cmake --build`
+      # would hit the broken upstream filetransfer plugin, so compile targets
+      # individually and skip only the ones that genuinely fail.
+      - name: Build upstream plugins
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          for target in authkeys builtindirectory demo desktopservices ldap \
+                        powercontrol remoteaccess screenlock screenshot \
+                        systemusergroups textmessage usersessioncontrol \
+                        windows-platform external-vnc-server headless-vnc-server \
+                        ultravnc-builtin vnchooks; do
+            if cmake --build build --parallel 4 --target "$target" >> plugins.log 2>&1; then
+              echo "built:   $target"
+            else
+              echo "skipped: $target"
+            fi
+          done
+
+      # A hand-written DLL whitelist caused missing libbz2 / libmd4c / libbrotli
+      # errors at runtime. collect_mingw_deps.py instead walks the real PE import
+      # closure with ntldd until every runtime DLL is present.
+      - name: Assemble self-contained runtime payload
+        shell: msys2 {0}
+        run: bash veyon/scripts/collect-windows-runtime.sh
+
+      - name: Build teacher and student setup EXEs
         shell: msys2 {0}
         run: |
           set -e
-          bin=dist-windows
-          mkdir -p "$bin/platforms" "$bin/styles" "$bin/tls" "$bin/imageformats"
-          find build -type f \( -name 'veyon-*.exe' -o -name 'veyon-*.dll' -o -name 'classroom.dll' \) \
-            ! -path '*CMakeFiles*' -exec cp '{}' "$bin/" \;
-          cp /ucrt64/bin/Qt6*.dll "$bin/" 2>/dev/null || true
-          for pat in libqca libgcc libstdc++ libwinpthread libcrypto libssl libjpeg libpng16 \
-                     liblzo2 libvncclient libvncserver libldap liblber libsasl zlib1 libssp \
-                     libbrotli libfreetype libharfbuzz libicu libpcre2 libzstd libdouble-conversion; do
-            cp /ucrt64/bin/$pat*.dll "$bin/" 2>/dev/null || true
-          done
-          for sub in platforms styles tls imageformats; do
-            cp /ucrt64/share/qt6/plugins/$sub/*.dll "$bin/$sub/" 2>/dev/null || \
-              cp /ucrt64/lib/qt6/plugins/$sub/*.dll "$bin/$sub/" 2>/dev/null || true
-          done
-          echo '--- collected ---'
-          ls -1 "$bin" | head -70
-          test -f "$bin/classroom.dll"     || { echo 'classroom.dll missing'; exit 1; }
-          test -f "$bin/veyon-master.exe"  || { echo 'veyon-master.exe missing'; exit 1; }
-          test -f "$bin/veyon-service.exe" || { echo 'veyon-service.exe missing'; exit 1; }
+          mkdir -p dist
+          # Unicode true requires a UTF-8 BOM for the Chinese UI strings.
+          { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+          makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
+          makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
+          ls -lh dist
 
       - uses: actions/upload-artifact@v6
         with:
-          name: classkeep-windows-binaries
-          path: dist-windows/*
+          name: classkeep-windows-setups
+          path: dist/*.exe
           if-no-files-found: error

@@ -48,13 +48,15 @@
 > | [docs/CLASSKEEP-THIRD-PARTY.md](docs/CLASSKEEP-THIRD-PARTY.md) | 第三方组件与许可清单 |
 > | [docs/CLASSKEEP-LICENSE.md](docs/CLASSKEEP-LICENSE.md) | 许可证与衍生作品声明 |
 > | [plugins/classroom/README.md](plugins/classroom/README.md) | 课守插件源码结构 |
-> | [scripts/README.md](scripts/README.md) | 发布包打包脚本 |
-> | [mobile/README.md](mobile/README.md) | Android 工程历史副本说明 |
+> | [scripts/README.md](scripts/README.md) | 依赖闭包收集、NSIS 安装器与图标生成脚本 |
+> | [`../mobile/README.md`](../mobile/README.md) | Android 教室端工程说明 |
+> | [`../.github/workflows/`](../.github/workflows/) | 编译验证 / Windows 构建 / 发布流水线 |
 >
 > 本项目继承上游 **GPL-2.0-or-later**（见 `COPYING` 与 `../LICENSE`）。
 > 上游项目主页：https://veyon.io/ — 本分支与上游 Veyon 项目无隶属、背书或合作关系。
 >
-> 注意：本目录内 `mobile/` 是**历史提交副本，不再维护**；Android 唯一权威工程在仓库根 [`../mobile/`](../mobile/)。
+> Android 工程在仓库根 [`../mobile/`](../mobile/)（唯一一份）；桌面端图标由根目录
+> [`../ClassKeep_logo.png`](../ClassKeep_logo.png) 生成，产品名统一为「课守 ClassKeep」。
 
 [![.github/workflows/build.yml](https://github.com/veyon/veyon/actions/workflows/build.yml/badge.svg?branch=4.5)](https://github.com/veyon/veyon/actions/workflows/build.yml)
 [![Latest stable release](https://img.shields.io/github/release/veyon/veyon.svg?maxAge=3600)](https://github.com/veyon/veyon/releases)

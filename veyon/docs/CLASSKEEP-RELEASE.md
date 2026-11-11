@@ -2,8 +2,8 @@
 
 仓库：<https://github.com/zk26/ClassKeep> · 许可 **GPL-2.0-or-later**。
 
-每个 Release（`v<版本>` tag）必须同时提供 **教师端、学生端、APP** 三类产物，另加校验文件。
-本文件定义命名、内容、构建来源、校验与安装方式。
+每个 Release 必须同时提供**教师端安装程序、学生端安装程序、APP** 三类产物，
+另加校验文件与发布说明。
 
 > **合规前置**：分发二进制前必须阅读 [`CLASSKEEP-LICENSE.md`](CLASSKEEP-LICENSE.md)、
 > [`../../NOTICE.md`](../../NOTICE.md) 与 [`CLASSKEEP-THIRD-PARTY.md`](CLASSKEEP-THIRD-PARTY.md)，
@@ -14,201 +14,134 @@
 
 ## 1. 版本号与命名
 
-版本格式 `vMAJOR.MINOR.PATCH`（示例 `v1.0.0`），与 `mobile/app/build.gradle.kts` 的 `versionName` 保持一致。
+版本格式 `vMAJOR.MINOR.PATCH`，与 `mobile/app/build.gradle.kts` 的 `versionName` 一致。
 
-| 产物 | 文件名 | 构建来源 |
+| 产物 | 文件名 | 格式 |
 |---|---|---|
-| 教师端 | `ClassKeep-Teacher-<ver>-win64.zip` | `ClassKeep Release` → `windows` job（MSYS2 UCRT64 + Qt6/MinGW） |
-| 学生端 | `ClassKeep-Student-<ver>-win64.zip` | 同上：同一套二进制，注入不同的预设配置与安装脚本 |
-| APP | `ClassKeep-Mobile-<ver>.apk` | `ClassKeep Release` → `android` job（Ubuntu + JDK 21） |
-| 校验 | `SHA256SUMS.txt` | 覆盖上述三类产物 |
+| 教师端安装程序 | `ClassKeep-Teacher-<ver>-win64-setup.exe` | NSIS 安装器（单文件 EXE） |
+| 学生端安装程序 | `ClassKeep-Student-<ver>-win64-setup.exe` | NSIS 安装器（单文件 EXE） |
+| APP | `ClassKeep-Mobile-<ver>.apk` | Android APK |
+| 校验 | `SHA256SUMS.txt` | 覆盖上述三者 |
 | 发布说明 | `RELEASE-NOTES.md` | 由 `scripts/release-notes-template.md` 生成 |
 
-**三类产物都是真实编译的，不含占位包、空包或伪造二进制。**
+**三类产物都是真实编译的**，不含占位包、空包或伪造二进制。
+仓库内不提交预编译二进制（`dist/`、`*.apk`、`*.exe` 安装包均由根 `.gitignore` 排除）。
 
-> 历史说明：`v1.0.0` 曾附带 `-preset` 部署配置包（当时 CI 尚未支持 Windows 编译），
-> 由 `scripts/package-presets.ps1` 生成，内含配置模板、安装脚本、文档与许可文件，但**明确标注不含可执行文件**。
-> 自 `v1.1.0` 起改由上面的完整二进制包取代；`package-presets.ps1` 仍保留，供无工具链环境做离线配置部署。
-> 命名上 `-win64.zip` 与 `-win64-preset.zip` 严格区分，不得混用。
-
-GitHub 还会自动附带 `Source code (zip)` / `(tar.gz)`，无需手工上传。
+> 历史：`v1.0.0` 曾发布 `-preset` 配置包，`v1.1.0`～`v1.2.0` 发布 ZIP 绿色包。
+> 这些旧包因运行时 DLL 不全而无法正常启动，**已删除**。
+> 自 `v1.3.0` 起改为 NSIS 安装 EXE，并用 `ntldd` 递归收集完整依赖闭包。
 
 ---
 
-## 2. 产物内容清单
+## 2. 两个安装程序的差别
 
-### 2.1 `ClassKeep-Teacher-<ver>-win64.zip`
+沿用上游 `nsis/veyon.nsi.in` 的组件式安装流程：安装器会自动注册并启动
+Veyon Service、放行防火墙、启用 SAS。
 
-运行位置：**教师机**（Windows 10/11）。
+| ROLE | 组件页 | 安装的额外文件 |
+|---|---|---|
+| `teacher` | 「服务端（必选，只读）」+「教师控制台（可选，默认勾选）」 | `veyon-master.exe` + 控制台快捷方式 |
+| `student` | **只有「服务端（必选，只读）」** | **不含 `veyon-master.exe`，组件页也没有 Master 选项** |
 
-```
-veyon-master.exe                Veyon Master
-veyon-configurator.exe          Veyon Configurator
-veyon-service.exe               Veyon Service（本机如需被管理）
-veyon-cli.exe                   命令行工具
-classroom.dll                   课守插件
-*.dll / Qt*.dll / platforms\    运行依赖
-config\
-  veyon-config.json             预设配置模板（含 Classroom 段）
-  classes.csv                   班级名单模板（seat,name,ip）
-  network-security-note.txt     Bridge 端口与网段说明
-docs\
-  CLASSKEEP.md
-  CLASSKEEP-DEPLOY.md
-  CLASSKEEP-PROTOCOL.md
-  CLASSKEEP-RELEASE.md
-  CLASSKEEP-LICENSE.md
-COPYING                         GPL v2 许可证全文
-install-teacher.ps1             静默安装脚本（注册服务、写配置、放行防火墙）
-README.txt                      三步快速上手
-```
+两者共用同一份 `payload/`（Veyon 可执行文件、`veyon-core.dll`、全部 Veyon 插件、
+Qt6/CRT 运行时 DLL、Qt 插件、QCA 加密插件、文档与 `ClassKeep.ico`），差别在编译期
+决定——学生端安装器里根本没有 Master 段，等价于上游的 `/NoMaster` 行为。
 
-### 2.2 `ClassKeep-Student-<ver>-win64.zip`
-
-运行位置：**学生机**（Windows 10/11 企业版/教育版/IoT 企业版，超级管理员登录，UWF 还原）。
+### payload 目录结构
 
 ```
-veyon-service.exe               Veyon Service（LocalSystem）
-veyon-server.exe                Veyon Server
-veyon-worker.exe                Veyon Feature Worker
-classroom.dll                   课守插件
-*.dll / Qt*.dll / platforms\    运行依赖
-config\
-  veyon-config.json             预设：退出保护开、自助登录开、密钥留空（由教师端下发）
-  uwf-exclusions.txt            建议加入 UWF 排除的目录清单
-docs\
-  CLASSKEEP-DEPLOY.md
-  CLASSKEEP-LICENSE.md
-COPYING
-install-student.ps1             静默安装 + UWF 排除项 + 服务自启
-README.txt
+veyon-server.exe / veyon-service.exe / veyon-worker.exe
+veyon-configurator.exe / veyon-cli.exe / veyon-wcli.exe
+veyon-master.exe                    （教师端安装器才释放）
+veyon-core.dll + 全部 Qt6/CRT 运行时 DLL
+plugins/classroom.dll + 其它 Veyon 插件 DLL
+platforms/qwindows.dll
+styles/ tls/ imageformats/ crypto/
+LICENSE.TXT / COPYING.TXT / README.TXT / ClassKeep.ico
 ```
 
-> 学生端与教师端共用同一套 Veyon 二进制，差别只在**安装组件与预设配置**。
-> 若使用 Veyon 官方安装器，可在安装时勾选组件，再导入对应 `veyon-config.json`。
-
-### 2.3 `ClassKeep-Mobile-<ver>.apk`
-
-```
-app-release.apk（或 unsigned debug APK，见下）
-```
-
-- `applicationId = top.ikee002.classkeep`，`minSdk 30`。
-- Release 构建需签名；CI 里可用上传的 keystore（secrets）或产出未签名 APK 并在 Release 说明中标注**需自行签名**。
-- debug 构建产物仅用于内测，不得当作正式版发布。
-
-### 2.4 `SHA256SUMS.txt`
-
-```
-<sha256小写>  ClassKeep-Teacher-1.0.0-win64.zip
-<sha256小写>  ClassKeep-Student-1.0.0-win64.zip
-<sha256小写>  ClassKeep-Mobile-1.0.0.apk
-```
-
-由 `scripts/package-classkeep.ps1` 自动生成，发布前必须校验。
+> 运行时 DLL 由 `scripts/collect_mingw_deps.py` 用 `ntldd` 递归解析 PE 导入闭包收集，
+> **不再使用文件名白名单**——白名单曾漏掉 `libbz2-1.dll`、`libmd4c.dll`、
+> `libbrotli*.dll` 等，导致安装后所有 EXE 报「找不到 DLL」。
 
 ---
 
 ## 3. 构建来源
 
-产物由 [`../../.github/workflows/classkeep-release.yml`](../../.github/workflows/classkeep-release.yml)
+由 [`../../.github/workflows/classkeep-release.yml`](../../.github/workflows/classkeep-release.yml)
 在推送 `v*` tag 或手动 `Run workflow` 时构建：
 
 | Job | Runner | 产出 |
 |---|---|---|
-| `android` | `ubuntu-24.04` + JDK 21 + Android SDK | `ClassKeep-Mobile-<ver>.apk` |
-| `windows` | `windows-latest` + MSYS2 **UCRT64** + Qt6/MinGW | 真实编译的 `.exe` / `.dll`（含 `classroom.dll`）+ Qt6/CRT 运行时 |
-| `package` | `windows-latest` | 用 `package-classkeep.ps1` 组装教师端/学生端 ZIP + `SHA256SUMS.txt` |
+| `android` | `ubuntu-24.04` + JDK 21 + Android SDK | `ClassKeep-Mobile.apk` |
+| `windows` | `windows-latest` + MSYS2 **UCRT64** + Qt6/MinGW + ntldd + NSIS | 两个 `*-setup.exe` |
+| `package` | `windows-latest` | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 | `release` | `ubuntu-24.04` | 校验后创建 Release 并上传全部 assets |
 
-Windows 依赖由 `msys2/setup-msys2@v2` 在 UCRT64 下安装（QCA 包名是 `qca-qt6`，
-LDAP/SASL 是 `openldap` / `cyrus-sasl`）；3rdparty 按上游 v4.11.4 的 gitlink SHA 精确检出。
-详见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md) 路线 D。
-
-另外 [`../../.github/workflows/classkeep-windows.yml`](../../.github/workflows/classkeep-windows.yml)
-可单独手动触发，只做 Windows 编译验证（产出 `classkeep-windows-binaries` artifact）。
-
-> 仓库内**不提交预编译二进制**（`dist/`、`*.apk`、发布 ZIP 均由根 `.gitignore` 排除）。
->
-> 版本历史：`v1.0.0` 附带的是 `-preset` 部署配置包；自 `v1.1.0` 起，
-> **教师端 / 学生端 / APP 三类产物全部由 GitHub Actions 真实编译**，
-> `SHA256SUMS.txt` 覆盖三者。不含任何占位包、空包或伪造二进制。
-> `v1.2.0` 起新增签到、座位网格快捷加减分、期末明细表与 `ClassKeep_logo.png` 图标。
+Windows 依赖、3rdparty 锁定 SHA 与编译目标详见
+[`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md) 路线 D。
+另有 [`../../.github/workflows/classkeep-windows.yml`](../../.github/workflows/classkeep-windows.yml)
+可单独手动触发，只做 Windows 编译与安装器验证。
 
 ---
 
-## 4. 本地打包
+## 4. 本地生成安装程序
 
-在已有编译产物的机器上：
+在装有 MSYS2 UCRT64（含 `ntldd` / `nsis` / `python`）的机器上，仓库根执行：
 
-```powershell
-cd veyon
-.\scripts\package-classkeep.ps1 `
-    -Version 1.0.0 `
-    -TeacherDir D:\build\teacher\bin `
-    -StudentDir D:\build\student\bin `
-    -ApkPath D:\build\mobile\app-release-unsigned.apk `
-    -OutputDir dist
+```bash
+bash veyon/scripts/collect-windows-runtime.sh
+mkdir -p dist
+{ printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
 ```
 
-脚本会：
-1. 校验三类输入目录/文件存在（缺失即报错，不产出半成品）；
-2. 分别组装教师端、学生端 ZIP，注入 `config/` 模板、`docs/`、`COPYING` 与安装脚本；
-3. 复制 APK 并按版本重命名；
-4. 生成 `dist/SHA256SUMS.txt` 与 `dist/RELEASE-NOTES.md` 草稿。
-
-`dist/` 已加入 `.gitignore`，产物不进仓库。
+`payload/` 由第一条命令从 `build/` 组装；图标 `.ico` 已提交进仓库，CI 不重新生成。
 
 ---
 
-## 5. 校验与安装
+## 5. 校验
 
-### 校验（PowerShell）
+`SHA256SUMS.txt` 由 `package` job 自动生成，覆盖三类产物：
+
+```
+<sha256小写>  ClassKeep-Mobile-1.3.0.apk
+<sha256小写>  ClassKeep-Student-1.3.0-win64-setup.exe
+<sha256小写>  ClassKeep-Teacher-1.3.0-win64-setup.exe
+```
 
 ```powershell
-cd dist
 Get-Content SHA256SUMS.txt | ForEach-Object {
     $hash, $file = $_ -split '\s+', 2
-    $actual = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
-    if ($actual -ne $hash) { throw "校验失败: $file" }
+    if ((Get-FileHash $file -Algorithm SHA256).Hash.ToLower() -ne $hash) { throw "校验失败: $file" }
 }
-Write-Output '全部校验通过'
 ```
 
-### 安装顺序
-
-1. **学生机**：以管理员运行 `install-student.ps1` → 确认 UWF 已开启且排除项已加 → 重启。
-2. **教师机**：以管理员运行 `install-teacher.ps1` → Configurator 里打开「课守 ClassKeep」页设置 Bridge 端口 → 打开 Master。
-3. **手机**：安装 APK → 输入本堂课密钥与教师机 IP/端口（自动发现会填）→ 立即同步。
-4. 首次上课在教师端点「开始新课堂」生成密钥，再按 IP 登录学生。
-
-详细操作步骤与排障见 [`CLASSKEEP-DEPLOY.md`](CLASSKEEP-DEPLOY.md)。
+`release` job 会用 `sha256sum -c` 再校验一次，任一不符即失败。
 
 ---
 
-## 6. 发布流程
+## 6. 安装顺序
 
-```powershell
-# 1. 确认版本号一致
-#    mobile/app/build.gradle.kts -> versionName / versionCode
+1. **学生机**：以管理员运行学生端 `setup.exe`，保持「服务端」勾选；安装完成后
+   Veyon Service 已自动注册并启动。再以管理员运行 `veyon-configurator.exe`
+   导入教师机导出的认证配置。
+2. **教师机**：以管理员运行教师端 `setup.exe`，保持「教师控制台」勾选；
+   用 Veyon Configurator 完成认证配置，再运行 `veyon-master.exe`。
+3. **手机**：安装 APK，输入本堂课密钥与教师机 IP/端口。
 
-# 2. 打 tag 并推送（CI 会自动构建并创建 Release）
-cd veyon
-git tag v1.0.0
-git push git@github.com:zk26/ClassKeep.git v1.0.0
+安装目录内的 `README.TXT` 有中文说明；完整流程见
+[`CLASSKEEP-DEPLOY.md`](CLASSKEEP-DEPLOY.md)。
 
-# 3. 在 GitHub Actions 页面确认三个 job 全部成功
-# 4. 打开 Releases 页面核对三类产物 + SHA256SUMS.txt
-```
-
-若 CI 暂不可用，可用 `scripts/package-classkeep.ps1` 产出后，在 GitHub Releases 页面
-「Create a new release → 选择 tag → 拖入三个产物 + SHA256SUMS.txt」手动发布。
+> 学生机须为 Windows 10/11 **企业版、教育版或 IoT 企业版**（UWF 仅这些版本支持）。
+> UWF 排除项添加后必须**重启**，不能用「关机再开机」代替快速启动。
 
 ---
 
-## 7. 分发合规
+## 7. 已知限制
 
-按 GPL-2.0-or-later，每次分发二进制必须同时提供对应完整源码。
-GitHub 自动附带的源码归档 + 本仓库的 commit 记录满足该要求；
-离线分发（如 U 盘拷给其他学校）必须额外附上源码 ZIP、`COPYING` 与
-[`CLASSKEEP-LICENSE.md`](CLASSKEEP-LICENSE.md)。
+- Android APK 是 **debug 签名**内测包，正式分发需自行签名。
+- 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都编不过，未随包分发；
+  课守控制台的「分发并安装」依赖该功能，请改用系统自带部署方式。
+- 构建产物未在真实 UWF 学生机上做安装联调，部署前请先在单台机器验证。

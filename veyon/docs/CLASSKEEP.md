@@ -82,27 +82,31 @@ veyon/plugins/classroom/      课守插件（全部新增）
   ClassroomWordCloud.*          中文分词与 SVG / 位图词云
   ClassroomSystem.*             UWF / Core Audio / 防火墙 / 安装命令
   ClassroomSecrets.*            密钥加密落盘与挑战应答摘要
-  ClassroomSelfTest.cpp         零依赖自检用例（WITH_TESTS=ON）
+  ClassroomSeatGrid.*           座位缩略图、签到汇总、点击分数快捷加减分
+ClassroomSelfTest.cpp         零依赖自检用例（WITH_TESTS=ON）
 
-mobile/                       Android 教室端（Kotlin，零第三方网络库）— 唯一权威工程
+mobile/                       Android 教室端（Kotlin，零第三方网络库）— 唯一工程
   app/src/main/java/top/ikee002/classkeep/
-veyon/mobile/                 历史提交副本，仅为保留旧 fork 结构，**不再维护**
+  tools/generate_icons.py     从根 ClassKeep_logo.png 生成启动图标
 
 核心扩展点（对上游的最小改动）
   veyon/core/src/FeatureProviderInterface.h    增加 startSessionFeature() 钩子
   veyon/core/src/FeatureManager.h/.cpp         增加 startSessionFeatures() 分发
   veyon/server/src/ComputerControlServer.cpp   start() 时调用该钩子
   veyon/master/src/ComputerMonitoringWidget.cpp  Ctrl+双击缩略图直接远控
+  veyon/cmake/modules/WindowsBuildHelpers.cmake  EXE 版本信息产品名改为 ClassKeep
 
 仓库根级
   README.md / LICENSE / NOTICE.md / .gitignore
+  ClassKeep_logo.png           唯一品牌图标来源
+  .github/workflows/           编译验证 / Windows 构建 / 发布
+  veyon/scripts/              依赖闭包收集、NSIS 安装器、图标生成
 ```
 
 ---
 
-> **关于两份 `mobile/` 目录**：仓库根 `mobile/` 是 **Android 唯一权威工程**（Android Studio 打开它）；
-> `veyon/mobile/` 是早期推送到旧 fork `zk26/veyon` 时留下的**历史副本，不再维护**。
-> 两者互不联动，请勿在 `veyon/mobile/` 中修改代码。
+> Android 工程只有仓库根 `mobile/` 一份（Android Studio 打开它）。
+> 早期留下的 `veyon/mobile/` 历史副本和废弃的 ZIP 打包脚本已删除。
 > 生成物、本机 SDK 配置与发布产物已由仓库根 `.gitignore` 排除。
 
 ## 4. 构建

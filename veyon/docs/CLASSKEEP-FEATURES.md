@@ -133,13 +133,15 @@
 |---|---|---|---|
 | G1 | 改名 **中文「课守」/ 英文 ClassKeep** | ✅ | 插件元信息、标题、Android `app_name`、包名 `top.ikee002.classkeep`、数据目录 `%APPDATA%/ClassKeep`、广播前缀 |
 | G2 | 删除 RN 残留，**移植到你的 Kotlin 项目** | ✅ | `mobile/` 只剩 Android 工程；7 个 Kotlin 文件 |
-| G3 | **每一个说明文件都写清楚、不要有纠纷** | ✅ | 根 `README.md`、`NOTICE.md`、`LICENSE`、`veyon/README.md`、8 份 docs、`plugins/classroom/README.md`、`scripts/README.md`、`mobile/README.md`、`veyon/mobile/README.md`（历史副本声明） |
-| G4 | 法律与合规文档 | ✅ | `LICENSE`(GPL v2 全文)、`NOTICE.md`、`CLASSKEEP-LICENSE.md`、`CLASSKEEP-THIRD-PARTY.md`、`CLASSKEEP-PRIVACY.md` |
+| G3 | **每一个说明文件都写清楚、不要有纠纷** | ✅ | 根 `README.md`、`NOTICE.md`、`LICENSE`、`veyon/README.md`、8 份 docs、`plugins/classroom/README.md`、`scripts/README.md`、`mobile/README.md` |
+| G4 | 法律与合规文档 | ✅ | `LICENSE`(GPL v2 全文)、`NOTICE.md`（含 Logo 归属）、`CLASSKEEP-LICENSE.md`、`CLASSKEEP-THIRD-PARTY.md`、`CLASSKEEP-PRIVACY.md` |
 | G5 | **协议规范**写死兼容铁律 | ✅ | `CLASSKEEP-PROTOCOL.md`：全量枚举数值表、HTTP 路由、认证公式与基准向量、UDP 报文、数据格式、「只追加不插入/重排」 |
-| G6 | 明确「两份 `mobile/`」与历史副本关系 | ✅ | 根 README、`veyon/mobile/README.md` |
-| G7 | **Releases 三类产物全都有** | ✅ | 当前 `v1.2.0`（11.73 MB APK + 两个 46.19 MB Windows ZIP + 校验 + 说明），**GitHub Actions 真实编译**；`v1.1.0` 起改为完整二进制包 |
+| G6 | 清理冗余、只保留一份 Android 工程 | ✅ | 删除 `veyon/mobile/` 历史副本与两个废弃 ZIP 打包脚本；所有文档引用已同步 |
+| G7 | **Releases 三类产物全都有** | ✅ | 当前 `v1.3.0`：教师端 `setup.exe` + 学生端 `setup.exe` + APP `apk` + 校验 + 说明，**GitHub Actions 真实编译**；旧 ZIP / preset 包已删除 |
 | G8 | GitHub 真实编译路线 | ✅ | `classkeep-build.yml`(Linux/Qt6)、`classkeep-windows.yml`(MinGW)、`classkeep-release.yml`(三产物)；`CLASSKEEP-BUILD.md` |
-| G9 | 打包脚本与自检 | ✅ | `scripts/package-classkeep.ps1`、`package-presets.ps1`、`release-notes-template.md`、`ClassroomSelfTest.cpp`、`ClassKeepUnitTest.kt` |
+| G9 | 安装器、依赖闭包与自检 | ✅ | `collect_mingw_deps.py`(ntldd 递归)、`collect-windows-runtime.sh`、`classkeep-installer.nsi`、`generate_windows_icons.py`、`ClassroomSelfTest.cpp`、`ClassKeepUnitTest.kt` |
+| G10 | **桌面端统一改名与换图标** | ✅ | `WindowsBuildHelpers.cmake` 产品名改 ClassKeep；Logo 生成 master/configurator/installer/uninstaller `.ico`；安装器与快捷方式显示「课守 ClassKeep 教师端/学生端」 |
+| G11 | **沿用上游组件式安装**，学生端不出现 Master | ✅ | `classkeep-installer.nsi` 基于 `nsis/veyon.nsi.in`：教师端「服务端(RO) + 教师控制台(可选)」，学生端只有「服务端(RO)」，自动注册/启动服务 |
 
 ---
 

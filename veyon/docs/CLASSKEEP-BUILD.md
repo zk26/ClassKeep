@@ -145,8 +145,8 @@ workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Bui
 | 环境 | **UCRT64**（不是 MINGW64——MSYS2 的 QCA / LibVNC 只发布到 ucrt64 / clang64） |
 | 编译器 | `mingw-w64-ucrt-x86_64-gcc` + Ninja |
 | Qt | `mingw-w64-ucrt-x86_64-qt6-base` 等，用 `cmake -DCMAKE_PREFIX_PATH=/ucrt64` 配置（MSYS2 没有 `qt-cmake` wrapper） |
-| 关键包名 | `qca-qt6`、`openldap`、`cyrus-sasl`（**不是** `qca` / `libldap` / `libsasl`） |
-| 产物 | `classkeep-windows-binaries` artifact：编译出的 `.exe` / `.dll` + UCRT64 运行时 DLL |
+| 关键包名 | `qca-qt6`、`openldap`、`cyrus-sasl`、`ntldd`、`nsis`、`python`（**不是** `qca` / `libldap` / `libsasl`） |
+| 产物 | `classkeep-windows-setups` artifact：教师端 / 学生端两个 `*-setup.exe`（内含完整 DLL 闭包） |
 
 设计要点：
 
@@ -159,17 +159,22 @@ workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Bui
 实际产出（已验证）：
 
 ```
-classroom.dll                       课守插件（含 UWF / Core Audio / WFP 实现）
+plugins/classroom.dll + 其它 Veyon 插件 DLL
 veyon-core.dll
-veyon-master.exe / veyon-configurator.exe / veyon-cli.exe     教师端
-veyon-service.exe / veyon-server.exe / veyon-worker.exe       学生端
-Qt6*.dll / libqca-qt6.dll / libvncclient.dll / CRT 运行时
-platforms/ styles/ tls/ imageformats/                       Qt 插件
+veyon-master.exe / veyon-configurator.exe / veyon-cli.exe / veyon-wcli.exe
+veyon-service.exe / veyon-server.exe / veyon-worker.exe
+Qt6*.dll / libqca-qt6.dll / libbz2-1.dll / libmd4c.dll / CRT 运行时（递归闭包）
+platforms/ styles/ tls/ imageformats/ crypto/               Qt 与 QCA 插件
+LICENSE.TXT / COPYING.TXT / README.TXT / ClassKeep.ico
 ```
 
-`classkeep-release.yml` 内联了同一套 Windows 编译步骤，把上述产物分别复制成
-`teacher/` 与 `student/` 两个目录，再用 `scripts/package-classkeep.ps1`
-组装教师端 / 学生端 ZIP（详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md)）。
+运行时 DLL 由 `scripts/collect_mingw_deps.py` **用 `ntldd` 递归解析 PE 导入闭包**收集，
+不再使用文件名白名单。旧版白名单漏掉 `libbz2-1.dll`、`libmd4c.dll`、`libbrotli*.dll`，
+安装后所有 EXE 都报「找不到 DLL」——这是 `v1.3.0` 修复的核心问题。
+
+`classkeep-release.yml` 内联同一套 Windows 步骤，再用 NSIS 生成
+`ClassKeep-Teacher-<ver>-win64-setup.exe` 与 `ClassKeep-Student-<ver>-win64-setup.exe`
+（详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) 与 `scripts/README.md`）。
 
 ---
 
@@ -232,20 +237,23 @@ cmake --build build --parallel 4 --target \
 > 也不要用 `windows-binaries` / `create-windows-installer` target：
 > `WindowsInstaller.cmake` 写死了 Linux 交叉编译路径（`${MINGW_PREFIX}`、
 > `/usr/lib/gcc/<target>/<ver>-posix`），原生 MSYS2 下不适用。
-> 运行时 DLL 与 Qt 插件的收集命令可直接照抄
-> [`classkeep-windows.yml`](../../.github/workflows/classkeep-windows.yml) 的 `Collect` 步骤。
+> 运行时 DLL 与 Qt 插件的收集由
+> [`collect-windows-runtime.sh`](../scripts/collect-windows-runtime.sh) 完成。
 
-### 2.4 组装产物
+### 2.4 生成安装程序
 
-```powershell
-cd G:\veyon
-.\veyon\scripts\package-classkeep.ps1 -Version 1.0.1 `
-    -TeacherDir <教师端运行时目录> -StudentDir <学生端运行时目录> `
-    -ApkPath <APK路径> -OutputDir dist
+```bash
+cd /g/veyon
+bash veyon/scripts/collect-windows-runtime.sh
+mkdir -p dist
+{ printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
 ```
 
-脚本会校验两个目录都含 `classroom.dll`，缺一即报错，不产半成品。
-详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md)。
+`collect-windows-runtime.sh` 会校验 `plugins/classroom.dll`、`veyon-wcli.exe`、
+`platforms/qwindows.dll` 等关键文件，缺一即报错，不产半成品。
+详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) 与 [`../scripts/README.md`](../scripts/README.md)。
 
 ---
 

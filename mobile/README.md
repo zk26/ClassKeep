@@ -1,11 +1,10 @@
 # 课守 ClassKeep · Android 教室端（权威工程）
 
-这是仓库根 `mobile/`，**Android 教室端 App 的唯一权威工程**。
-请用 Android Studio 打开本目录；`../veyon/mobile/` 是早期推送到旧 fork 时留下的历史副本，**请勿在此修改**。
+这是仓库根 `mobile/`，**Android 教室端 App 的唯一工程**（历史副本已清理）。
+请用 Android Studio 打开本目录。
 
 - 仓库：<https://github.com/zk26/ClassKeep>
 - 许可：**GPL-2.0-or-later**（见 [`../LICENSE`](../LICENSE)、[`../NOTICE.md`](../NOTICE.md)）
-- 完整工程说明：[`../veyon/mobile/README.md`](../veyon/mobile/README.md)（内容相同，属历史副本）
 - 协议：[`../veyon/docs/CLASSKEEP-PROTOCOL.md`](../veyon/docs/CLASSKEEP-PROTOCOL.md)
 - 数据合规：[`../veyon/docs/CLASSKEEP-PRIVACY.md`](../veyon/docs/CLASSKEEP-PRIVACY.md)
 

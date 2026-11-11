@@ -1,8 +1,14 @@
 # 课守 ClassKeep — 第三方组件与许可清单
 
 本文件列明本仓库**构建期 / 运行期**涉及的第三方组件及其许可，用于分发合规核对。
-**本仓库不附带、不重新分发任何下列组件的二进制文件**；它们由使用者自行安装或由包管理器提供。
-如有遗漏，以各组件官方发布时随附的许可证为准。
+
+> **仓库源码**：不含任何第三方二进制（生成物与安装包由 `.gitignore` 排除）。
+> **Releases 安装程序**：为让 Windows 端可直接运行，`setup.exe` 内**确实捆绑了
+> Qt6 / QCA / OpenSSL / LibVNC / MinGW CRT 等动态链接库**（由 MSYS2 UCRT64 提供，
+> `ntldd` 递归收集）。这些都是以**动态链接**方式随附的 LGPL / GPL 兼容或宽松许可组件；
+> 分发方必须按下文第 7 节核对清单执行，尤其 Qt 的 LGPL 动态链接义务、
+> 保留各组件许可文本与归属声明，以及提供对应源码获取方式。
+> 如有遗漏，以各组件官方发布时随附的许可证为准。
 
 ---
 
@@ -16,7 +22,9 @@
 Veyon 的 GPL v2 全文见仓库根 [`LICENSE`](../../LICENSE) 与 [`veyon/COPYING`](../COPYING)。
 本仓库相对上游的修改声明见 [`NOTICE.md`](../../NOTICE.md) 第 4 节。
 
-## 2. 桌面端构建依赖（不随本仓库分发）
+## 2. 桌面端依赖（仓库源码不含；Release 安装包内随附对应 DLL）
+
+下表中带「运行时」的组件，其动态链接库会随 `setup.exe` 一并分发（见本文件开头说明）。
 
 | 组件 | 用途 | 许可（以官方为准） |
 |---|---|---|
@@ -30,8 +38,11 @@ Veyon 的 GPL v2 全文见仓库根 [`LICENSE`](../../LICENSE) 与 [`veyon/COPYI
 | OpenLDAP / Cyrus SASL | 目录与认证（Linux/可选） | OpenLDAP License / CMU 风格许可 |
 | PAM | 认证（Linux/可选） | 各实现许可 |
 | libX11 / libXtst / libfakekey | X11 输入（Linux/可选） | MIT / X11 风格许可 |
-| NSIS | Windows 安装包（可选） | zlib License |
-| CMake、编译器（MSVC / MinGW / GCC / Clang） | 构建工具 | 各自许可 |
+| NSIS | 生成 Windows 安装 EXE（构建工具，不随包分发） | zlib License |
+| ntldd | 递归解析 PE 导入依赖以收集运行时 DLL | GPL-2.0-or-later（构建工具） |
+| Pillow | 本机生成 `.ico` / Android 图标（构建工具） | HPND |
+| MinGW-w64 CRT / libgcc / libstdc++ / winpthreads | 运行时 DLL（随安装包分发） | GPL-3.0-with-GCC-exception 等 |
+| CMake、编译器（MinGW / GCC / Clang） | 构建工具 | 各自许可 |
 
 ## 3. 桌面端运行时系统接口（Windows，不分发）
 

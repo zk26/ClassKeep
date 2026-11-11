@@ -35,11 +35,13 @@ SPDX-License-Identifier: GPL-2.0-or-later
 覆盖范围（不限于）：
 
 - `veyon/plugins/classroom/` — 课守插件全部 C++/Qt 源文件
-- `mobile/`（仓库根）与 `veyon/mobile/`（历史副本）— Android Kotlin 工程
-- `veyon/docs/`、`veyon/scripts/`、根级 `README.md`、`NOTICE.md`、`LICENSE`、`.gitignore`
-- `veyon/.github/workflows/classkeep-release.yml` — 发布工作流
+- `mobile/`（仓库根，唯一一份）— Android Kotlin 工程与图标生成脚本
+- `veyon/docs/`、`veyon/scripts/`（含 NSIS 安装器模板）、根级 `README.md`、`NOTICE.md`、`LICENSE`、`.gitignore`
+- `.github/workflows/` — 编译验证 / Windows 构建 / 发布三条工作流
 - `veyon/core/src/FeatureProviderInterface.h`、`veyon/core/src/FeatureManager.h/.cpp`、
-  `veyon/server/src/ComputerControlServer.cpp`、`veyon/master/src/ComputerMonitoringWidget.cpp` 的扩展改动
+  `veyon/server/src/ComputerControlServer.cpp`、`veyon/master/src/ComputerMonitoringWidget.cpp`、
+  `veyon/cmake/modules/WindowsBuildHelpers.cmake` 的扩展改动
+- `ClassKeep_logo.png` 及由其生成的 `.ico` / `mipmap` 图标（由仓库所有者提供，见 `NOTICE.md`）
 
 ### 关于 Android 应用
 

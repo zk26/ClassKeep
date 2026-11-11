@@ -20,32 +20,31 @@ G:\veyon\  (= 仓库根)
 ├── NOTICE.md            版权、许可、修改声明、商标、隐私与无担保声明
 ├── .gitignore           排除生成物 / 本机配置 / 发布产物
 │
+├── .github\workflows\   三条 GitHub Actions 流水线（编译验证 / Windows 构建 / 发布）
 ├── veyon\               桌面端（上游 Veyon 源码 + 课守插件）
-│   ├── README.md         仓库首页总入口（桌面端视角）
+│   ├── README.md         桌面端视角的总入口
 │   ├── COPYING           上游 GPL v2 全文
 │   ├── plugins\classroom\ 课守插件源码及说明
 │   ├── docs\             全套协议与说明文档
-│   ├── scripts\          发布包打包脚本及说明
-│   ├── .github\workflows\ 发布构建流水线
-│   ├── mobile\           Android 工程的**历史提交副本**（请勿在此修改）
+│   ├── scripts\          Windows 依赖收集、NSIS 安装器、图标生成脚本
 │   └── core\, master\, server\  对上游的最小扩展点
 │
-└── mobile\              ← Android 教室端 App（**唯一权威工程**，Android Studio 打开此目录）
+└── mobile\              ← Android 教室端 App（**唯一工程**，Android Studio 打开此目录）
 ```
 
-> **`mobile/` 与 `veyon/mobile/` 的关系**：后者是先前推送到旧 fork 时留下的副本，
-> 仅为保留历史而存在，**不再维护**；所有 Android 改动请在根 `mobile/` 进行。
-> 本仓库保留了上游 Veyon 的完整提交历史（详见 `git log`）。
+`ClassKeep_logo.png` 是唯一的品牌图标来源，桌面端 `.ico` 与 Android `mipmap` 图标均由它生成。
+本仓库保留了上游 Veyon 的完整提交历史（详见 `git log`）；早期留下的
+`veyon/mobile/` 历史副本与废弃的 ZIP 打包脚本已清理。
 
 ---
 
 ## 2. 三类发布产物
 
-| 产物 | 运行位置 | 内容 |
+| 产物 | 形态 | 内容 |
 |---|---|---|
-| **教师端** | 教师机 Windows | Veyon Master + Configurator + 课守插件 + Bridge 服务 + 预设配置 |
-| **学生端** | 学生机 Windows（UWF 还原） | Veyon Service / Server / Worker + 课守插件 + 预设安全配置 |
-| **APP** | Android 11+ 手机/平板 | 课守教室端（网段发现、密钥同步、班级数据、控制指令、期末表、词云） |
+| **教师端** | `ClassKeep-Teacher-<ver>-win64-setup.exe` | NSIS 安装程序：组件页「服务端(必选) + 教师控制台(可选)」，自动注册并启动服务 |
+| **学生端** | `ClassKeep-Student-<ver>-win64-setup.exe` | NSIS 安装程序：组件页**只有服务端(必选)**，不安装也不出现 Master |
+| **APP** | `ClassKeep-Mobile-<ver>.apk` | Android 11+ 教室端（网段发现、密钥同步、班级数据、控制指令、期末表、词云） |
 
 产物命名、内容清单、校验与安装步骤见
 [`veyon/docs/CLASSKEEP-RELEASE.md`](veyon/docs/CLASSKEEP-RELEASE.md)。
@@ -56,13 +55,15 @@ G:\veyon\  (= 仓库根)
 > | Job | 环境 | 产出 |
 > |---|---|---|
 > | `android` | Ubuntu 24.04 + JDK 21 | `ClassKeep-Mobile-<ver>.apk` |
-> | `windows` | Windows + MSYS2 UCRT64 + Qt6/MinGW | `veyon-master.exe` / `veyon-service.exe` / `classroom.dll` 等 |
-> | `package` | Windows | 组装教师端 / 学生端 ZIP + 校验 |
+> | `windows` | Windows + MSYS2 UCRT64 + Qt6/MinGW + ntldd + NSIS | 教师端 / 学生端两个 `setup.exe` |
+> | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
-> **自 v1.1.0 起三类产物全部是真实编译的**，不含占位包或伪造二进制。
-> 当前最新为 **[v1.2.0](https://github.com/zk26/ClassKeep/releases/tag/v1.2.0)**，包含签到、座位网格快捷加减分、期末明细表与新图标。
-> `v1.0.0` 曾附带 `-preset` 部署配置包（当时 CI 尚未支持 Windows 编译），现已由完整二进制包取代；
-> `package-presets.ps1` 仍保留用于无工具链环境的离线配置部署。
+> 三类产物全部真实编译，不含占位包或伪造二进制。
+> **当前最新为 [v1.3.0](https://github.com/zk26/ClassKeep/releases/tag/v1.3.0)**：
+> 用 `ntldd` 递归解析 PE 导入闭包，修好了旧版安装后报
+> `libbz2-1.dll` / `libmd4c.dll` / `libbrotli*.dll` 缺失的问题；
+> 桌面端与 Android 端统一使用 `ClassKeep_logo.png` 图标与「课守 ClassKeep」名称。
+> 旧的 ZIP / preset 包因无法启动已删除。
 > Windows 编译路线见 [`CLASSKEEP-BUILD.md` 路线 D](veyon/docs/CLASSKEEP-BUILD.md)。
 
 ---
@@ -91,14 +92,17 @@ cd mobile
 .\gradlew.bat :app:assembleDebug :app:testDebugUnitTest
 ```
 
-### 打发布包
+### 打安装程序（有 MSYS2 UCRT64 工具链时）
 
-```powershell
-cd veyon
-.\scripts\package-classkeep.ps1 -Version 1.0.0 `
-    -TeacherDir <教师端编译输出> -StudentDir <学生端编译输出> `
-    -ApkPath <app-debug.apk> -OutputDir dist
+```bash
+bash veyon/scripts/collect-windows-runtime.sh
+mkdir -p dist
+{ printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
 ```
+
+详见 [`veyon/scripts/README.md`](veyon/scripts/README.md)。
 
 ---
 
@@ -125,9 +129,9 @@ cd veyon
 | [`veyon/docs/CLASSKEEP-PROTOCOL.md`](veyon/docs/CLASSKEEP-PROTOCOL.md) | **协议规范**：命令/参数全量数值表、HTTP 路由、认证算法、UDP 发现、数据格式、兼容性铁律 |
 | [`veyon/docs/CLASSKEEP-DEPLOY.md`](veyon/docs/CLASSKEEP-DEPLOY.md) | 部署、每堂课流程、UWF 与 Defender 注意、数据迁移、排障 |
 | [`veyon/docs/CLASSKEEP-RELEASE.md`](veyon/docs/CLASSKEEP-RELEASE.md) | 发布产物清单、命名、校验、安装 |
-| [`veyon/mobile/README.md`](veyon/mobile/README.md) | Android 教室端工程说明 |
+| [`mobile/README.md`](mobile/README.md) | Android 教室端工程说明 |
 | [`veyon/plugins/classroom/README.md`](veyon/plugins/classroom/README.md) | 课守插件源码结构 |
-| [`veyon/scripts/README.md`](veyon/scripts/README.md) | 发布包打包脚本 |
+| [`veyon/scripts/README.md`](veyon/scripts/README.md) | 依赖闭包收集、NSIS 安装器与图标生成脚本 |
 
 ---
 

@@ -2,15 +2,17 @@
 
 三种产物均由 GitHub Actions **真实编译**，不是占位包：
 
-| 产物 | 文件 | 构建 |
+| 产物 | 文件 | 说明 |
 |---|---|---|
+| 教师端安装程序 | `ClassKeep-Teacher-{VER}-win64-setup.exe` | Windows + MSYS2 UCRT64 + Qt6/MinGW；NSIS 安装器，组件页含「服务端（必选）」+「教师控制台（可选）」 |
+| 学生端安装程序 | `ClassKeep-Student-{VER}-win64-setup.exe` | 同一套运行时，组件页**只有「服务端（必选）」**，不安装也不出现 Master |
 | APP | `ClassKeep-Mobile-{VER}.apk` | Ubuntu + JDK 21 + Android SDK，`:app:assembleDebug` + 单元测试 |
-| 教师端 | `ClassKeep-Teacher-{VER}-win64.zip` | Windows + MSYS2 UCRT64 + Qt6/MinGW，含 `veyon-master.exe` / `veyon-configurator.exe` |
-| 学生端 | `ClassKeep-Student-{VER}-win64.zip` | 同上，含 `veyon-service.exe` / `veyon-server.exe` / `veyon-worker.exe` |
-| 校验 | `SHA256SUMS.txt` | 覆盖全部产物 |
+| 校验 | `SHA256SUMS.txt` | 覆盖上述三者 |
 
-教师端与学生端使用同一套 Veyon 二进制（含 `classroom.dll`、Qt6/CRT 运行时 DLL 与 Qt 插件），
-差别只在注入的预设配置和安装辅助脚本。
+安装器沿用 Veyon 官方安装流程：自动注册并启动 Veyon Service、放行防火墙、启用 SAS，
+并把 `classroom.dll` 等插件、Qt6/CRT 运行时 DLL 与 Qt 插件安装到对应目录。
+自 {VER} 起运行时依赖由 `ntldd` 递归解析 PE 导入闭包收集，**不再使用手工 DLL 白名单**
+（旧版会报 `libbz2-1.dll` / `libmd4c.dll` 缺失）。
 
 ## 校验
 
@@ -21,20 +23,22 @@ Get-Content SHA256SUMS.txt | ForEach-Object {
 }
 ```
 
-## 使用
+## 安装顺序
 
-1. 学生机：以管理员运行 `install-student.ps1`，安装 Veyon Service，按 `config/uwf-exclusions.txt`
-   添加 UWF 排除项后**重启**（不是关机再开机）。
-2. 教师机：以管理员运行 `install-teacher.ps1`，打开 ClassKeep 控制台点「开始新课堂」。
-3. 手机：安装 APK，输入本堂课密钥与教师机 IP/端口。
+1. **学生机**：以管理员运行学生端安装 EXE，保持「服务端」勾选；安装完即已自动注册并启动服务。
+2. **教师机**：以管理员运行教师端安装 EXE，保持「教师控制台」勾选；再用 Veyon Configurator
+   导入/配置认证密钥。
+3. **手机**：安装 APK，输入本堂课密钥与教师机 IP/端口。
 
-详见包内 `README.txt` 与 `docs/CLASSKEEP-DEPLOY.md`。
+安装目录内有 `README.TXT` 中文说明；完整部署流程见 `veyon/docs/CLASSKEEP-DEPLOY.md`。
 
 ## 已知限制
 
 - Android APK 是 **debug 签名**（非发布签名），仅供内测；正式分发请自行签名。
-- 本构建产物来自 MSYS2 UCRT64/MinGW，未在真实 UWF 学生机上做安装联调；部署前请先在单台机器验证。
+- 构建产物来自 MSYS2 UCRT64/MinGW，未在真实 UWF 学生机上做安装联调；部署前请先在单台机器验证。
 - 学生机须为 Windows 10/11 企业版、教育版或 IoT 企业版（UWF 仅这些版本支持）。
+- 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都无法编译，未包含在安装包中；
+  远程装软件功能请通过课守控制台的「分发并安装」或系统自带部署方式完成。
 
 ## 合规
 

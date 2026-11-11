@@ -30,20 +30,31 @@
 完整依赖与命令见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。最简形式：
 
 ```bash
-cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
+cmake -S veyon -B build -G Ninja -DCMAKE_PREFIX_PATH=/ucrt64 \
+  -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
 cmake --build build --target classroom veyon-master veyon-configurator \
-                    veyon-service veyon-server veyon-worker
+                    veyon-cli veyon-wcli veyon-service veyon-server veyon-worker
+bash veyon/scripts/collect-windows-runtime.sh
 ```
 
 > 必须显式列出目标，**不要**跑全量 `cmake --build build`：
 > 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都编不过（缺 `<QUuid>`、`qApp` 类型）。
 > 详见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。
 
-若只想先验证代码能否编译，直接用 GitHub Actions 的 **ClassKeep Build Check**（Linux/Qt5/GCC），
+若只想先验证代码能否编译，直接用 GitHub Actions 的 **ClassKeep Build Check**（Linux/Qt6/GCC），
 无需在本机装整套 MinGW 工具链。
 
-按 Veyon 官方方式安装，确保教师机与学生机都带 `classroom` 插件。
-学生机与教师机使用同一套二进制，差别只在安装组件与预设配置。
+### 安装（推荐使用 Release 里的安装程序）
+
+1. **学生机**：以管理员运行 `ClassKeep-Student-<ver>-win64-setup.exe`。组件页**只有
+   「服务端（必选）」**，不会安装也不会出现 Master；安装器会自动注册并启动
+   Veyon Service、放行防火墙、启用 SAS。
+2. **教师机**：以管理员运行 `ClassKeep-Teacher-<ver>-win64-setup.exe`，组件页另含可选项
+   「教师控制台」（`veyon-master.exe`），保持勾选。
+3. 两端再分别用 `veyon-configurator.exe` 完成 Veyon 认证配置（教师机导出、学生机导入）。
+
+安装器沿用上游 `nsis/veyon.nsi.in` 的安装流程；`classroom.dll` 等插件安装在
+`plugins/` 子目录，运行时 DLL 由 `ntldd` 递归收集，**不要**自己手工拷贝 DLL 白名单。
 Veyon Service 以 `LocalSystem` 运行，因此 `uwfmgr.exe`、`netsh.exe`、`shutdown.exe` 无需额外提权或 UAC。
 
 ### 手机端

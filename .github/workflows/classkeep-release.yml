@@ -98,6 +98,9 @@ jobs:
             mingw-w64-ucrt-x86_64-lzo2
             mingw-w64-ucrt-x86_64-openldap
             mingw-w64-ucrt-x86_64-cyrus-sasl
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-nsis
+            mingw-w64-ucrt-x86_64-python
 
       - name: Fetch Veyon 3rdparty sources (pinned to v4.11.4)
         shell: bash
@@ -140,40 +143,60 @@ jobs:
           set -o pipefail
           cmake --build build --parallel 4 --target \
             classroom \
-            veyon-master veyon-configurator veyon-cli \
+            veyon-master veyon-configurator veyon-cli veyon-wcli \
             veyon-service veyon-server veyon-worker 2>&1 | tee build.log
 
-      - name: Collect binaries and runtime DLLs
+      - name: Build upstream plugins
+        shell: msys2 {0}
+        run: |
+          set -o pipefail
+          for target in authkeys builtindirectory demo desktopservices ldap \
+                        powercontrol remoteaccess screenlock screenshot \
+                        systemusergroups textmessage usersessioncontrol \
+                        windows-platform external-vnc-server headless-vnc-server \
+                        ultravnc-builtin vnchooks; do
+            if cmake --build build --parallel 4 --target "$target" >> plugins.log 2>&1; then
+              echo "built:   $target"
+            else
+              echo "skipped: $target"
+            fi
+          done
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrEmpty($v)) { $v = $env:GITHUB_REF_NAME -replace '^v', '' }
+          if ([string]::IsNullOrEmpty($v)) { $v = '1.3.0' }
+          "value=$v" >> $env:GITHUB_OUTPUT
+
+      # A hand-written DLL whitelist produced installs that failed with
+      # "libbz2-1.dll / libmd4c.dll not found". ntldd now walks the real PE
+      # import closure so every required runtime DLL is shipped.
+      - name: Assemble self-contained runtime payload
+        shell: msys2 {0}
+        run: bash veyon/scripts/collect-windows-runtime.sh
+
+      - name: Build teacher and student setup EXEs
         shell: msys2 {0}
         run: |
           set -e
-          bin=dist-windows
-          mkdir -p "$bin/platforms" "$bin/styles" "$bin/tls" "$bin/imageformats"
-          find build -type f \( -name 'veyon-*.exe' -o -name 'veyon-*.dll' -o -name 'classroom.dll' \) \
-            ! -path '*CMakeFiles*' -exec cp '{}' "$bin/" \;
-          cp /ucrt64/bin/Qt6*.dll "$bin/" 2>/dev/null || true
-          for pat in libqca libgcc libstdc++ libwinpthread libcrypto libssl libjpeg libpng16 \
-                     liblzo2 libvncclient libvncserver libldap liblber libsasl zlib1 libssp \
-                     libbrotli libfreetype libharfbuzz libicu libpcre2 libzstd libdouble-conversion; do
-            cp /ucrt64/bin/$pat*.dll "$bin/" 2>/dev/null || true
-          done
-          for sub in platforms styles tls imageformats; do
-            cp /ucrt64/share/qt6/plugins/$sub/*.dll "$bin/$sub/" 2>/dev/null || \
-              cp /ucrt64/lib/qt6/plugins/$sub/*.dll "$bin/$sub/" 2>/dev/null || true
-          done
-          test -f "$bin/classroom.dll"     || { echo 'classroom.dll missing'; exit 1; }
-          test -f "$bin/veyon-master.exe"  || { echo 'veyon-master.exe missing'; exit 1; }
-          test -f "$bin/veyon-service.exe" || { echo 'veyon-service.exe missing'; exit 1; }
+          mkdir -p dist
+          { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+          makensis -DVERSION='${{ steps.ver.outputs.value }}' -DROLE=teacher installer.nsi
+          makensis -DVERSION='${{ steps.ver.outputs.value }}' -DROLE=student installer.nsi
+          ls -lh dist
 
       - uses: actions/upload-artifact@v6
         with:
           name: classkeep-windows
-          path: dist-windows/*
+          path: dist/*.exe
           if-no-files-found: error
 
   # ------------------------------------------------------------------ Package
   package:
-    name: Assemble teacher/student release ZIPs
+    name: Assemble release artifacts
     needs: [android, windows]
     runs-on: windows-latest
     timeout-minutes: 20
@@ -188,7 +211,7 @@ jobs:
       - uses: actions/download-artifact@v6
         with:
           name: classkeep-windows
-          path: windows-bin
+          path: windows-setups
 
       - name: Resolve version
         id: ver
@@ -196,22 +219,35 @@ jobs:
         run: |
           $v = '${{ github.event.inputs.version }}'
           if ([string]::IsNullOrEmpty($v)) { $v = $env:GITHUB_REF_NAME -replace '^v', '' }
-          if ([string]::IsNullOrEmpty($v)) { $v = '1.0.1' }
+          if ([string]::IsNullOrEmpty($v)) { $v = '1.3.0' }
           "value=$v" >> $env:GITHUB_OUTPUT
 
-      - name: Package the three artifacts
+      - name: Assemble the three artifacts
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force -Path stage/teacher, stage/student, dist | Out-Null
-          Copy-Item -Path 'windows-bin/*' -Destination 'stage/teacher' -Recurse -Force
-          Copy-Item -Path 'windows-bin/*' -Destination 'stage/student' -Recurse -Force
-          $apk = (Get-ChildItem -LiteralPath 'artifacts' -Filter '*.apk' -File | Select-Object -First 1).FullName
+          $v = '${{ steps.ver.outputs.value }}'
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+
+          $apk = Get-ChildItem -LiteralPath 'artifacts' -Filter '*.apk' -File | Select-Object -First 1
           if (-not $apk) { throw 'Android APK artifact missing' }
-          .\veyon\scripts\package-classkeep.ps1 `
-            -Version '${{ steps.ver.outputs.value }}' `
-            -TeacherDir 'stage/teacher' -StudentDir 'stage/student' `
-            -ApkPath $apk -OutputDir dist
+          Copy-Item -LiteralPath $apk.FullName -Destination "dist/ClassKeep-Mobile-$v.apk" -Force
+
+          $setups = @(Get-ChildItem -LiteralPath 'windows-setups' -Filter '*-setup.exe' -File)
+          if ($setups.Count -ne 2) { throw "Expected 2 setup EXEs, got $($setups.Count)" }
+          foreach ($setup in $setups) {
+            Copy-Item -LiteralPath $setup.FullName -Destination "dist/$($setup.Name)" -Force
+          }
+
+          $lines = Get-ChildItem -LiteralPath 'dist' -File |
+            Where-Object { $_.Name -like 'ClassKeep-*' } |
+            Sort-Object Name |
+            ForEach-Object {
+              ((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower()) + '  ' + $_.Name
+            }
+          [IO.File]::WriteAllLines('dist/SHA256SUMS.txt', $lines, (New-Object Text.UTF8Encoding($false)))
+          Get-ChildItem -LiteralPath 'dist' -File |
+            Select-Object Name, @{N='MB';E={[math]::Round($_.Length/1MB,2)}} | Format-Table -AutoSize
 
       - name: Write release notes
         shell: pwsh
@@ -242,8 +278,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          ls dist/ClassKeep-Teacher-*-win64.zip
-          ls dist/ClassKeep-Student-*-win64.zip
+          ls dist/ClassKeep-Teacher-*-win64-setup.exe
+          ls dist/ClassKeep-Student-*-win64-setup.exe
           ls dist/ClassKeep-Mobile-*.apk
           ls dist/SHA256SUMS.txt
           cd dist
@@ -258,8 +294,8 @@ jobs:
           name: 课守 ClassKeep ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
           body_path: dist/RELEASE-NOTES.md
           files: |
-            dist/ClassKeep-Teacher-*-win64.zip
-            dist/ClassKeep-Student-*-win64.zip
+            dist/ClassKeep-Teacher-*-win64-setup.exe
+            dist/ClassKeep-Student-*-win64-setup.exe
             dist/ClassKeep-Mobile-*.apk
             dist/SHA256SUMS.txt
             dist/RELEASE-NOTES.md
