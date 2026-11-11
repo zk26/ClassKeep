@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- phone -->
+    <dimen name="page_padding">14dp</dimen>
+    <dimen name="timetable_cell">88dp</dimen>
+    <integer name="grid_columns">2</integer>
+</resources>

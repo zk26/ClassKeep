@@ -17,6 +17,7 @@ data class Cache(
     val entries: Int = 0,
     val students: Int = 0,
     val scoresRaw: String = "{}",
+    val seatsRaw: String = "{}",
     val events: List<ActivityEvent> = emptyList(),
     val updatedAt: Long = 0,
 )
@@ -39,6 +40,7 @@ class CacheStore(context: Context) {
             entries = prefs.getInt("entries", 0),
             students = prefs.getInt("students", 0),
             scoresRaw = prefs.getString("scoresRaw", "{}") ?: "{}",
+            seatsRaw = prefs.getString("seatsRaw", "{}") ?: "{}",
             events = (0 until events.length()).mapNotNull { index ->
                 events.optJSONObject(index)?.let { obj ->
                     ActivityEvent(
@@ -81,6 +83,7 @@ class CacheStore(context: Context) {
                 .putInt("entries", cache.entries)
                 .putInt("students", cache.students)
                 .putString("scoresRaw", cache.scoresRaw)
+                .putString("seatsRaw", cache.seatsRaw)
                 .putString("events", events.toString())
                 .putLong("updatedAt", cache.updatedAt)
                 .apply()

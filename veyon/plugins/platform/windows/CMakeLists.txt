@@ -74,12 +74,11 @@ target_include_directories(windows-platform PRIVATE
 # mandatory windows-platform plugin can be built. See that header for details.
 target_link_libraries(windows-platform PRIVATE -lws2_32 -lwtsapi32 -lnetapi32 -luserenv -limm32 -lntdll -liphlpapi -lsetupapi -lsecur32)
 target_link_libraries(windows-platform PRIVATE Qt6::GuiPrivate)
-# ClassKeep: modern MinGW-w64 headers gate several APIs (DsGetDcNameW,
-# WTSQueryUserToken, AF_INET6, ConvertSidToStringSidW) behind _WIN32_WINNT.
-target_compile_definitions(windows-platform PRIVATE
-	ULTRAVNC_VEYON_SUPPORT
-	_WIN32_WINNT=0x0A00
-	WINVER=0x0A00
-)
+# ClassKeep: do NOT redefine _WIN32_WINNT / WINVER here. The MSYS2 UCRT64
+# toolchain already defines them, and Veyon's global -Werror turns the
+# "redefined" warning into a hard error. Fixing the windows.h include order
+# in the .cpp files is sufficient for DsGetDcNameW / WTSQueryUserToken /
+# AF_INET6 / ConvertSidToStringSidW to be visible.
+target_compile_definitions(windows-platform PRIVATE ULTRAVNC_VEYON_SUPPORT)
 target_compile_options(windows-platform PRIVATE "-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation")
 set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE SKIP_PRECOMPILE_HEADERS TRUE)

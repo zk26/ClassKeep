@@ -65,6 +65,21 @@ class BridgeClient {
     fun scores(host: String): ScoreSnapshot =
         parseScoreSnapshot(request(host, "scores", "GET", null, auth = true))
 
+    /** Students in the exact order the teacher dragged them on the seat grid. */
+    fun seats(host: String): List<SeatStudent> =
+        parseSeats(request(host, "seats", "GET", null, auth = true))
+
+    /** One-tap scoring from the phone (delta in -5..+5, reason optional). */
+    fun score(host: String, seat: String, delta: Int, reason: String): Boolean {
+        connect(host)
+        val body = JSONObject()
+            .put("seat", seat)
+            .put("delta", delta)
+            .put("reason", reason)
+            .toString()
+        return JSONObject(request(host, "score", "POST", body, auth = true)).optBoolean("ok")
+    }
+
     fun events(host: String): List<ActivityEvent> =
         parseEvents(request(host, "events", "GET", null, auth = true))
 

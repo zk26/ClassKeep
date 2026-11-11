@@ -143,6 +143,11 @@
 | G10 | **桌面端统一改名与换图标** | ✅ | `WindowsBuildHelpers.cmake` 产品名改 ClassKeep；Logo 生成 master/configurator/installer/uninstaller `.ico`；安装器与快捷方式显示「课守 ClassKeep 教师端/学生端」 |
 | G11 | **沿用上游组件式安装**，学生端不出现 Master | ✅ | `classkeep-installer.nsi` 基于 `nsis/veyon.nsi.in`：教师端「服务端(RO) + 教师控制台(可选)」，学生端只有「服务端(RO)」，自动注册/启动服务 |
 | G12 | 安装/卸载 **不再弹 `__fastfail` 崩溃框**（沿用原有 `veyon-wcli.exe`） | ✅ | 补齐并硬校验启动必需的 `windows-platform.dll` 与 Qt6 版 `libqca-ossl.dll`；用自制 `interception.h` 桩与 MinGW 头文件兼容修复让平台插件可编译；安装流程保持上游 wcli 不变 |
+| G13 | APP 密钥支持**手动输入 + 上传 `.key` 文件** | ✅ | `ActivityResultContracts.OpenDocument`，支持纯文本 / `key=…` / JSON（`sessionKey`/`key`/`lessonKey`/`密钥`）三种格式 |
+| G14 | APP **底部导航栏 5 项** + 学生加减分 | ✅ | 课堂 / 加分 / 控制 / 课表 / 更多；加分页点卡片选 -5…+5、填原因、乐观更新失败回滚 |
+| G15 | **教师端网格拖拽排序**（下次开机不变）+ 手机按序生成卡片 | ✅ | `ClassroomSeatGrid` 拖放交换 → `seat-order-<班级>.json` 即时持久化 → Bridge `/seats` 按序返回 → APP 按序渲染 |
+| G16 | APP **课表功能**（参考 ClassBoard，不照搬）+ **平板适配** | ✅ | 零依赖 `TimetableStore`（周网格、当前节高亮、下一节提示、导入作息 JSON）；`sw600dp`/`sw720dp` 调整边距、格宽与卡片列数 |
+| G17 | UI 按交互规范重做（去阴影、同心圆角、常驻标签） | ✅ | `CLASSKEEP-UI.md` 记录验收清单；`UiKit.kt` / `BottomBar.kt` 落地，胶囊指示随选中项平滑移动 |
 
 ---
 

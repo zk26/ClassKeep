@@ -4,6 +4,7 @@
  * This file is part of the Veyon classroom modification.
  */
 
+#include <QDate>
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
@@ -20,6 +21,8 @@
 #include "ClassroomBridge.h"
 #include "ClassroomData.h"
 #include "ClassroomProtocol.h"
+#include "ClassroomScore.h"
+#include "ClassroomSeatOrder.h"
 #include "ClassroomSecrets.h"
 #include "ClassroomTermReport.h"
 #include "ClassroomWordCloud.h"
@@ -399,6 +402,80 @@ void ClassroomBridge::handleRoute( QTcpSocket* socket, const QString& method,
 	{
 		m_book.load( m_className );
 		respond( socket, jsonResponse( m_book.syncSnapshot() ) );
+		return;
+	}
+	// The mobile app renders student cards in exactly the order the teacher
+	// dragged them on the seat grid. The order is persisted by ClassroomSeatGrid.
+	if( path == QStringLiteral("/api/classroom/seats") )
+	{
+		m_book.load( m_className );
+		const auto* classItem = m_roster.findClass( m_className );
+		QVector<ClassroomStudent> ordered;
+		if( classItem != nullptr )
+		{
+			for( const auto& seat : Classroom::loadSeatOrder( m_className ) )
+			{
+				for( const auto& student : classItem->students )
+				{
+					if( student.seat == seat ) { ordered.append( student ); break; }
+				}
+			}
+			for( const auto& student : classItem->students )
+			{
+				bool placed = false;
+				for( const auto& item : ordered )
+				{
+					if( item.seat == student.seat ) { placed = true; break; }
+				}
+				if( placed == false ) { ordered.append( student ); }
+			}
+		}
+		QJsonArray seats;
+		for( const auto& student : ordered )
+		{
+			seats.append( QJsonObject{
+				{ QStringLiteral("seat"), student.seat },
+				{ QStringLiteral("student"), student.name },
+				{ QStringLiteral("ip"), student.ip },
+				{ QStringLiteral("score"), m_book.total( student.seat ) } } );
+		}
+		respond( socket, jsonResponse( QJsonObject{
+			{ QStringLiteral("className"), m_className },
+			{ QStringLiteral("seats"), seats } } ) );
+		return;
+	}
+	// One-tap scoring from the phone. Uses the same score book as the teacher UI.
+	if( path == QStringLiteral("/api/classroom/score") && method == QStringLiteral("POST") )
+	{
+		const auto request = QJsonDocument::fromJson( body ).object();
+		const auto seat = request.value( QStringLiteral("seat") ).toString();
+		const auto delta = request.value( QStringLiteral("delta") ).toInt();
+		const auto reason = request.value( QStringLiteral("reason") ).toString();
+		bool ok = false;
+		if( seat.isEmpty() == false && delta != 0 && m_className.isEmpty() == false )
+		{
+			m_book.load( m_className );
+			const auto lessonId = m_book.ensureLesson( QDate::currentDate(), tr( "Mobile scoring" ) );
+			QString studentName;
+			if( const auto* classItem = m_roster.findClass( m_className ) )
+			{
+				for( const auto& student : classItem->students )
+				{
+					if( student.seat == seat ) { studentName = student.name; break; }
+				}
+			}
+			ClassroomScoreEntry entry;
+			entry.lessonId = lessonId;
+			entry.className = m_className;
+			entry.seat = seat;
+			entry.student = studentName;
+			entry.delta = delta;
+			entry.label = reason.isEmpty() ? QString::number( delta ) : reason;
+			entry.author = QStringLiteral("Mobile");
+			m_book.addEntry( entry );
+			ok = true;
+		}
+		respond( socket, jsonResponse( QJsonObject{ { QStringLiteral("ok"), ok } } ) );
 		return;
 	}
 	if( path == QStringLiteral("/api/classroom/report") )

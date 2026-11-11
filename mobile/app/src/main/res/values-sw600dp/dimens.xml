@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 7" tablets and larger: wider gutters, wider timetable cells -->
+    <dimen name="page_padding">32dp</dimen>
+    <dimen name="timetable_cell">120dp</dimen>
+    <integer name="grid_columns">3</integer>
+</resources>

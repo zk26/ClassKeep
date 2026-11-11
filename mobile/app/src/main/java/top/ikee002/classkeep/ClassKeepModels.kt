@@ -28,6 +28,14 @@ data class ScoreSnapshot(
     val raw: String = "{}",
 )
 
+/** One student card, already ordered like the teacher's seat grid. */
+data class SeatStudent(
+    val seat: String = "",
+    val student: String = "",
+    val ip: String = "",
+    val score: Int = 100,
+)
+
 data class ActivityEvent(
     val timestamp: String = "",
     val student: String = "",
@@ -92,6 +100,20 @@ fun parseScoreSnapshot(raw: String): ScoreSnapshot {
         entries = entries,
         raw = raw,
     )
+}
+
+fun parseSeats(raw: String): List<SeatStudent> {
+    val array = JSONObject(raw).optJSONArray("seats") ?: return emptyList()
+    return (0 until array.length()).mapNotNull { index ->
+        array.optJSONObject(index)?.let { obj ->
+            SeatStudent(
+                seat = obj.optString("seat"),
+                student = obj.optString("student"),
+                ip = obj.optString("ip"),
+                score = obj.optInt("score", 100),
+            )
+        }
+    }
 }
 
 fun parseEvents(raw: String): List<ActivityEvent> {

@@ -22,17 +22,39 @@ $env:ANDROID_HOME = 'G:\Andorid'
 本机已实测：`:app:assembleDebug` 与 `:app:testDebugUnitTest` 全部 `BUILD SUCCESSFUL`，
 产物 `app/build/outputs/apk/debug/app-debug.apk`。
 
+## 功能
+
+| 底部标签 | 内容 |
+|---|---|
+| 课堂 | 品牌头、连接状态、IP / 密钥 / 端口，**密钥可手动输入或导入 `.key` 文件**、立即同步、离线工作、班级概况、最近活动 |
+| 加分 | 按教师端座位网格**拖拽后的顺序**生成学生卡片；点卡片选 `-5…+5`（步长 1）→ 填原因 → 提交；乐观更新，失败回滚 |
+| 控制 | 静音 / 断网 / 肃静 / USB / 远控 / 投屏 / UWF 等指令 |
+| 课表 | 周课表网格、当天列与当前节高亮、下一节课提示、点格子填科目、常用科目预设、导入作息 JSON |
+| 更多 | 期末成绩表导出、班级词云、许可与隐私说明 |
+
+设计遵循[交互与动效规范](../veyon/docs/CLASSKEEP-UI.md)的要点：
+卡片**不使用投影阴影**、只用一层细描边；外圆角 20dp / 内圆角 14dp 的同心圆角；
+浮动标签常驻框上方、帮助文字常驻框下方，不依赖会消失的 placeholder；
+底部胶囊指示随选中项平滑移动、图标回弹、仅选中项显示文字；
+列表末尾留出底部栏 + 手势安全区。
+
+**平板适配**：`values-sw600dp` / `values-sw720dp` 提供更大的页面边距、课表格宽度
+与学生卡片列数（手机 2 列 / 7 寸 3 列 / 10 寸 4 列），课表可横向滚动。
+
 ## 源码
 
 ```
 app/src/main/java/top/ikee002/classkeep/
-  MainActivity.kt       UI、自动发现节流、同步、控制指令、报表/词云
-  BridgeClient.kt       HttpURLConnection 全部路由 + 认证头
-  Discovery.kt          DatagramSocket 主动探测 + 周期广播 + MulticastLock
-  ClassKeepCrypto.kt    SHA-256 挑战应答（与教师机逐字节一致）
-  ClassKeepModels.kt    数据类与 org.json 解析
-  Announcement.kt       UDP 广播报文常量与解析
-  CacheStore.kt         SharedPreferences 离线缓存
+  MainActivity.kt       5 个标签页、密钥导入、座位加分、课表、报表/词云
+  UiKit.kt             视觉规范组件（无阴影卡片、常驻标签、无边框按钮）
+  BottomBar.kt         自定义底部导航（胶囊跟随 + 图标回弹）
+  TimetableStore.kt    零依赖周课表数据层（兼容全校作息 JSON 导入）
+  BridgeClient.kt      HttpURLConnection 全部路由 + 挑战应答认证
+  Discovery.kt         DatagramSocket 主动探测 + 周期广播 + MulticastLock
+  ClassKeepCrypto.kt   SHA-256 挑战应答（与教师机逐字节一致）
+  ClassKeepModels.kt   数据类与 org.json 解析
+  Announcement.kt      UDP 广播报文常量与解析
+  CacheStore.kt        SharedPreferences 离线缓存
 ```
 
 **零第三方网络/JSON/加密库**：全部使用 Android / JDK 平台内置 API。

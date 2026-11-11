@@ -190,6 +190,8 @@ Veyon 注册表段名固定为 `Classroom`（**不要改**，否则旧配置丢�
 | `GET` | `/state` | **公开** | `TeacherState`（见下），仅元数据与当前挑战值 |
 | `GET` | `/roster` | 需要 | 班级名单 JSON |
 | `GET` | `/scores` | 需要 | 当前班级积分快照 |
+| `GET` | `/seats` | 需要 | `{"className":..., "seats":[{"seat","student","ip","score"}]}`，**顺序与教师端座位网格拖拽后的顺序一致** |
+| `POST` | `/score` | 需要 | 请求 `{"seat":"12","delta":3,"reason":"发言积极"}`，响应 `{"ok":bool}`，写入同一积分册 |
 | `GET` | `/events` | 需要 | `{"events":[...]}`，近 30 天最多 2000 条 |
 | `GET` | `/wordcloud?seat=<seat>` | 需要 | `image/svg+xml`，SVG 文本 |
 | `GET` | `/report` | 需要 | `application/vnd.ms-excel`，Excel 2003 SpreadsheetML |
