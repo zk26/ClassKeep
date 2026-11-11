@@ -4,6 +4,7 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.view.Gravity
 import android.view.View
+import android.view.ViewTreeObserver
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -14,6 +15,10 @@ import android.widget.TextView
  * a white capsule slides to the selected item (front arrives first, tail
  * follows), the selected icon bounces once, only the selected item grows a
  * text label, and the rest keep icons alone.
+ *
+ * Phone-fit note: every child has an EXPLICIT height. Using MATCH_PARENT for
+ * the indicator makes a wrap_content FrameLayout stretch to the whole screen
+ * and squeeze the content area to zero (that was the "竖条占满全屏" bug).
  */
 class BottomBar(
     context: Context,
@@ -29,6 +34,9 @@ class BottomBar(
     private val labels = mutableListOf<TextView>()
     private var selected = -1
 
+    private val barHeight = Ui.dp(context, 58)
+    private val outer = Ui.dp(context, 6)
+
     init {
         background = Ui.shape(
             context,
@@ -36,12 +44,13 @@ class BottomBar(
             22,
             context.getColor(R.color.ck_border),
         )
-        val outer = Ui.dp(context, 6)
         setPadding(outer, outer, outer, outer)
         elevation = 0f
+        // Fixed height: never let this bar consume the content area's space.
+        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, barHeight + outer * 2)
 
         indicator.background = Ui.shape(context, context.getColor(R.color.ck_chip_bg), 16)
-        addView(indicator, LayoutParams(0, LayoutParams.MATCH_PARENT))
+        addView(indicator, LayoutParams(0, barHeight).apply { gravity = Gravity.TOP })
 
         val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         tabs.forEachIndexed { index, tab ->
@@ -51,6 +60,7 @@ class BottomBar(
                 val v = Ui.dp(context, 5)
                 setPadding(v, v, v, v)
                 isClickable = true
+                isFocusable = true
                 setOnClickListener { select(index); onSelected(index) }
             }
             val icon = TextView(context).apply {
@@ -68,13 +78,21 @@ class BottomBar(
             }
             item.addView(icon)
             item.addView(label)
-            row.addView(item, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+            row.addView(item, LinearLayout.LayoutParams(0, barHeight, 1f))
             items.add(item)
             icons.add(icon)
             labels.add(label)
         }
-        addView(row, LayoutParams(LayoutParams.MATCH_PARENT, Ui.dp(context, 58)))
+        addView(row, LayoutParams(LayoutParams.MATCH_PARENT, barHeight).apply { gravity = Gravity.TOP })
 
+        // select() needs measured item widths. Re-run once after the first real
+        // layout so a zero-width early call cannot leave the capsule invisible.
+        viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                viewTreeObserver.removeOnGlobalLayoutListener(this)
+                select(if (selected < 0) 0 else selected, animated = false)
+            }
+        })
         post { select(0, animated = false) }
     }
 
@@ -88,7 +106,8 @@ class BottomBar(
             if (indicator.layoutParams.width != width) {
                 indicator.layoutParams = indicator.layoutParams.apply { this.width = width }
             }
-            val target = (paddingLeft + item.left).toFloat()
+            // The indicator already starts at paddingLeft, just like the row.
+            val target = item.left.toFloat()
             if (animated) {
                 ObjectAnimator.ofFloat(indicator, "translationX", indicator.translationX, target).apply {
                     duration = 280
@@ -106,6 +125,7 @@ class BottomBar(
                 }
             } else {
                 indicator.translationX = target
+                indicator.scaleX = 1f
             }
             labels.forEachIndexed { i, view ->
                 view.visibility = if (i == index) VISIBLE else GONE

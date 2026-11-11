@@ -98,12 +98,11 @@ class MainActivity : AppCompatActivity() {
                 BottomBar.Tab("更", "更多"),
             ),
         ) { index -> showTab(index) }
+        // Explicit height keeps the docked bar from ever eating the content area.
+        val barHeight = Ui.dp(this, 58) + Ui.dp(this, 6) * 2
         barHost.addView(
             bottomBar,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ),
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeight),
         )
         ViewCompat.setOnApplyWindowInsetsListener(barHost) { view, insets ->
             val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars())

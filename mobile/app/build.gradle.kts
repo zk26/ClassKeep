@@ -14,8 +14,8 @@ android {
         applicationId = "top.ikee002.classkeep"
         minSdk = 30
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.4.0"
+        versionCode = 5
+        versionName = "1.4.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
