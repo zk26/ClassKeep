@@ -117,4 +117,23 @@ class BridgeClient {
         return JSONObject(request(host, "sync", "POST", body, auth = true)).optBoolean("ok")
     }
 
+    /** Teacher-machine copy of the timetable. Empty object when never uploaded. */
+    fun timetable(host: String): JSONObject {
+        connect(host)
+        return JSONObject(request(host, "timetable", "GET", null, auth = true))
+            .optJSONObject("timetable") ?: JSONObject()
+    }
+
+    fun pushTimetable(host: String, timetableJson: String): Boolean {
+        connect(host)
+        val body = JSONObject().put("timetable", JSONObject(timetableJson)).toString()
+        return JSONObject(request(host, "timetable", "POST", body, auth = true)).optBoolean("ok")
+    }
+
+    /** Per-class roster used by the 「班级」 page. */
+    fun classes(host: String): String {
+        connect(host)
+        return request(host, "classes", "GET", null, auth = true)
+    }
+
 }

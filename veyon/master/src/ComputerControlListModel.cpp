@@ -509,8 +509,14 @@ QString withClassKeepScore( const ComputerControlInterface::Pointer& controlInte
 		return label;
 	}
 
-	return QStringLiteral("%1 · %2").arg( label, QCoreApplication::translate(
-		"ComputerControlListModel", "%1 points" ).arg( score.toInt() ) );
+	// Agreed layout: shield (client protection on) + name + [score].
+	// The shield is a plain glyph so it renders even without an emoji font.
+	const auto protection = object->property( "classkeepProtected" );
+	const auto shield = protection.toBool() ? QString::fromUtf8( "\xF0\x9F\x9B\xA1" )
+											   : QString::fromUtf8( "\xE2\x97\x8B" );
+	return QStringLiteral("%1 %2  [%3]")
+		.arg( shield, label )
+		.arg( score.toInt() );
 }
 }
 

@@ -68,6 +68,10 @@ private:
 	void setupSeatTab();
 	void refreshSeatGrid();
 	void refreshUwfStatus();
+	//! 2.1.0 teacher-side parity with the phone: timetable + per-lesson scoring.
+	void setupTimetableTab();
+	void refreshLessonRecords();
+	QString timetableFilePath() const;
 
 	//! 2.0.0 quick tools. "Client protection" and "UWF" are separate switches.
 	void setupToolsTab();
@@ -211,6 +215,9 @@ private:
 	QLineEdit* m_toolSoftware = nullptr;
 	QLineEdit* m_toolWebsite = nullptr;
 	QMap<QString, QString> m_uwfStatus; //!< seat -> latest UWF report from that machine
+	QLineEdit* m_lessonTopic = nullptr;
+	QPlainTextEdit* m_lessonRecords = nullptr;
+	QLabel* m_timetableSummary = nullptr;
 	QLabel* m_checkInSummary = nullptr;
 	QMap<QString, QString> m_checkInNames;
 	QMap<QString, QDateTime> m_checkInTimes;

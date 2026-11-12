@@ -1,9 +1,9 @@
 ; ClassKeep - Windows installer (based on upstream Veyon nsis/veyon.nsi.in)
 ;
 ; Compile twice from the repository root (the release workflow supplies VERSION;
-; 2.0.0 is only the fallback defined below):
-;   makensis -DVERSION=2.0.0 -DROLE=teacher installer.nsi
-;   makensis -DVERSION=2.0.0 -DROLE=student installer.nsi
+; 2.1.0 is only the fallback defined below):
+;   makensis -DVERSION=2.1.0 -DROLE=teacher installer.nsi
+;   makensis -DVERSION=2.1.0 -DROLE=student installer.nsi
 ;
 ; ROLE=teacher : component page with "Service" (read-only, registers/starts the
 ;                ClassKeepService service) and "Master" (optional console).
@@ -23,7 +23,7 @@ Unicode true
 !include "FileFunc.nsh"
 
 !ifndef VERSION
-  !define VERSION "2.0.0"
+  !define VERSION "2.1.0"
 !endif
 !ifndef ROLE
   !define ROLE "teacher"
@@ -88,7 +88,11 @@ ShowInstDetails show
 ; so this must happen before any File/Delete instruction.
 ; ---------------------------------------------------------------------------
 Function StopClassKeepProcesses
-  DetailPrint "正在停止 ClassKeep 服务与客户端进程…"
+  ; "service not installed" / "process not found" are EXPECTED on a fresh
+  ; install, and wcli emits GBK Chinese that Unicode NSIS renders as mojibake.
+  ; Silence the sub-process log for this cleanup only, then restore it so the
+  ; real install progress (extracted files, registry writes) stays visible.
+  SetDetailsPrint none
   nsExec::ExecToLog '"$SYSDIR\sc.exe" stop ClassKeepService'
   nsExec::ExecToLog '"$SYSDIR\sc.exe" stop VeyonService'
   nsExec::ExecToLog '"$SYSDIR\sc.exe" delete VeyonService'
@@ -107,6 +111,7 @@ Function StopClassKeepProcesses
   nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-cli.exe'
   nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-wcli.exe'
   Sleep 1200
+  SetDetailsPrint both
 FunctionEnd
 
 ; Delete both generations of executables and retry while a handle is still
@@ -167,6 +172,9 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   ; Unregister the service with whichever CLI the previous version shipped.
   ; `plugins/windows-platform.dll` + Qt6 `libqca-ossl.dll` must be present for
   ; the CLI to start; collect-windows-runtime.sh hard-verifies both.
+  ; Its Chinese console output is GBK and renders as mojibake in a Unicode
+  ; installer, so keep it out of the details log too.
+  SetDetailsPrint none
   IfFileExists "$INSTDIR\ClassKeep-wcli.exe" 0 ck_legacy_wcli
     nsExec::ExecToLog '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
     Goto ck_unregister_done
@@ -174,6 +182,7 @@ Section "ClassKeep Service (required)" SEC_SERVICE
     IfFileExists "$INSTDIR\veyon-wcli.exe" 0 ck_unregister_done
       nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" service unregister'
   ck_unregister_done:
+  SetDetailsPrint both
 
   Call RemoveLockedBinaries
   Delete "$INSTDIR\*.dll"
@@ -318,6 +327,7 @@ Section Uninstall
     Abort
   ${EndIf}
 
+  SetDetailsPrint none
   IfFileExists "$INSTDIR\ClassKeep-wcli.exe" 0 ck_un_legacy_wcli
     nsExec::ExecToLog '"$INSTDIR\ClassKeep-wcli.exe" config set Service/SoftwareSASEnabled 0'
     nsExec::ExecToLog '"$INSTDIR\ClassKeep-wcli.exe" config set Network/FirewallExceptionEnabled 0'
@@ -365,6 +375,7 @@ Section Uninstall
   Delete "$INSTDIR\veyon-wcli.exe"
   Delete "$INSTDIR\veyon-master.exe"
   Sleep 1000
+  SetDetailsPrint both
 
   Delete "$INSTDIR\*.exe"
   Delete "$INSTDIR\*.dll"

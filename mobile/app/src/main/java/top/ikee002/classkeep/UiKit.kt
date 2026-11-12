@@ -132,6 +132,14 @@ object Ui {
             textSize = 13f
             isAllCaps = false
             stateListAnimator = null
+            // Explicit size is mandatory: a bare addView() used to produce
+            // weight/height races that stacked buttons on top of each other.
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { topMargin = dp(context, 8) }
+            minimumHeight = dp(context, 44)
+            minHeight = dp(context, 44)
             val normal = if (primary) c(context, R.color.ck_primary) else c(context, R.color.ck_chip_bg)
             val pressed = if (primary) c(context, R.color.ck_primary_dark) else c(context, R.color.ck_chip_pressed)
             val fg = if (primary) c(context, R.color.white) else c(context, R.color.ck_primary)

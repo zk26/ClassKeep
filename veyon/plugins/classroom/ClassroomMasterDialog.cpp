@@ -16,6 +16,7 @@
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -54,6 +55,7 @@
 #include "ClassroomData.h"
 #include "ClassroomMasterDialog.h"
 #include "ClassroomProtocol.h"
+#include "ClassroomScore.h"
 #include "ClassroomScorePanel.h"
 #include "ClassroomSeatGrid.h"
 #include "ClassroomSystem.h"
@@ -102,6 +104,7 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 	m_tabs->addTab( m_scorePanel, tr( "Score & reports" ) );
 
 	setupSeatTab();
+	setupTimetableTab();
 	// Created last so it can reuse widgets from the other tabs, but inserted as
 	// the FIRST tab: these are the actions a teacher uses every lesson.
 	setupToolsTab();
@@ -1569,6 +1572,203 @@ void ClassroomMasterDialog::refreshUwfStatus()
 }
 
 
+QString ClassroomMasterDialog::timetableFilePath() const
+{
+	return QDir( dataDirectory() ).filePath( QStringLiteral("timetable.json") );
+}
+
+
+void ClassroomMasterDialog::refreshLessonRecords()
+{
+	if( m_lessonRecords == nullptr ) { return; }
+
+	// Natural per-class record: what was taught (score book lessons), what
+	// happened (today's activity log) and how the students did (score entries).
+	ClassroomScoreBook book( dataDirectory() );
+	book.load( currentClassName() );
+
+	QString text;
+	const auto& lessons = book.lessons();
+	for( auto index = lessons.size() - 1; index >= 0; --index )
+	{
+		const auto& lesson = lessons.at( index );
+		QVector<ClassroomScoreEntry> entries;
+		int totalDelta = 0;
+		for( const auto& entry : book.entries() )
+		{
+			if( entry.lessonId == lesson.id )
+			{
+				entries.append( entry );
+				totalDelta += entry.delta;
+			}
+		}
+		text += tr( "%1 - lesson content: %2\n" )
+					.arg( lesson.date.toString( Qt::ISODate ) )
+					.arg( lesson.topic.isEmpty() ? tr( "(not filled in)" ) : lesson.topic );
+		text += tr( "  Performance: %1 score entries, total %2%3 points\n" )
+					.arg( int( entries.size() ) )
+					.arg( totalDelta > 0 ? QStringLiteral("+") : QString{} )
+					.arg( totalDelta );
+		for( const auto& entry : entries )
+		{
+			text += tr( "  - %1 %2 (%3)\n" )
+						.arg( entry.student.isEmpty() ? entry.seat : entry.student )
+						.arg( entry.delta > 0 ? QStringLiteral("+%1").arg( entry.delta ) : QString::number( entry.delta ) )
+						.arg( entry.label );
+		}
+		text += QLatin1Char('\n');
+	}
+
+	const auto events = m_store.load( QDate::currentDate(), QDate::currentDate() );
+	if( events.isEmpty() == false )
+	{
+		text += tr( "What happened today (recent activity):\n" );
+		const int first = qMax( 0, int( events.size() ) - 12 );
+		for( int index = int( events.size() ) - 1; index >= first; --index )
+		{
+			const auto& event = events.at( index );
+			text += tr( "  %1 - %2 - %3\n" )
+						.arg( event.timestamp.toString( QStringLiteral("HH:mm") ) )
+						.arg( event.type )
+						.arg( event.detail );
+		}
+	}
+	if( text.isEmpty() ) { text = tr( "No lesson records yet. Start a new lesson or score a student on the Score & reports tab." ); }
+	m_lessonRecords->setPlainText( text );
+
+	if( m_timetableSummary != nullptr )
+	{
+		QFile file( timetableFilePath() );
+		QString summary = tr( "Timetable not uploaded by the phone yet." );
+		if( file.open( QFile::ReadOnly ) )
+		{
+			const auto document = QJsonDocument::fromJson( file.readAll() ).object();
+			file.close();
+			if( document.isEmpty() == false )
+			{
+				summary = tr( "Timetable: %1 - %2 periods - %3 courses - stored locally and on the teacher machine" )
+							  .arg( document.value( QStringLiteral("name") ).toString( tr( "(unnamed)" ) ) )
+							  .arg( int( document.value( QStringLiteral("periods") ).toArray().size() ) )
+							  .arg( int( document.value( QStringLiteral("courses") ).toArray().size() ) );
+			}
+		}
+		m_timetableSummary->setText( summary );
+	}
+}
+
+
+void ClassroomMasterDialog::setupTimetableTab()
+{
+	auto* page = new QWidget( m_tabs );
+	auto* layout = new QVBoxLayout( page );
+
+	auto* timetableCard = new QWidget( page );
+	auto* timetableLayout = new QVBoxLayout( timetableCard );
+	timetableLayout->addWidget( new QLabel( tr( "Timetable (shared with the phone)" ), timetableCard ) );
+	m_timetableSummary = new QLabel( tr( "Timetable not uploaded by the phone yet." ), timetableCard );
+	m_timetableSummary->setWordWrap( true );
+	timetableLayout->addWidget( m_timetableSummary );
+
+	auto* timetableRow = new QHBoxLayout;
+	auto* importTimetable = new QPushButton( tr( "Import timetable JSON" ), timetableCard );
+	auto* exportTimetable = new QPushButton( tr( "Export timetable JSON" ), timetableCard );
+	timetableRow->addWidget( importTimetable );
+	timetableRow->addWidget( exportTimetable );
+	timetableRow->addStretch( 1 );
+	timetableLayout->addLayout( timetableRow );
+	layout->addWidget( timetableCard );
+
+	connect( importTimetable, &QPushButton::clicked, this, [this]() {
+		const auto path = QFileDialog::getOpenFileName( this, tr( "Import timetable JSON" ),
+													   QString{}, tr( "JSON (*.json);;All files (*)" ) );
+		if( path.isEmpty() ) { return; }
+		QFile source( path );
+		if( source.open( QFile::ReadOnly ) == false ) { return; }
+		const auto bytes = source.readAll();
+		source.close();
+		if( QJsonDocument::fromJson( bytes ).object().isEmpty() ) { return; }
+		QDir().mkpath( dataDirectory() );
+		QFile target( timetableFilePath() );
+		if( target.open( QFile::WriteOnly | QFile::Truncate ) )
+		{
+			target.write( QJsonDocument( QJsonDocument::fromJson( bytes ).object() ).toJson( QJsonDocument::Compact ) );
+			target.close();
+		}
+		refreshLessonRecords();
+	} );
+	connect( exportTimetable, &QPushButton::clicked, this, [this]() {
+		const auto path = QFileDialog::getSaveFileName( this, tr( "Export timetable JSON" ),
+													   QStringLiteral("ClassKeep-timetable.json"),
+													   tr( "JSON (*.json);;All files (*)" ) );
+		if( path.isEmpty() ) { return; }
+		QFile source( timetableFilePath() );
+		if( source.open( QFile::ReadOnly ) == false ) { return; }
+		const auto bytes = source.readAll();
+		source.close();
+		QFile target( path );
+		if( target.open( QFile::WriteOnly | QFile::Truncate ) ) { target.write( bytes ); target.close(); }
+	} );
+
+	// Per-lesson scoring, bound to the lesson topic the teacher types here.
+	auto* lessonCard = new QWidget( page );
+	auto* lessonLayout = new QVBoxLayout( lessonCard );
+	lessonLayout->addWidget( new QLabel( tr( "This lesson" ), lessonCard ) );
+	auto* topicRow = new QHBoxLayout;
+	topicRow->addWidget( new QLabel( tr( "Lesson content:" ), lessonCard ) );
+	m_lessonTopic = new QLineEdit( lessonCard );
+	m_lessonTopic->setPlaceholderText( tr( "What was taught in this lesson" ) );
+	topicRow->addWidget( m_lessonTopic, 1 );
+	auto* saveTopic = new QPushButton( tr( "Save lesson topic" ), lessonCard );
+	topicRow->addWidget( saveTopic );
+	lessonLayout->addLayout( topicRow );
+
+	auto* scoreRow = new QHBoxLayout;
+	scoreRow->addWidget( new QLabel( tr( "Whole class performance:" ), lessonCard ) );
+	const QVector<int> deltas{ 5, 1, -1, -5 };
+	for( const auto delta : deltas )
+	{
+		auto* button = new QPushButton( delta > 0 ? QStringLiteral("+%1").arg( delta ) : QString::number( delta ),
+										lessonCard );
+		scoreRow->addWidget( button );
+		connect( button, &QPushButton::clicked, this, [this, delta]() {
+			if( m_scorePanel != nullptr && m_lessonTopic != nullptr )
+			{
+				const auto topic = m_lessonTopic->text().trimmed();
+				ClassroomScoreBook book( dataDirectory() );
+				book.load( currentClassName() );
+				book.ensureLesson( QDate::currentDate(), topic );
+				book.save();
+				scoreWholeClass( delta );
+				refreshLessonRecords();
+			}
+		} );
+	}
+	scoreRow->addStretch( 1 );
+	lessonLayout->addLayout( scoreRow );
+	connect( saveTopic, &QPushButton::clicked, this, [this]() {
+		ClassroomScoreBook book( dataDirectory() );
+		book.load( currentClassName() );
+		book.ensureLesson( QDate::currentDate(), m_lessonTopic->text().trimmed() );
+		book.save();
+		appendTeacherEvent( EventType::score(), tr( "Lesson topic: %1" ).arg( m_lessonTopic->text().trimmed() ) );
+		refreshLessonRecords();
+	} );
+
+	lessonLayout->addWidget( new QLabel( tr( "Class lesson records" ), lessonCard ) );
+	m_lessonRecords = new QPlainTextEdit( lessonCard );
+	m_lessonRecords->setReadOnly( true );
+	m_lessonRecords->setMinimumHeight( 220 );
+	lessonLayout->addWidget( m_lessonRecords, 1 );
+	auto* refreshRecords = new QPushButton( tr( "Refresh records" ), lessonCard );
+	connect( refreshRecords, &QPushButton::clicked, this, &ClassroomMasterDialog::refreshLessonRecords );
+	lessonLayout->addWidget( refreshRecords );
+	layout->addWidget( lessonCard, 1 );
+
+	m_tabs->addTab( page, tr( "Timetable & lesson" ) );
+	refreshLessonRecords();
+}
+
+
 void ClassroomMasterDialog::setupToolsTab()
 {
 	auto* page = new QWidget( m_tabs );
@@ -1871,6 +2071,8 @@ void ClassroomMasterDialog::refreshSeatGrid()
 				// base setProperty() with a QUuid-keyed overload of its own.
 				auto* object = static_cast<QObject*>( controlInterface.data() );
 				object->setProperty( "classkeepScore", m_scorePanel->scoreForSeat( student.seat ) );
+				object->setProperty( "classkeepProtected",
+									 settingsJson().value( SettingKey::exitProtection() ).toBool( true ) );
 				break;
 			}
 		}

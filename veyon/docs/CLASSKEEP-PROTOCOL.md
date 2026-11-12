@@ -104,6 +104,20 @@
 | 44 | `SetWebBlockRules` | M→S→W | 禁用地址（模糊匹配规则数组） | `RulesJson` |
 | 45 | `ProtectionStateReport` | W→S→M | 客户端保护状态回报 | `Enabled` |
 
+### 手机端 ↔ 教师机 HTTP 路由（2.1.0 新增）
+
+| 路径 | 方法 | 鉴权 | 用途 |
+|---|---|---|---|
+| `/api/classroom/timetable` | GET | 需要 | 读取教师机 `%APPDATA%/ClassKeep/timetable.json`，返回 `{"timetable": {...}, "revision": n}`；从未上传时 `timetable` 为空对象 |
+| `/api/classroom/timetable` | POST | 需要 | 请求体 `{"timetable": {...}}`，原样写入上述文件并返回 `{"ok": true, "revision": n}` |
+| `/api/classroom/classes` | GET | 需要 | 按当前班级返回名单与当前积分，供手机端「班级」页按班归档 |
+
+课表 JSON 采用 ClassBoard 单文档格式：`name`、`timeLabels`（0 或 2 个）、
+`periods[{label, times[], isBreak}]`、`courses[{name, dayOfWeek, startSection,
+endSection, colorIndex, room, teacher, note, className}]`，外加本分支的
+`config`（节数 / 大课间 / 午休 / 双作息偏移）与 `revision`。
+教师机端「课表与课堂」页签读写同一文件，两端始终一致。
+
 > `SetUninstallProtection` 收到后，学生端 worker（以 `LocalSystem` 运行）写
 > `HKLM\SOFTWARE\ClassKeep\Student\UninstallProtection` = 1/0；独立的
 > `uninstall.exe` 启动时读同一 DWORD，为 1 则弹提示并 `Abort`。

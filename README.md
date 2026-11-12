@@ -68,16 +68,18 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 > | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
 > 三类产物全部真实编译，不含占位包或伪造二进制。
-> **当前最新为 [v2.0.0](https://github.com/zk26/ClassKeep/releases/tag/v2.0.0)**：
+> **当前最新为 [v2.1.0](https://github.com/zk26/ClassKeep/releases/tag/v2.1.0)**：
 > 全量统一英文 `ClassKeep` 命名；**修复 1.5.1 升级安装时
 > 「无法打开要写入的文件 … veyon-worker.exe」**——安装前先停止并清理
 > 新/旧服务与全部客户端进程，等待文件句柄释放后再写入；
 > 安装器仍会自检服务 RUNNING 并把返回码写入 `install.log`。
-> 桌面端**默认简体中文**（Configurator → General → Language 可切换），
-> 界面与中文译文中的 Veyon 品牌串统一为 ClassKeep。
-> 教师端支持座位拖拽排序（下次开机不变）、监控缩略图显示姓名+当前分数、
-> 学生端卸载保护、常用功能置顶的小图标工具栏；APP 为 **4 个底部标签
-> （课堂 / 课表 / 配置 / 更多）**，矢量图标 + 常显名称，课表作息可调、更多页含导入导出与课堂回顾。
+> 桌面端**默认简体中文**（ClassKeep 插件 428 条界面串全部补齐 `veyon_zh_CN.ts`），
+> 安装/卸载详情不再打印 `sc`/`taskkill` 的无害报错与 GBK 乱码。
+> 教师端新增「课表与课堂」页签（课表导入导出、当堂课讲授内容、当堂课表现评分、
+> 按班级归档的课堂记录），补齐与手机端对等的能力。
+> APP 为 **5 个底部标签（课堂 / 班级 / 课表 / 配置 / 更多）**：真实应用图标、
+> 未配置时收缩提示、ClassBoard 样式双作息课表（彩色跨节卡片 + 今天高亮）、
+> 按班级自然展示课堂记录、导入导出收进设置、课表本地 + 教师机双写同步。
 > 旧版 ZIP / preset 包与有缺陷的 Release 已删除。
 > Windows 编译路线见 [`CLASSKEEP-BUILD.md` 路线 D](veyon/docs/CLASSKEEP-BUILD.md)。
 
@@ -113,8 +115,8 @@ cd mobile
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=2.0.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=2.0.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.1.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.1.0 -DROLE=student installer.nsi
 ```
 
 详见 [`veyon/scripts/README.md`](veyon/scripts/README.md)。

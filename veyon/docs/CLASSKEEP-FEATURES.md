@@ -13,6 +13,40 @@
 
 ---
 
+## 2.1.0 逐项核对：审计发现与整改（第四轮）
+
+| # | 审计发现 | 状态 | 整改结果 |
+|---|---|---|---|
+| A1 | 主监控缩略图只有 `名字 · 100 points`，不是约定的 `🛡️学生1 [100]` | ✅ | `ComputerControlListModel.cpp:501-517` 改为 `盾 名字  [积分]`；`ClassroomMasterDialog.cpp:2073` 同时发布 `classkeepProtected` 属性，保护关闭时显示空心圆 |
+| A2 | 工具栏「登陆/注销」仍是 Veyon 原生用户名+密码登录 | ❌ 未整改 | **仍未整改**：需替换 `usersessioncontrol` 的 `UserLoginDialog` 并改接 `Command::SetIdentity`，本轮未动 |
+| A3 | 学生机悬浮卡片无实机截图证据、创建 4 个按钮 | ◐ | 代码存在且 2.0.0 已编译；本轮未改，待机房联调 |
+| B1 | 安装/卸载详情满屏 `[SC] 1060`、`没有找到进程`、中文乱码 | ✅ | `classkeep-installer.nsi` 用 `SetDetailsPrint none/both` 包裹子进程清理段 |
+| B2 | Quick tools / Configurator 全英文 | ✅ | 补齐 `veyon_zh_CN.ts` 428 条（Classroom* 上下文），lrelease 直接生效 |
+| B3 | 托盘无图标、10+ 个 `ClassKeep Worker` | ❌ 未整改 | **仍未整改**：属 Veyon `FeatureWorkerManager` + 5s watchdog 的架构级竞态，需单独评估并回归测试，本轮不动 |
+| B4 | 「将 ClassKeep 功能迁移至指定区域」目标区域不明确 | ❌ 未整改 | **等待你指定目标区域**（工具栏分组 / 主界面 / 配置器合并） |
+| B5 | 教师端缺课表、当堂课表现评分 | ◐ | 新增「课表与课堂」页签：课表导入导出、讲授内容、全班表现评分、按班归档记录；与手机端共用 `timetable.json` |
+
+## 2.1.0 手机端十项调整
+
+| # | 需求 | 状态 | 实现位置 |
+|---|---|---|---|
+| M1 | `CK` → 真实图标 | ✅ | `MainActivity.brandHeader()` 用 `R.mipmap.ic_launcher_round` |
+| M2 | 未配置时卡片收缩 + 提示去配置页 | ✅ | `refreshConnectionHint()`；隐藏概况/活动大卡，主区留给控制与名单 |
+| M3 | 调整模块摆放 | ✅ | 概况/活动移入新增「班级」页；课堂页只留控制 + 名单 |
+| M4 | 新增底部「班级」页并按班归档 | ✅ | 5 个 tab；`refreshClassRecords()` + `/api/classroom/classes` |
+| M5 | 部分按钮收进设置 | ✅ | 「更多」只剩 2 个入口，7 个导入导出动作收进 `showMoreTools()`；课表 4 个操作收进「课表设置」 |
+| M6 | 双列按 ClassBoard 样式 | ✅ | `TimetableGridView.kt` 冻结双作息时间轴、彩色跨节卡片、间歇行、今天高亮；`TimetableConfig.dualTime` + 偏移 |
+| M7 | 本地 + 教师机双写 | ◐ | `BridgeClient.timetable()/pushTimetable()` + `ClassroomBridge` GET/POST；本地已验证编译，教师机路由待 CI + 联机验证 |
+| M8 | 课表设置归入课表设置项 | ✅ | 配置页「课表显示」卡片移除，全部并入「课表设置」 |
+| M9 | 修复按钮重叠 | ✅ | `Ui.button()` 显式 `MATCH_PARENT × WRAP_CONTENT` + `minHeight 44dp` + 8dp 上边距 |
+| M10 | 课堂内容按班级自然记录，取消「查询这堂课」 | ✅ | 删除 `showLessonReview()`；`refreshClassRecords()` 按班列出讲了什么/干了什么/同学表现 |
+
+> 手机端已用本机 JDK 23 + Android SDK 实测：`:app:assembleDebug` +
+> `:app:testDebugUnitTest` **BUILD SUCCESSFUL，9 个单测零警告全绿**。
+> 桌面端改动由 GitHub Actions 的 Linux Qt6/GCC 与 Windows MinGW 编译覆盖。
+
+---
+
 ## 2.0.0 常用工具 / 座位视图 / 学生卡片（第三轮）
 
 | # | 需求 | 状态 | 实现位置 | 使用入口 |

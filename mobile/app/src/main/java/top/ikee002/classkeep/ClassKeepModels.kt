@@ -116,6 +116,31 @@ fun parseSeats(raw: String): List<SeatStudent> {
     }
 }
 
+/** One class on the 「班级」 page, with its students and current scores. */
+data class ClassGroup(
+    val name: String = "",
+    val students: List<SeatStudent> = emptyList(),
+)
+
+fun parseClasses(raw: String): List<ClassGroup> {
+    val array = JSONObject(raw).optJSONArray("classes") ?: return emptyList()
+    return (0 until array.length()).mapNotNull { index ->
+        val obj = array.optJSONObject(index) ?: return@mapNotNull null
+        val seatsArray = obj.optJSONArray("students") ?: org.json.JSONArray()
+        val students = (0 until seatsArray.length()).mapNotNull { i ->
+            seatsArray.optJSONObject(i)?.let { s ->
+                SeatStudent(
+                    seat = s.optString("seat"),
+                    student = s.optString("student"),
+                    ip = s.optString("ip"),
+                    score = s.optInt("score", 100),
+                )
+            }
+        }
+        ClassGroup(name = obj.optString("name"), students = students)
+    }
+}
+
 fun parseEvents(raw: String): List<ActivityEvent> {
     val array = JSONObject(raw).optJSONArray("events") ?: return emptyList()
     return (0 until array.length()).mapNotNull { index ->

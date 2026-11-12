@@ -5037,4 +5037,1836 @@ Example: [^-]*-(PC[0-9]*)</source>
         <translation>不要使用 X Damage 扩展</translation>
     </message>
 </context>
+<context>
+    <name>ClassroomAiClient</name>
+    <message>
+        <source>AI is not configured or the message is empty.</source>
+        <translation>AI 未配置或消息为空。</translation>
+    </message>
+    <message>
+        <source>AI request failed: %1</source>
+        <translation>AI 请求失败：%1</translation>
+    </message>
+    <message>
+        <source>Could not send the request.</source>
+        <translation>无法发送请求。</translation>
+    </message>
+    <message>
+        <source>The AI endpoint returned an unexpected response.</source>
+        <translation>AI 接口返回了异常响应。</translation>
+    </message>
+    <message>
+        <source>The request was cancelled.</source>
+        <translation>请求已取消。</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomBridge</name>
+    <message>
+        <source>Bridge on port %1 (revision %2, lesson key %3)</source>
+        <translation>桥接端口 %1（版本 %2，密钥 %3）</translation>
+    </message>
+    <message>
+        <source>Bridge stopped</source>
+        <translation>桥接已停止</translation>
+    </message>
+    <message>
+        <source>Mobile scoring</source>
+        <translation>手机端加减分</translation>
+    </message>
+    <message>
+        <source>active</source>
+        <translation>已下发</translation>
+    </message>
+    <message>
+        <source>missing - start a new lesson</source>
+        <translation>未下发 · 请开始新课堂</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomClient</name>
+    <message>
+        <source>%1 - seat %2: teacher started a check-in. Type your name to confirm.</source>
+        <translation>%1 · %2 号：教师已开始签到，请输入姓名确认。</translation>
+    </message>
+    <message>
+        <source>AI assistant</source>
+        <translation>AI 助手</translation>
+    </message>
+    <message>
+        <source>AI assistant (configured by the teacher)</source>
+        <translation>AI 助手（由教师端配置）</translation>
+    </message>
+    <message>
+        <source>AI assistant - %1</source>
+        <translation>AI 助手 - %1</translation>
+    </message>
+    <message>
+        <source>Administrator account:</source>
+        <translation>管理员账号：</translation>
+    </message>
+    <message>
+        <source>Administrator credentials or connection key are not valid. This attempt has been logged.</source>
+        <translation>管理员凭据或密钥不正确，本次尝试已记录。</translation>
+    </message>
+    <message>
+        <source>Administrator password:</source>
+        <translation>管理员密码：</translation>
+    </message>
+    <message>
+        <source>Ask a question...</source>
+        <translation>输入问题…</translation>
+    </message>
+    <message>
+        <source>Attendance check-in</source>
+        <translation>课堂签到</translation>
+    </message>
+    <message>
+        <source>Call teacher</source>
+        <translation>呼叫老师</translation>
+    </message>
+    <message>
+        <source>Call the teacher</source>
+        <translation>呼叫老师</translation>
+    </message>
+    <message>
+        <source>Check in</source>
+        <translation>签到</translation>
+    </message>
+    <message>
+        <source>Class: %1  |  Key: %2</source>
+        <translation>班级：%1  |  密钥：%2</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Connection key</source>
+        <translation>本堂课密钥</translation>
+    </message>
+    <message>
+        <source>Connection key:</source>
+        <translation>本堂课密钥：</translation>
+    </message>
+    <message>
+        <source>Exit classroom client</source>
+        <translation>退出课堂客户端</translation>
+    </message>
+    <message>
+        <source>Exit client (protected)...</source>
+        <translation>退出客户端（受保护）…</translation>
+    </message>
+    <message>
+        <source>Me:</source>
+        <translation>我：</translation>
+    </message>
+    <message>
+        <source>My score</source>
+        <translation>查询积分</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>姓名</translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation>姓名：</translation>
+    </message>
+    <message>
+        <source>Not signed in</source>
+        <translation>未登录</translation>
+    </message>
+    <message>
+        <source>Please enter both the seat number and your name.</source>
+        <translation>请同时填写座位号与姓名。</translation>
+    </message>
+    <message>
+        <source>Please type your name first.</source>
+        <translation>请先输入姓名。</translation>
+    </message>
+    <message>
+        <source>Right-click: call the teacher / protected exit</source>
+        <translation>右键：呼叫老师 / 受保护退出</translation>
+    </message>
+    <message>
+        <source>Seat</source>
+        <translation>座位</translation>
+    </message>
+    <message>
+        <source>Seat number</source>
+        <translation>座位号</translation>
+    </message>
+    <message>
+        <source>Self sign-in is disabled. Please wait for the teacher to sign you in.</source>
+        <translation>已禁用自助登录，请等待教师端为你签到。</translation>
+    </message>
+    <message>
+        <source>Send</source>
+        <translation>发送</translation>
+    </message>
+    <message>
+        <source>Show AI assistant</source>
+        <translation>显示 AI 助手</translation>
+    </message>
+    <message>
+        <source>Show my score</source>
+        <translation>显示积分</translation>
+    </message>
+    <message>
+        <source>Sign in</source>
+        <translation>登录</translation>
+    </message>
+    <message>
+        <source>The connection key is not correct. Ask your teacher for the current key.</source>
+        <translation>密钥不正确，请向老师索取本堂课密钥。</translation>
+    </message>
+    <message>
+        <source>The seat number and name do not match the class roster.</source>
+        <translation>座位号与姓名和班级名单不一致。</translation>
+    </message>
+    <message>
+        <source>The teacher has disabled the AI assistant.</source>
+        <translation>教师端已关闭 AI 助手。</translation>
+    </message>
+    <message>
+        <source>The teacher has not issued a connection key for this lesson yet.</source>
+        <translation>教师端尚未下发本堂课密钥。</translation>
+    </message>
+    <message>
+        <source>Type your full name</source>
+        <translation>输入你的姓名</translation>
+    </message>
+    <message>
+        <source>Welcome! Your questions and this session are recorded in the classroom log.</source>
+        <translation>欢迎提问；问题与本次会话会记入课堂日志。</translation>
+    </message>
+    <message>
+        <source>active</source>
+        <translation>已下发</translation>
+    </message>
+    <message>
+        <source>authorized client exit</source>
+        <translation>已授权的客户端退出</translation>
+    </message>
+    <message>
+        <source>exit protection disabled</source>
+        <translation>退出保护已关闭</translation>
+    </message>
+    <message>
+        <source>locked</source>
+        <translation>已锁定</translation>
+    </message>
+    <message>
+        <source>no connection key issued by the teacher</source>
+        <translation>教师端未下发本堂课密钥</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>无</translation>
+    </message>
+    <message>
+        <source>not selected</source>
+        <translation>未选择</translation>
+    </message>
+    <message>
+        <source>not signed in</source>
+        <translation>未登录</translation>
+    </message>
+    <message>
+        <source>rejected client exit</source>
+        <translation>被拒绝的客户端退出</translation>
+    </message>
+    <message>
+        <source>seat/name mismatch for %1</source>
+        <translation>%1 号座位与姓名不匹配</translation>
+    </message>
+    <message>
+        <source>student signed in at seat %1</source>
+        <translation>学生已在 %1 号座位登录</translation>
+    </message>
+    <message>
+        <source>unknown</source>
+        <translation>未知</translation>
+    </message>
+    <message>
+        <source>unlocked</source>
+        <translation>未锁定</translation>
+    </message>
+    <message>
+        <source>wrong connection key for seat %1</source>
+        <translation>%1 号座位密钥错误</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomConfigurationPage</name>
+    <message>
+        <source>AI assistant</source>
+        <translation>AI 助手</translation>
+    </message>
+    <message>
+        <source>API key (optional):</source>
+        <translation>API 密钥（可选）：</translation>
+    </message>
+    <message>
+        <source>Administrator account:</source>
+        <translation>管理员账号：</translation>
+    </message>
+    <message>
+        <source>Allow students to sign in themselves</source>
+        <translation>允许学生自行登录（姓名 + 座位号）</translation>
+    </message>
+    <message>
+        <source>Base score:</source>
+        <translation>基础分：</translation>
+    </message>
+    <message>
+        <source>Behaviour monitoring</source>
+        <translation>行为采集</translation>
+    </message>
+    <message>
+        <source>Block USB input while locking</source>
+        <translation>锁定时禁用 USB 输入</translation>
+    </message>
+    <message>
+        <source>Connection key:</source>
+        <translation>本堂课密钥：</translation>
+    </message>
+    <message>
+        <source>Data directory:</source>
+        <translation>数据目录：</translation>
+    </message>
+    <message>
+        <source>Enable AI assistant</source>
+        <translation>启用 AI 助手</translation>
+    </message>
+    <message>
+        <source>Enable InternetGuard (WFP)</source>
+        <translation>启用上网管控（WFP）</translation>
+    </message>
+    <message>
+        <source>Enable UWF integration</source>
+        <translation>启用 UWF 集成</translation>
+    </message>
+    <message>
+        <source>Enable automatic LAN sync</source>
+        <translation>启用局域网自动同步</translation>
+    </message>
+    <message>
+        <source>Enable classroom features</source>
+        <translation>启用课堂功能</translation>
+    </message>
+    <message>
+        <source>Enable mobile bridge</source>
+        <translation>启用手机端桥接</translation>
+    </message>
+    <message>
+        <source>Extra word cloud stop words:</source>
+        <translation>词云额外停用词：</translation>
+    </message>
+    <message>
+        <source>Local or network API endpoint:</source>
+        <translation>本地或网络 API 地址：</translation>
+    </message>
+    <message>
+        <source>Log retention (days):</source>
+        <translation>日志保留（天）：</translation>
+    </message>
+    <message>
+        <source>Mobile bridge port:</source>
+        <translation>手机端桥接端口：</translation>
+    </message>
+    <message>
+        <source>Model:</source>
+        <translation>模型：</translation>
+    </message>
+    <message>
+        <source>Protect the client against being closed</source>
+        <translation>防止学生端被关闭</translation>
+    </message>
+    <message>
+        <source>Record active windows and applications</source>
+        <translation>记录前台窗口与应用程序</translation>
+    </message>
+    <message>
+        <source>Require administrator credentials to exit</source>
+        <translation>退出需要管理员凭据</translation>
+    </message>
+    <message>
+        <source>Sampling interval (seconds):</source>
+        <translation>采样间隔（秒）：</translation>
+    </message>
+    <message>
+        <source>Scoring, devices and bridge</source>
+        <translation>积分、设备与桥接</translation>
+    </message>
+    <message>
+        <source>Silence page text:</source>
+        <translation>肃静页文案：</translation>
+    </message>
+    <message>
+        <source>System prompt:</source>
+        <translation>系统提示词：</translation>
+    </message>
+    <message>
+        <source>Timeout (seconds):</source>
+        <translation>超时（秒）：</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomMasterDialog</name>
+    <message>
+        <source> days</source>
+        <translation> 天</translation>
+    </message>
+    <message>
+        <source> s</source>
+        <translation> 秒</translation>
+    </message>
+    <message>
+        <source>%1 expired log files have been removed.</source>
+        <translation>已清理 %1 个过期日志文件。</translation>
+    </message>
+    <message>
+        <source>%1 fuzzy rule(s) applied: %2</source>
+        <translation>已应用 %1 条模糊规则：%2</translation>
+    </message>
+    <message>
+        <source>%1 points applied to all %2 students.</source>
+        <translation>已给全部 %2 名学生加 %1 分。</translation>
+    </message>
+    <message>
+        <source>%1 points at seat %2: %3</source>
+        <translation>%2 号座位 %1 分：%3</translation>
+    </message>
+    <message>
+        <source>(none - blocking cleared)</source>
+        <translation>（无规则 · 已解除禁用）</translation>
+    </message>
+    <message>
+        <source>+1</source>
+        <translation>+1</translation>
+    </message>
+    <message>
+        <source>+5</source>
+        <translation>+5</translation>
+    </message>
+    <message>
+        <source>-1</source>
+        <translation>-1</translation>
+    </message>
+    <message>
+        <source>-5</source>
+        <translation>-5</translation>
+    </message>
+    <message>
+        <source>A new lesson has been started. Settings, roster and key were pushed to all computers.</source>
+        <translation>已开始新课堂，设置、名单与密钥已下发到所有学生机。</translation>
+    </message>
+    <message>
+        <source>AI disabled for all clients</source>
+        <translation>已关闭全体学生端 AI</translation>
+    </message>
+    <message>
+        <source>AI enabled for all clients</source>
+        <translation>已启用全体学生端 AI</translation>
+    </message>
+    <message>
+        <source>AI settings</source>
+        <translation>AI 设置</translation>
+    </message>
+    <message>
+        <source>API key (optional):</source>
+        <translation>API 密钥（可选）：</translation>
+    </message>
+    <message>
+        <source>Activity logs</source>
+        <translation>活动日志</translation>
+    </message>
+    <message>
+        <source>Administrator account:</source>
+        <translation>管理员账号：</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>全部</translation>
+    </message>
+    <message>
+        <source>All computers</source>
+        <translation>全部计算机</translation>
+    </message>
+    <message>
+        <source>All students</source>
+        <translation>全部学生</translation>
+    </message>
+    <message>
+        <source>Allow</source>
+        <translation>允许</translation>
+    </message>
+    <message>
+        <source>App block:</source>
+        <translation>禁用应用：</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>应用</translation>
+    </message>
+    <message>
+        <source>Apply rules</source>
+        <translation>应用规则</translation>
+    </message>
+    <message>
+        <source>Audio:</source>
+        <translation>音频：</translation>
+    </message>
+    <message>
+        <source>Batch sign in</source>
+        <translation>批量登录</translation>
+    </message>
+    <message>
+        <source>Batch sign out</source>
+        <translation>批量退出</translation>
+    </message>
+    <message>
+        <source>Block</source>
+        <translation>禁用</translation>
+    </message>
+    <message>
+        <source>Blocked apps (fuzzy):</source>
+        <translation>禁用应用（模糊匹配）：</translation>
+    </message>
+    <message>
+        <source>Blocked sites (fuzzy):</source>
+        <translation>禁用地址（模糊匹配）：</translation>
+    </message>
+    <message>
+        <source>Bridge port:</source>
+        <translation>桥接端口：</translation>
+    </message>
+    <message>
+        <source>Broadcast all</source>
+        <translation>全部广播</translation>
+    </message>
+    <message>
+        <source>Broadcast selected</source>
+        <translation>选中广播</translation>
+    </message>
+    <message>
+        <source>Broadcast started (USB input disabled, screens stay visible).</source>
+        <translation>广播已开始（禁用 USB 输入，屏幕正常显示）。</translation>
+    </message>
+    <message>
+        <source>Broadcast stopped, USB input restored.</source>
+        <translation>广播已停止，USB 输入已恢复。</translation>
+    </message>
+    <message>
+        <source>Broadcast:</source>
+        <translation>广播：</translation>
+    </message>
+    <message>
+        <source>CSV files (*.csv)</source>
+        <translation>CSV 文件 (*.csv)</translation>
+    </message>
+    <message>
+        <source>CSV files (*.csv);;All files (*)</source>
+        <translation>CSV 文件 (*.csv);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Call from %1 (%2, seat %3)</source>
+        <translation>来自 %1 的呼叫（%2，%3 号座位）</translation>
+    </message>
+    <message>
+        <source>Change student</source>
+        <translation>更换学生</translation>
+    </message>
+    <message>
+        <source>Check-in %1: %2 present, %3 name mismatch, %4 absent (total %5)</source>
+        <translation>%1 签到：%2 已到、%3 姓名不符、%4 未到（共 %5 人）</translation>
+    </message>
+    <message>
+        <source>Class</source>
+        <translation>班级</translation>
+    </message>
+    <message>
+        <source>Class &amp; sign-in</source>
+        <translation>班级与签到</translation>
+    </message>
+    <message>
+        <source>Class:</source>
+        <translation>班级：</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清空</translation>
+    </message>
+    <message>
+        <source>Clear results</source>
+        <translation>清空结果</translation>
+    </message>
+    <message>
+        <source>Client protection = students cannot quit the ClassKeep card. </source>
+        <translation>客户端保护 = 学生无法退出 ClassKeep 卡片。 </translation>
+    </message>
+    <message>
+        <source>Client protection OFF: the card may now be closed (use only for maintenance).</source>
+        <translation>客户端保护已关闭：卡片现在可以被关闭（仅用于维护）。</translation>
+    </message>
+    <message>
+        <source>Client protection ON: students can no longer quit the ClassKeep card.</source>
+        <translation>客户端保护已开启：学生无法再退出 ClassKeep 卡片。</translation>
+    </message>
+    <message>
+        <source>Client protection:</source>
+        <translation>客户端保护：</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Comma or newline separated, e.g. douyin, bilibili, game</source>
+        <translation>逗号或换行分隔，例如 抖音、b站、游戏</translation>
+    </message>
+    <message>
+        <source>Comma or newline separated, e.g. game, steam, notepad</source>
+        <translation>逗号或换行分隔，例如 游戏、steam、记事本</translation>
+    </message>
+    <message>
+        <source>Connection OK: %1</source>
+        <translation>连接正常：%1</translation>
+    </message>
+    <message>
+        <source>Connection failed: %1</source>
+        <translation>连接失败：%1</translation>
+    </message>
+    <message>
+        <source>Could not save %1</source>
+        <translation>无法保存 %1</translation>
+    </message>
+    <message>
+        <source>Could not save the roster to %1</source>
+        <translation>无法把名单保存到 %1</translation>
+    </message>
+    <message>
+        <source>Custom...</source>
+        <translation>自定义…</translation>
+    </message>
+    <message>
+        <source>Data directory:</source>
+        <translation>数据目录：</translation>
+    </message>
+    <message>
+        <source>Deploy:</source>
+        <translation>部署：</translation>
+    </message>
+    <message>
+        <source>Detail</source>
+        <translation>详情</translation>
+    </message>
+    <message>
+        <source>Disable</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Disable + reboot</source>
+        <translation>关闭并重启</translation>
+    </message>
+    <message>
+        <source>Disable AI (all)</source>
+        <translation>关闭 AI（全部）</translation>
+    </message>
+    <message>
+        <source>Disable UWF</source>
+        <translation>关闭 UWF</translation>
+    </message>
+    <message>
+        <source>Disable gateway</source>
+        <translation>禁用网关</translation>
+    </message>
+    <message>
+        <source>Distribute and install</source>
+        <translation>分发并安装</translation>
+    </message>
+    <message>
+        <source>Edit interest keywords</source>
+        <translation>编辑兴趣关键词</translation>
+    </message>
+    <message>
+        <source>Enable</source>
+        <translation>启用</translation>
+    </message>
+    <message>
+        <source>Enable + reboot</source>
+        <translation>启用并重启</translation>
+    </message>
+    <message>
+        <source>Enable AI (all)</source>
+        <translation>启用 AI（全部）</translation>
+    </message>
+    <message>
+        <source>Enable AI assistant on student computers</source>
+        <translation>在学生机启用 AI 助手</translation>
+    </message>
+    <message>
+        <source>Enable UWF</source>
+        <translation>启用 UWF</translation>
+    </message>
+    <message>
+        <source>Enable gateway</source>
+        <translation>启用网关</translation>
+    </message>
+    <message>
+        <source>Enable on all students</source>
+        <translation>对全部学生机启用</translation>
+    </message>
+    <message>
+        <source>Enter a software path first.</source>
+        <translation>请先填写软件路径。</translation>
+    </message>
+    <message>
+        <source>Enter a website address first.</source>
+        <translation>请先填写网址。</translation>
+    </message>
+    <message>
+        <source>Events</source>
+        <translation>事件</translation>
+    </message>
+    <message>
+        <source>Exiting requires the administrator account</source>
+        <translation>退出需要管理员账号</translation>
+    </message>
+    <message>
+        <source>Export CSV</source>
+        <translation>导出 CSV</translation>
+    </message>
+    <message>
+        <source>Export activity logs</source>
+        <translation>导出活动日志</translation>
+    </message>
+    <message>
+        <source>Export class roster</source>
+        <translation>导出班级名单</translation>
+    </message>
+    <message>
+        <source>Export interest profiles</source>
+        <translation>导出兴趣画像</translation>
+    </message>
+    <message>
+        <source>Force sign out</source>
+        <translation>强制退出</translation>
+    </message>
+    <message>
+        <source>From:</source>
+        <translation>起始：</translation>
+    </message>
+    <message>
+        <source>Full path of the program on the student machine</source>
+        <translation>程序在学生机上的完整路径</translation>
+    </message>
+    <message>
+        <source>Fullscreen broadcast</source>
+        <translation>全屏广播</translation>
+    </message>
+    <message>
+        <source>Gateway:</source>
+        <translation>网关：</translation>
+    </message>
+    <message>
+        <source>Generate and push key</source>
+        <translation>生成并下发密钥</translation>
+    </message>
+    <message>
+        <source>Generate key</source>
+        <translation>生成密钥</translation>
+    </message>
+    <message>
+        <source>Half-life:</source>
+        <translation>半衰期：</translation>
+    </message>
+    <message>
+        <source>Hide</source>
+        <translation>隐藏</translation>
+    </message>
+    <message>
+        <source>Host</source>
+        <translation>主机</translation>
+    </message>
+    <message>
+        <source>IP</source>
+        <translation>IP</translation>
+    </message>
+    <message>
+        <source>IP address</source>
+        <translation>IP 地址</translation>
+    </message>
+    <message>
+        <source>Import CSV</source>
+        <translation>导入 CSV</translation>
+    </message>
+    <message>
+        <source>Import class roster</source>
+        <translation>导入班级名单</translation>
+    </message>
+    <message>
+        <source>Install command sent: %1</source>
+        <translation>已下发安装命令：%1</translation>
+    </message>
+    <message>
+        <source>Installer path on the teacher machine</source>
+        <translation>教师机上的安装程序路径</translation>
+    </message>
+    <message>
+        <source>Installer:</source>
+        <translation>安装程序：</translation>
+    </message>
+    <message>
+        <source>Interest</source>
+        <translation>兴趣</translation>
+    </message>
+    <message>
+        <source>Interest analysis</source>
+        <translation>兴趣分析</translation>
+    </message>
+    <message>
+        <source>Interest keywords</source>
+        <translation>兴趣关键词</translation>
+    </message>
+    <message>
+        <source>Interest mix</source>
+        <translation>兴趣分布</translation>
+    </message>
+    <message>
+        <source>Internet:</source>
+        <translation>网络：</translation>
+    </message>
+    <message>
+        <source>Key: %1</source>
+        <translation>密钥：%1</translation>
+    </message>
+    <message>
+        <source>Keyword</source>
+        <translation>关键词</translation>
+    </message>
+    <message>
+        <source>Last activity</source>
+        <translation>最近活动</translation>
+    </message>
+    <message>
+        <source>Leading interest</source>
+        <translation>主要兴趣</translation>
+    </message>
+    <message>
+        <source>Lessons</source>
+        <translation>节次</translation>
+    </message>
+    <message>
+        <source>Local UWF: supported=%1 enabled=%2; client results are in the activity log</source>
+        <translation>本机 UWF：支持=%1 启用=%2；学生机结果见活动日志</translation>
+    </message>
+    <message>
+        <source>Local or network API endpoint:</source>
+        <translation>本地或网络 API 地址：</translation>
+    </message>
+    <message>
+        <source>Lock all</source>
+        <translation>锁定全部</translation>
+    </message>
+    <message>
+        <source>Log retention:</source>
+        <translation>日志保留：</translation>
+    </message>
+    <message>
+        <source>Mobile:</source>
+        <translation>手机端：</translation>
+    </message>
+    <message>
+        <source>Model:</source>
+        <translation>模型：</translation>
+    </message>
+    <message>
+        <source>Monitoring &amp; lock</source>
+        <translation>监控与锁定</translation>
+    </message>
+    <message>
+        <source>Mute</source>
+        <translation>静音</translation>
+    </message>
+    <message>
+        <source>Mute all</source>
+        <translation>全员静音</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>姓名</translation>
+    </message>
+    <message>
+        <source>New class</source>
+        <translation>新建班级</translation>
+    </message>
+    <message>
+        <source>New class name:</source>
+        <translation>新班级名称：</translation>
+    </message>
+    <message>
+        <source>New student:</source>
+        <translation>新学生：</translation>
+    </message>
+    <message>
+        <source>No check-in started.</source>
+        <translation>尚未开始签到。</translation>
+    </message>
+    <message>
+        <source>Not tested yet.</source>
+        <translation>尚未测试。</translation>
+    </message>
+    <message>
+        <source>Open data directory</source>
+        <translation>打开数据目录</translation>
+    </message>
+    <message>
+        <source>Open on students:</source>
+        <translation>在学生机打开：</translation>
+    </message>
+    <message>
+        <source>Open per-machine logs</source>
+        <translation>打开各机器日志</translation>
+    </message>
+    <message>
+        <source>Open software</source>
+        <translation>打开软件</translation>
+    </message>
+    <message>
+        <source>Open website</source>
+        <translation>打开网页</translation>
+    </message>
+    <message>
+        <source>Other:</source>
+        <translation>其他：</translation>
+    </message>
+    <message>
+        <source>Please choose an installer path first.</source>
+        <translation>请先选择安装程序路径。</translation>
+    </message>
+    <message>
+        <source>Please enter the IP address, seat number and student name.</source>
+        <translation>请填写 IP 地址、座位号与学生姓名。</translation>
+    </message>
+    <message>
+        <source>Please select a student row first.</source>
+        <translation>请先选中一行学生。</translation>
+    </message>
+    <message>
+        <source>Points for every student:</source>
+        <translation>给每位学生的分数：</translation>
+    </message>
+    <message>
+        <source>Prevent students from exiting the client</source>
+        <translation>防止学生退出客户端</translation>
+    </message>
+    <message>
+        <source>Profiles are computed from all lessons in the selected date range. </source>
+        <translation>画像基于所选日期范围内的全部节次计算。 </translation>
+    </message>
+    <message>
+        <source>Purge expired</source>
+        <translation>清理过期日志</translation>
+    </message>
+    <message>
+        <source>Push key</source>
+        <translation>下发密钥</translation>
+    </message>
+    <message>
+        <source>Push roster</source>
+        <translation>下发名单</translation>
+    </message>
+    <message>
+        <source>Push settings</source>
+        <translation>下发设置</translation>
+    </message>
+    <message>
+        <source>Query</source>
+        <translation>查询</translation>
+    </message>
+    <message>
+        <source>Query UWF</source>
+        <translation>查询 UWF</translation>
+    </message>
+    <message>
+        <source>Quick sign in by IP</source>
+        <translation>按 IP 快速登录</translation>
+    </message>
+    <message>
+        <source>Quick tools</source>
+        <translation>常用工具</translation>
+    </message>
+    <message>
+        <source>Quick:</source>
+        <translation>快速操作：</translation>
+    </message>
+    <message>
+        <source>Ready.</source>
+        <translation>就绪。</translation>
+    </message>
+    <message>
+        <source>Reboot command sent to all students.</source>
+        <translation>已向全部学生机下发重启命令。</translation>
+    </message>
+    <message>
+        <source>Record active process names</source>
+        <translation>记录活动进程名</translation>
+    </message>
+    <message>
+        <source>Record active window titles</source>
+        <translation>记录活动窗口标题</translation>
+    </message>
+    <message>
+        <source>Record application, window title and browsing behaviour</source>
+        <translation>记录应用、窗口标题与上网行为</translation>
+    </message>
+    <message>
+        <source>Refresh</source>
+        <translation>刷新</translation>
+    </message>
+    <message>
+        <source>Refresh analysis</source>
+        <translation>刷新分析</translation>
+    </message>
+    <message>
+        <source>Refresh status</source>
+        <translation>刷新状态</translation>
+    </message>
+    <message>
+        <source>Release</source>
+        <translation>解除</translation>
+    </message>
+    <message>
+        <source>Remote control</source>
+        <translation>远程控制</translation>
+    </message>
+    <message>
+        <source>Request timeout:</source>
+        <translation>请求超时：</translation>
+    </message>
+    <message>
+        <source>Restart students</source>
+        <translation>重启学生机</translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation>恢复</translation>
+    </message>
+    <message>
+        <source>Roster name</source>
+        <translation>名单姓名</translation>
+    </message>
+    <message>
+        <source>Sampling interval:</source>
+        <translation>采样间隔：</translation>
+    </message>
+    <message>
+        <source>Save and push to students</source>
+        <translation>保存并下发到学生机</translation>
+    </message>
+    <message>
+        <source>Save on this computer</source>
+        <translation>仅保存在本机</translation>
+    </message>
+    <message>
+        <source>Save roster</source>
+        <translation>保存名单</translation>
+    </message>
+    <message>
+        <source>Scope:</source>
+        <translation>作用范围：</translation>
+    </message>
+    <message>
+        <source>Score &amp; reports</source>
+        <translation>积分与报表</translation>
+    </message>
+    <message>
+        <source>Screen:</source>
+        <translation>屏幕：</translation>
+    </message>
+    <message>
+        <source>Seat</source>
+        <translation>座位</translation>
+    </message>
+    <message>
+        <source>Seat number</source>
+        <translation>座位号</translation>
+    </message>
+    <message>
+        <source>Seats &amp; check-in</source>
+        <translation>座位与签到</translation>
+    </message>
+    <message>
+        <source>Selected students (roster table)</source>
+        <translation>选中学生（名单表）</translation>
+    </message>
+    <message>
+        <source>Sent to %1 machine(s): %2</source>
+        <translation>已下发到 %1 台机器：%2</translation>
+    </message>
+    <message>
+        <source>Session: %1</source>
+        <translation>会话：%1</translation>
+    </message>
+    <message>
+        <source>Show</source>
+        <translation>显示</translation>
+    </message>
+    <message>
+        <source>Sign in by IP</source>
+        <translation>按 IP 登录</translation>
+    </message>
+    <message>
+        <source>Silence page shown and text saved.</source>
+        <translation>肃静页已显示，文案已保存。</translation>
+    </message>
+    <message>
+        <source>Silence page text:</source>
+        <translation>肃静页文案：</translation>
+    </message>
+    <message>
+        <source>Silence page:</source>
+        <translation>肃静页面：</translation>
+    </message>
+    <message>
+        <source>Site block:</source>
+        <translation>禁用地址：</translation>
+    </message>
+    <message>
+        <source>Software path:</source>
+        <translation>软件路径：</translation>
+    </message>
+    <message>
+        <source>Source:</source>
+        <translation>来源：</translation>
+    </message>
+    <message>
+        <source>Start check-in</source>
+        <translation>开始签到</translation>
+    </message>
+    <message>
+        <source>Start mobile bridge</source>
+        <translation>启动手机端桥接</translation>
+    </message>
+    <message>
+        <source>Start new lesson</source>
+        <translation>开始新课堂</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>状态</translation>
+    </message>
+    <message>
+        <source>Stop bridge</source>
+        <translation>停止桥接</translation>
+    </message>
+    <message>
+        <source>Stop broadcast</source>
+        <translation>停止广播</translation>
+    </message>
+    <message>
+        <source>Stop demo</source>
+        <translation>停止演示</translation>
+    </message>
+    <message>
+        <source>Student</source>
+        <translation>学生</translation>
+    </message>
+    <message>
+        <source>Student name</source>
+        <translation>学生姓名</translation>
+    </message>
+    <message>
+        <source>Student uninstall protection enabled.</source>
+        <translation>已开启学生端卸载保护。</translation>
+    </message>
+    <message>
+        <source>Student uninstall protection released.</source>
+        <translation>已解除学生端卸载保护。</translation>
+    </message>
+    <message>
+        <source>Students may sign in themselves (seat + name + key)</source>
+        <translation>允许学生自助登录（座位号 + 姓名 + 密钥）</translation>
+    </message>
+    <message>
+        <source>Suggested layer</source>
+        <translation>建议层级</translation>
+    </message>
+    <message>
+        <source>Sync IPs to directory</source>
+        <translation>同步 IP 到目录</translation>
+    </message>
+    <message>
+        <source>Sync now</source>
+        <translation>立即同步</translation>
+    </message>
+    <message>
+        <source>System &amp; devices</source>
+        <translation>系统与设备</translation>
+    </message>
+    <message>
+        <source>System prompt:</source>
+        <translation>系统提示词：</translation>
+    </message>
+    <message>
+        <source>Teacher IP kept reachable while Internet is blocked</source>
+        <translation>断网时教师机 IP 仍可访问</translation>
+    </message>
+    <message>
+        <source>Teacher IP:</source>
+        <translation>教师机 IP：</translation>
+    </message>
+    <message>
+        <source>Test connection</source>
+        <translation>测试连接</translation>
+    </message>
+    <message>
+        <source>Testing...</source>
+        <translation>测试中…</translation>
+    </message>
+    <message>
+        <source>Text shown on every student screen, e.g. Please read page 42</source>
+        <translation>显示在每台学生机屏幕上的文字，例如 请阅读第 42 页</translation>
+    </message>
+    <message>
+        <source>The keyword configuration must be a valid JSON array.</source>
+        <translation>关键词配置必须是合法的 JSON 数组。</translation>
+    </message>
+    <message>
+        <source>Time</source>
+        <translation>时间</translation>
+    </message>
+    <message>
+        <source>To:</source>
+        <translation>截止：</translation>
+    </message>
+    <message>
+        <source>Trend</source>
+        <translation>趋势</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>类型</translation>
+    </message>
+    <message>
+        <source>Typed name</source>
+        <translation>填写的姓名</translation>
+    </message>
+    <message>
+        <source>USB input:</source>
+        <translation>USB 输入：</translation>
+    </message>
+    <message>
+        <source>UWF disable queued on all clients; reboot sent.</source>
+        <translation>已向全部学生机下发关闭 UWF，并发送重启命令。</translation>
+    </message>
+    <message>
+        <source>UWF enable queued on all clients; reboot sent.</source>
+        <translation>已向全部学生机下发启用 UWF，并发送重启命令。</translation>
+    </message>
+    <message>
+        <source>UWF query sent; results appear in the seat list view and activity log.</source>
+        <translation>已下发 UWF 查询，结果见座位列表视图与活动日志。</translation>
+    </message>
+    <message>
+        <source>UWF restore disabled</source>
+        <translation>已关闭 UWF 还原</translation>
+    </message>
+    <message>
+        <source>UWF restore disabled for all students. Install your software now, then enable it again.</source>
+        <translation>已关闭全部学生机的 UWF 还原，现在可以安装软件，装完请再启用。</translation>
+    </message>
+    <message>
+        <source>UWF restore enabled</source>
+        <translation>已启用 UWF 还原</translation>
+    </message>
+    <message>
+        <source>UWF restore queued for all students. Takes effect after reboot; use Restart students if needed.</source>
+        <translation>已向全部学生机下发启用 UWF，重启后生效；如需重启请点「重启学生机」。</translation>
+    </message>
+    <message>
+        <source>UWF restore:</source>
+        <translation>UWF 还原：</translation>
+    </message>
+    <message>
+        <source>UWF:</source>
+        <translation>UWF：</translation>
+    </message>
+    <message>
+        <source>Uninstall protection:</source>
+        <translation>卸载保护：</translation>
+    </message>
+    <message>
+        <source>Unlock all</source>
+        <translation>解锁全部</translation>
+    </message>
+    <message>
+        <source>Unmute</source>
+        <translation>取消静音</translation>
+    </message>
+    <message>
+        <source>Unmute all</source>
+        <translation>取消静音</translation>
+    </message>
+    <message>
+        <source>Veyon Master cannot write the global computer directory. </source>
+        <translation>ClassKeep 控制台无法写入全局计算机目录。 </translation>
+    </message>
+    <message>
+        <source>Watch &amp; do</source>
+        <translation>边看边做</translation>
+    </message>
+    <message>
+        <source>Watch &amp; do started (window demo, students keep keyboard/mouse, screens stay visible).</source>
+        <translation>边看边做已开始（窗口演示，学生保留键鼠，屏幕正常显示）。</translation>
+    </message>
+    <message>
+        <source>Website URL:</source>
+        <translation>网页地址：</translation>
+    </message>
+    <message>
+        <source>Whole class %1</source>
+        <translation>全班 %1</translation>
+    </message>
+    <message>
+        <source>Whole class score:</source>
+        <translation>全班加减分：</translation>
+    </message>
+    <message>
+        <source>Window demo</source>
+        <translation>窗口演示</translation>
+    </message>
+    <message>
+        <source>absent</source>
+        <translation>未到</translation>
+    </message>
+    <message>
+        <source>all clients locked</source>
+        <translation>已锁定全部客户端</translation>
+    </message>
+    <message>
+        <source>all clients unlocked</source>
+        <translation>已解锁全部客户端</translation>
+    </message>
+    <message>
+        <source>broadcast started</source>
+        <translation>已开始广播</translation>
+    </message>
+    <message>
+        <source>check-in started for %1</source>
+        <translation>%1 已开始签到</translation>
+    </message>
+    <message>
+        <source>client protection disabled</source>
+        <translation>已关闭客户端保护</translation>
+    </message>
+    <message>
+        <source>client protection enabled</source>
+        <translation>已开启客户端保护</translation>
+    </message>
+    <message>
+        <source>http://127.0.0.1:11434/v1/chat/completions</source>
+        <translation>http://127.0.0.1:11434/v1/chat/completions</translation>
+    </message>
+    <message>
+        <source>https://...</source>
+        <translation>https://...</translation>
+    </message>
+    <message>
+        <source>insufficient data</source>
+        <translation>数据不足</translation>
+    </message>
+    <message>
+        <source>name mismatch</source>
+        <translation>姓名不符</translation>
+    </message>
+    <message>
+        <source>new connection key generated</source>
+        <translation>已生成新的本堂课密钥</translation>
+    </message>
+    <message>
+        <source>new lesson started for class %1</source>
+        <translation>%1 已开始新课堂</translation>
+    </message>
+    <message>
+        <source>no</source>
+        <translation>否</translation>
+    </message>
+    <message>
+        <source>none</source>
+        <translation>无</translation>
+    </message>
+    <message>
+        <source>not signed in</source>
+        <translation>未登录</translation>
+    </message>
+    <message>
+        <source>present</source>
+        <translation>已到</translation>
+    </message>
+    <message>
+        <source>signed in: %1</source>
+        <translation>已登录：%1</translation>
+    </message>
+    <message>
+        <source>signed in: %1 (%2)</source>
+        <translation>已登录：%1（%2）</translation>
+    </message>
+    <message>
+        <source>signed out by the teacher</source>
+        <translation>教师端已将其退出</translation>
+    </message>
+    <message>
+        <source>teacher</source>
+        <translation>教师</translation>
+    </message>
+    <message>
+        <source>teacher signed in %1 at %2</source>
+        <translation>教师端已把 %1 登录到 %2</translation>
+    </message>
+    <message>
+        <source>teacher signed out the student</source>
+        <translation>教师端已退出该学生</translation>
+    </message>
+    <message>
+        <source>teacher switched the student to %1</source>
+        <translation>教师端已把学生切换为 %1</translation>
+    </message>
+    <message>
+        <source>watch-and-do started</source>
+        <translation>已开始边看边做</translation>
+    </message>
+    <message>
+        <source>whole class %1 points for %2 students</source>
+        <translation>全班 %2 人各 %1 分</translation>
+    </message>
+    <message>
+        <source>yes</source>
+        <translation>是</translation>
+    </message>
+    <message>
+        <source>%1 - lesson content: %2
+</source>
+        <translation>%1 · 讲了什么：%2
+</translation>
+    </message>
+    <message>
+        <source>  Performance: %1 score entries, total %2%3 points
+</source>
+        <translation>  同学表现：%1 条加减分，合计 %2%3 分
+</translation>
+    </message>
+    <message>
+        <source>  · %1 %2 (%3)
+</source>
+        <translation>  · %1 %2（%3）
+</translation>
+    </message>
+    <message>
+        <source>What happened today (recent activity):
+</source>
+        <translation>今天干了什么（最近活动）：
+</translation>
+    </message>
+    <message>
+        <source>(not filled in)</source>
+        <translation>（未填写）</translation>
+    </message>
+    <message>
+        <source>No lesson records yet. Start a new lesson or score a student on the Score &amp; reports tab.</source>
+        <translation>暂无课堂记录。可在「积分与报表」页开始新课堂或给学生加减分。</translation>
+    </message>
+    <message>
+        <source>Timetable not uploaded by the phone yet.</source>
+        <translation>手机端尚未上传课表。</translation>
+    </message>
+    <message>
+        <source>Timetable: %1 - %2 periods - %3 courses - stored locally and on the teacher machine</source>
+        <translation>课表：%1 · %2 个节次 · %3 门课程 · 已保存在本地与教师机</translation>
+    </message>
+    <message>
+        <source>(unnamed)</source>
+        <translation>（未命名）</translation>
+    </message>
+    <message>
+        <source>Timetable (shared with the phone)</source>
+        <translation>课表（与手机端共用）</translation>
+    </message>
+    <message>
+        <source>Import timetable JSON</source>
+        <translation>导入课表 JSON</translation>
+    </message>
+    <message>
+        <source>Export timetable JSON</source>
+        <translation>导出课表 JSON</translation>
+    </message>
+    <message>
+        <source>JSON (*.json);;All files (*)</source>
+        <translation>JSON (*.json);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>This lesson</source>
+        <translation>当堂课</translation>
+    </message>
+    <message>
+        <source>Lesson content:</source>
+        <translation>讲了什么：</translation>
+    </message>
+    <message>
+        <source>What was taught in this lesson</source>
+        <translation>本堂课讲授的内容</translation>
+    </message>
+    <message>
+        <source>Save lesson topic</source>
+        <translation>保存讲授内容</translation>
+    </message>
+    <message>
+        <source>Whole class performance:</source>
+        <translation>当堂课表现评分：</translation>
+    </message>
+    <message>
+        <source>Lesson topic: %1</source>
+        <translation>课堂内容：%1</translation>
+    </message>
+    <message>
+        <source>Class lesson records</source>
+        <translation>班级课堂记录</translation>
+    </message>
+    <message>
+        <source>Refresh records</source>
+        <translation>刷新记录</translation>
+    </message>
+    <message>
+        <source>Timetable &amp; lesson</source>
+        <translation>课表与课堂</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomPlugin</name>
+    <message>
+        <source>ClassKeep - classes, sign-in by IP, logs, scoring and control</source>
+        <translation>ClassKeep - 班级、按 IP 签到、日志、积分与课堂控制</translation>
+    </message>
+    <message>
+        <source>Classroom client</source>
+        <translation>ClassKeep 课堂客户端</translation>
+    </message>
+    <message>
+        <source>Student is calling the teacher</source>
+        <translation>学生正在呼叫老师</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomScorePanel</name>
+    <message>
+        <source>Add entry</source>
+        <translation>添加记录</translation>
+    </message>
+    <message>
+        <source>Base score:</source>
+        <translation>基础分：</translation>
+    </message>
+    <message>
+        <source>Bold</source>
+        <translation>加粗</translation>
+    </message>
+    <message>
+        <source>CSV files (*.csv)</source>
+        <translation>CSV 文件 (*.csv)</translation>
+    </message>
+    <message>
+        <source>Call from %1 (%2, seat %3)</source>
+        <translation>来自 %1 的呼叫（%2，%3 号座位）</translation>
+    </message>
+    <message>
+        <source>Colour</source>
+        <translation>颜色</translation>
+    </message>
+    <message>
+        <source>Current total</source>
+        <translation>当前总分</translation>
+    </message>
+    <message>
+        <source>Daily score</source>
+        <translation>每日积分</translation>
+    </message>
+    <message>
+        <source>Date:</source>
+        <translation>日期：</translation>
+    </message>
+    <message>
+        <source>Excel 2003 XML (*.xls)</source>
+        <translation>Excel 2003 XML (*.xls)</translation>
+    </message>
+    <message>
+        <source>Export CSV</source>
+        <translation>导出 CSV</translation>
+    </message>
+    <message>
+        <source>Export Excel (.xls)</source>
+        <translation>导出 Excel (.xls)</translation>
+    </message>
+    <message>
+        <source>Export SVG</source>
+        <translation>导出 SVG</translation>
+    </message>
+    <message>
+        <source>Export class report</source>
+        <translation>导出班级报表</translation>
+    </message>
+    <message>
+        <source>Export word cloud</source>
+        <translation>导出词云</translation>
+    </message>
+    <message>
+        <source>Font</source>
+        <translation>字体</translation>
+    </message>
+    <message>
+        <source>From:</source>
+        <translation>起始：</translation>
+    </message>
+    <message>
+        <source>Generate word cloud</source>
+        <translation>生成词云</translation>
+    </message>
+    <message>
+        <source>Images (*.png *.jpg *.jpeg *.bmp)</source>
+        <translation>图片 (*.png *.jpg *.jpeg *.bmp)</translation>
+    </message>
+    <message>
+        <source>Include attendance column</source>
+        <translation>包含考勤列</translation>
+    </message>
+    <message>
+        <source>Include per-entry score details</source>
+        <translation>包含逐条积分明细</translation>
+    </message>
+    <message>
+        <source>Include scoring rules sheet</source>
+        <translation>包含积分规则工作表</translation>
+    </message>
+    <message>
+        <source>Insert image</source>
+        <translation>插入图片</translation>
+    </message>
+    <message>
+        <source>Lesson content</source>
+        <translation>课堂内容</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>姓名</translation>
+    </message>
+    <message>
+        <source>Please select a student row first.</source>
+        <translation>请先选中一行学生。</translation>
+    </message>
+    <message>
+        <source>Publish rules to students</source>
+        <translation>发布规则给学生</translation>
+    </message>
+    <message>
+        <source>Quick actions, one per line: label:delta</source>
+        <translation>快捷操作，每行一条：标签:分值</translation>
+    </message>
+    <message>
+        <source>Remove last entry</source>
+        <translation>删除最后一条</translation>
+    </message>
+    <message>
+        <source>Report exported.</source>
+        <translation>报表已导出。</translation>
+    </message>
+    <message>
+        <source>Rich text detail (bold, underline, colour, font, size, image)</source>
+        <translation>富文本明细（加粗、下划线、颜色、字体、字号、图片）</translation>
+    </message>
+    <message>
+        <source>Rules</source>
+        <translation>规则</translation>
+    </message>
+    <message>
+        <source>SVG files (*.svg)</source>
+        <translation>SVG 文件 (*.svg)</translation>
+    </message>
+    <message>
+        <source>Save and publish rules</source>
+        <translation>保存并发布规则</translation>
+    </message>
+    <message>
+        <source>Scoring rules (rich text)</source>
+        <translation>积分规则（富文本）</translation>
+    </message>
+    <message>
+        <source>Scoring rules saved.</source>
+        <translation>积分规则已保存。</translation>
+    </message>
+    <message>
+        <source>Seat</source>
+        <translation>座位</translation>
+    </message>
+    <message>
+        <source>Set lesson</source>
+        <translation>设置节次</translation>
+    </message>
+    <message>
+        <source>Teacher</source>
+        <translation>教师</translation>
+    </message>
+    <message>
+        <source>Term name</source>
+        <translation>学期名称</translation>
+    </message>
+    <message>
+        <source>Term report</source>
+        <translation>期末报表</translation>
+    </message>
+    <message>
+        <source>Text colour</source>
+        <translation>文字颜色</translation>
+    </message>
+    <message>
+        <source>This lesson</source>
+        <translation>本堂课</translation>
+    </message>
+    <message>
+        <source>To:</source>
+        <translation>截止：</translation>
+    </message>
+    <message>
+        <source>Underline</source>
+        <translation>下划线</translation>
+    </message>
+    <message>
+        <source>Word cloud</source>
+        <translation>词云</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomSeatGrid</name>
+    <message>
+        <source>%1 students in %2. Drag cards to reorder (persisted); click a score for -5..+5.</source>
+        <translation>%2 共 %1 名学生。拖拽卡片可调整顺序（会保存）；点分数可 -5…+5。</translation>
+    </message>
+    <message>
+        <source>%1: %2 of %3 students online. Shield = client protection on. </source>
+        <translation>%1：%3 人中 %2 人在线。盾牌表示客户端保护已开启。 </translation>
+    </message>
+    <message>
+        <source>-</source>
+        <translation>-</translation>
+    </message>
+    <message>
+        <source>Click to add or deduct points (-5..+5)</source>
+        <translation>点击加减分（-5…+5）</translation>
+    </message>
+    <message>
+        <source>Client protection</source>
+        <translation>客户端保护</translation>
+    </message>
+    <message>
+        <source>Drag this card onto another one to swap positions</source>
+        <translation>把卡片拖到另一张上可交换位置</translation>
+    </message>
+    <message>
+        <source>Drag this card onto another one to swap positions\n%1\nUWF: %2</source>
+        <translation>拖到另一张卡片上可交换位置\n%1\nUWF：%2</translation>
+    </message>
+    <message>
+        <source>IP address</source>
+        <translation>IP 地址</translation>
+    </message>
+    <message>
+        <source>Last activity</source>
+        <translation>最近活动</translation>
+    </message>
+    <message>
+        <source>List view shows every detail (including UWF state) without student screen captures</source>
+        <translation>列表视图显示全部信息（含 UWF 状态），不抓取学生机屏幕</translation>
+    </message>
+    <message>
+        <source>No class selected.</source>
+        <translation>尚未选择班级。</translation>
+    </message>
+    <message>
+        <source>Online</source>
+        <translation>在线状态</translation>
+    </message>
+    <message>
+        <source>Reason for %1 points at seat %2:</source>
+        <translation>%2 号座位 %1 分的原因：</translation>
+    </message>
+    <message>
+        <source>Roster name</source>
+        <translation>名单姓名</translation>
+    </message>
+    <message>
+        <source>Score</source>
+        <translation>积分</translation>
+    </message>
+    <message>
+        <source>Score +/-</source>
+        <translation>加减分</translation>
+    </message>
+    <message>
+        <source>Score reason</source>
+        <translation>加减分原因</translation>
+    </message>
+    <message>
+        <source>Seat</source>
+        <translation>座位</translation>
+    </message>
+    <message>
+        <source>Signed in</source>
+        <translation>已登录</translation>
+    </message>
+    <message>
+        <source>Switch to grid view</source>
+        <translation>切换网格视图</translation>
+    </message>
+    <message>
+        <source>Switch to list view</source>
+        <translation>切换列表视图</translation>
+    </message>
+    <message>
+        <source>UWF restore</source>
+        <translation>UWF 还原</translation>
+    </message>
+    <message>
+        <source>live</source>
+        <translation>实时</translation>
+    </message>
+    <message>
+        <source>not signed in</source>
+        <translation>未登录</translation>
+    </message>
+    <message>
+        <source>off</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>offline</source>
+        <translation>离线</translation>
+    </message>
+    <message>
+        <source>on (cannot quit)</source>
+        <translation>开启（不可退出）</translation>
+    </message>
+    <message>
+        <source>online</source>
+        <translation>在线</translation>
+    </message>
+    <message>
+        <source>unknown</source>
+        <translation>未知</translation>
+    </message>
+    <message>
+        <source>unknown - use Query UWF</source>
+        <translation>未知 · 请点「查询 UWF」</translation>
+    </message>
+</context>
 </TS>

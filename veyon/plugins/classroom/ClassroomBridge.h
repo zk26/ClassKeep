@@ -56,6 +56,7 @@ private:
 	QByteArray announcementPayload();
 	qint64 revision() const;
 	QJsonObject stateObject() const;
+	QString timetableFilePath() const;
 	void handleCommand( const QJsonObject& command, bool* handled );
 	QString tokenFor( const QString& nonce ) const;
 	bool authorized( const QStringList& headerLines ) const;

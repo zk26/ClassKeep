@@ -7,6 +7,7 @@
 #include <QDate>
 #include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QHostAddress>
 #include <QJsonArray>
@@ -206,6 +207,12 @@ QJsonObject ClassroomBridge::stateObject() const
 			 { QStringLiteral("nonce"), m_nonce },
 			 { QStringLiteral("keyConfigured"), m_sessionKey.isEmpty() == false },
 			 { QStringLiteral("classNames"), QJsonArray::fromStringList( m_roster.classNames() ) } };
+}
+
+
+QString ClassroomBridge::timetableFilePath() const
+{
+	return QDir( m_dataDirectory ).filePath( QStringLiteral("timetable.json") );
 }
 
 
@@ -515,6 +522,69 @@ void ClassroomBridge::handleRoute( QTcpSocket* socket, const QString& method,
 		}
 		QJsonObject result{ { QStringLiteral("events"), array } };
 		respond( socket, jsonResponse( result ) );
+		return;
+	}
+	// ------------------------------------------------------------------ timetable
+	// 2.0.x: the phone owns the timetable but keeps a copy on the teacher machine
+	// so a replacement phone can pull it back. The JSON is the ClassBoard
+	// single-document format and is stored verbatim next to the classroom data.
+	if( path == QStringLiteral("/api/classroom/timetable") && method == QStringLiteral("GET") )
+	{
+		QFile file( timetableFilePath() );
+		QJsonObject document;
+		if( file.open( QFile::ReadOnly ) )
+		{
+			document = QJsonDocument::fromJson( file.readAll() ).object();
+			file.close();
+		}
+		respond( socket, jsonResponse( QJsonObject{
+			{ QStringLiteral("timetable"), document },
+			{ QStringLiteral("revision"), document.value( QStringLiteral("revision") ).toInt( 0 ) } } ) );
+		return;
+	}
+	if( path == QStringLiteral("/api/classroom/timetable") && method == QStringLiteral("POST") )
+	{
+		const auto request = QJsonDocument::fromJson( body ).object();
+		const auto document = request.value( QStringLiteral("timetable") ).toObject();
+		bool ok = false;
+		if( document.isEmpty() == false )
+		{
+			QDir().mkpath( m_dataDirectory );
+			QFile file( timetableFilePath() );
+			if( file.open( QFile::WriteOnly | QFile::Truncate ) )
+			{
+				ok = file.write( QJsonDocument( document ).toJson( QJsonDocument::Compact ) ) >= 0;
+				file.close();
+			}
+		}
+		respond( socket, jsonResponse( QJsonObject{
+			{ QStringLiteral("ok"), ok },
+			{ QStringLiteral("revision"), revision() } } ) );
+		return;
+	}
+	// 「班级」 page: lessons / entries / events grouped by class, so the phone
+	// can show a natural per-class record instead of a one-off "query lesson".
+	if( path == QStringLiteral("/api/classroom/classes") )
+	{
+		QJsonArray classes;
+		const auto* classItem = m_roster.findClass( m_className );
+		if( classItem != nullptr )
+		{
+			m_book.load( m_className );
+			QJsonArray students;
+			for( const auto& student : classItem->students )
+			{
+				students.append( QJsonObject{
+					{ QStringLiteral("seat"), student.seat },
+					{ QStringLiteral("student"), student.name },
+					{ QStringLiteral("ip"), student.ip },
+					{ QStringLiteral("score"), m_book.total( student.seat ) } } );
+			}
+			classes.append( QJsonObject{
+				{ QStringLiteral("name"), m_className },
+				{ QStringLiteral("students"), students } } );
+		}
+		respond( socket, jsonResponse( QJsonObject{ { QStringLiteral("classes"), classes } } ) );
 		return;
 	}
 	if( path == QStringLiteral("/api/classroom/command") && method == QStringLiteral("POST") )

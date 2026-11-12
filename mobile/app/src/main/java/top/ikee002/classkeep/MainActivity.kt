@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -48,18 +49,25 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var contentHost: FrameLayout
     private lateinit var bottomBar: BottomBar
-    // 2.0.0: 课堂 / 课表 / 配置 / 更多 -- four tabs with icon + name.
-    private val pages = arrayOfNulls<View>(4)
+    // 2.0.x: 课堂 / 班级 / 课表 / 配置 / 更多 -- five tabs with icon + name.
+    private val pages = arrayOfNulls<View>(5)
 
     private lateinit var statusBadge: TextView
     private lateinit var messageView: TextView
     private lateinit var revisionView: TextView
+    private lateinit var setupHint: TextView
+    private lateinit var goConfigButton: android.widget.Button
+    private lateinit var statusActions: LinearLayout
     private lateinit var snapshotView: TextView
     private lateinit var activityView: TextView
     private lateinit var seatGrid: LinearLayout
     private lateinit var seatHint: TextView
-    private lateinit var scheduleGrid: LinearLayout
     private lateinit var scheduleHint: TextView
+    private lateinit var timetableAxis: TimetableAxisView
+    private lateinit var timetableGrid: TimetableCourseGridView
+    private lateinit var classHost: LinearLayout
+    private lateinit var classHint: TextView
+    private var classNames: List<String> = emptyList()
 
     private lateinit var ipField: Ui.Field
     private lateinit var keyField: Ui.Field
@@ -93,6 +101,7 @@ class MainActivity : AppCompatActivity() {
             this,
             listOf(
                 BottomBar.Tab(R.drawable.ck_tab_class, "课堂"),
+                BottomBar.Tab(R.drawable.ck_tab_classroom, "班级"),
                 BottomBar.Tab(R.drawable.ck_tab_schedule, "课表"),
                 BottomBar.Tab(R.drawable.ck_tab_config, "配置"),
                 BottomBar.Tab(R.drawable.ck_tab_more, "更多"),
@@ -151,7 +160,8 @@ class MainActivity : AppCompatActivity() {
             try {
                 timetableStore.save(TimetableStore.fromJson(text))
                 refreshSchedule()
-                message("作息表已导入")
+                pushTimetableToTeacher()
+                message("作息表已导入（兼容 ClassBoard 全校作息 JSON）")
             } catch (_: Exception) {
                 message("作息表格式无法识别")
             }
@@ -187,17 +197,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildPages() {
-        // 「课堂」= 状态概览 + 课堂控制 + 加分减分（原独立页签合并进来）
+        // 「课堂」= 紧凑连接提示 + 课堂控制 + 加分减分。
+        // 未配置时状态卡收缩成一行提示，主要区域留给控制与学生名单。
         pages[0] = scrollPage { column ->
             column.addView(brandHeader())
 
             val status = Ui.card(this)
             statusBadge = Ui.badge(this, "离线", false)
-            val badgeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            val badgeRow = Ui.row(this)
             badgeRow.addView(statusBadge)
+            badgeRow.addView(Ui.spacer(this))
             status.addView(badgeRow)
             messageView = Ui.body(this, "正在网段内查找教师机…")
             status.addView(messageView)
+            revisionView = Ui.helper(this, "本地版本 - - -")
+            status.addView(revisionView)
+            setupHint = Ui.helper(this, "")
+            status.addView(setupHint)
+            val goConfig = Ui.button(this, "前往「配置」填写教师机 IP 与密钥", primary = true)
+            goConfig.setOnClickListener { showTab(3) }
+            goConfigButton = goConfig
+            status.addView(goConfig)
             val actions = Ui.row(this)
             val sync = Ui.button(this, "立即同步", primary = true)
             val offline = Ui.button(this, "离线工作")
@@ -209,22 +229,9 @@ class MainActivity : AppCompatActivity() {
             }
             actions.addView(sync, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             actions.addView(offline, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            statusActions = actions
             status.addView(actions)
-            revisionView = Ui.helper(this, "本地版本 - - -")
-            status.addView(revisionView)
             column.addView(status)
-
-            val overview = Ui.card(this)
-            overview.addView(Ui.section(this, "班级概况"))
-            snapshotView = Ui.body(this)
-            overview.addView(snapshotView)
-            column.addView(overview)
-
-            val activity = Ui.card(this)
-            activity.addView(Ui.section(this, "最近活动"))
-            activityView = Ui.body(this, "暂无活动记录", 12f)
-            activity.addView(activityView)
-            column.addView(activity)
 
             val control = Ui.card(this)
             control.addView(Ui.section(this, "课堂控制"))
@@ -261,56 +268,67 @@ class MainActivity : AppCompatActivity() {
 
             refreshHome()
             refreshSeatCards()
+            refreshConnectionHint()
         }
 
-        // 「课表」= 可调作息 + 单列/双列时间 + 导入导出
+        // 「班级」= 按班级归档的课堂自然记录 + 概况 + 最近活动
         pages[1] = scrollPage { column ->
+            val classes = Ui.card(this)
+            classes.addView(Ui.section(this, "班级记录"))
+            classes.addView(Ui.body(this, "每堂课讲了什么、干了什么、同学表现如何，按班级自然归档，不需要单独查询。"))
+            classHint = Ui.helper(this, "尚未同步班级数据")
+            classes.addView(classHint)
+            classHost = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            classes.addView(classHost)
+            column.addView(classes)
+
+            val overview = Ui.card(this)
+            overview.addView(Ui.section(this, "班级概况"))
+            snapshotView = Ui.body(this)
+            overview.addView(snapshotView)
+            column.addView(overview)
+
+            val activity = Ui.card(this)
+            activity.addView(Ui.section(this, "最近活动"))
+            activityView = Ui.body(this, "暂无活动记录", 12f)
+            activity.addView(activityView)
+            column.addView(activity)
+            refreshClassRecords()
+            refreshHome()
+        }
+
+        // 「课表」= ClassBoard 样式网格 + 单一「课表设置」入口。
+        // 所有课表相关操作（作息、双列、导入导出、教师机同步）都收进设置里。
+        pages[2] = scrollPage { column ->
             val card = Ui.card(this)
             card.addView(Ui.section(this, "本周课表"))
             scheduleHint = Ui.body(this)
             card.addView(scheduleHint)
-
-            val first = Ui.row(this)
-            val setup = Ui.button(this, "作息设置", primary = true)
-            val importJson = Ui.button(this, "导入作息")
+            val setup = Ui.button(this, "课表设置", primary = true)
             setup.setOnClickListener { showTimetableSettings() }
-            importJson.setOnClickListener {
-                timetableLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
-            }
-            first.addView(setup, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            first.addView(importJson, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            card.addView(first)
+            card.addView(setup)
+            card.addView(Ui.helper(this, "点课格编辑课程；今天列与当前节高亮；大课间 / 午休横跨整行。"))
 
-            val second = Ui.row(this)
-            val exportJson = Ui.button(this, "导出作息")
-            val reset = Ui.button(this, "恢复默认作息")
-            exportJson.setOnClickListener { exportTimetable() }
-            reset.setOnClickListener {
-                timetableStore.save(Timetable())
-                refreshSchedule()
-                message("已恢复默认作息")
-            }
-            second.addView(exportJson, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            second.addView(reset, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            card.addView(second)
-            card.addView(Ui.helper(this, "点课格改科目；当天列与当前节高亮。节数、大课间、午休与时间列样式在「作息设置」里调整。"))
-
+            // Frozen time axis + horizontally scrollable day grid, both inside a
+            // common vertical scroll so rows stay aligned.
+            val table = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            timetableAxis = TimetableAxisView(this)
+            timetableGrid = TimetableCourseGridView(this)
+            timetableGrid.onCellClick = { day, row -> editCourse(day, row) }
             val horizontal = HorizontalScrollView(this).apply {
                 isFillViewport = false
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                )
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
-            scheduleGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            horizontal.addView(scheduleGrid)
-            card.addView(horizontal)
+            horizontal.addView(timetableGrid)
+            table.addView(timetableAxis, LinearLayout.LayoutParams(Ui.dp(this, 112), ViewGroup.LayoutParams.WRAP_CONTENT))
+            table.addView(horizontal)
+            card.addView(table)
             column.addView(card)
             refreshSchedule()
         }
 
-        // 「配置」= 连接参数 + 课表显示样式
-        pages[2] = scrollPage { column ->
+        // 「配置」= 连接参数（课表设置已移出到课表页）
+        pages[3] = scrollPage { column ->
             val connection = Ui.card(this)
             connection.addView(Ui.section(this, "连接配置"))
             ipField = Ui.field(this, "教师机 IP", "与学生机、教师机处于同一局域网", initial = cache.teacherIp)
@@ -351,51 +369,21 @@ class MainActivity : AppCompatActivity() {
             connection.addView(Ui.helper(this, "密钥每堂课轮换；也可在「更多」页导入。"))
             column.addView(connection)
 
-            val display = Ui.card(this)
-            display.addView(Ui.section(this, "课表显示"))
-            val toggle = Ui.button(this, "切换单列 / 双列时间", primary = true)
-            toggle.setOnClickListener {
-                val before = timetableStore.load().config.dualTimeColumn
-                timetableStore.setDualTimeColumn(!before)
-                refreshSchedule()
-                message(if (before) "已切换为单列时间" else "已切换为双列时间")
-            }
-            display.addView(toggle)
-            display.addView(Ui.helper(this, "双列：开始/结束各占一列；单列：一列内显示 08:20-09:00。"))
-            column.addView(display)
+            column.addView(Ui.helper(this, "课表的节数、大课间、午休、双列作息与导入导出，统一在「课表 → 课表设置」里。"))
         }
 
-        // 「更多」= 导入导出 + 课堂回顾
-        pages[3] = scrollPage { column ->
-            val io = Ui.card(this)
-            io.addView(Ui.section(this, "导入导出"))
-            io.addView(Ui.body(this, "导出文件保存在 App 私有 Documents 目录，可用文件管理器或 adb 取走。"))
-            val ioActions: List<Pair<String, () -> Unit>> = listOf(
-                "导入本堂课密钥 (.key)" to {
-                    keyLauncher.launch(arrayOf("text/plain", "application/json", "application/octet-stream", "*/*"))
-                },
-                "导入作息 JSON" to {
-                    timetableLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
-                },
-                "导出课表 JSON" to { exportTimetable() },
-                "导出本地缓存数据" to { exportLocalData() },
-                "导出期末成绩表" to { exportReport() },
-                "查看班级词云" to { showWordCloud() },
-            )
-            ioActions.forEach { (label, action) ->
-                val button = Ui.button(this, label)
-                button.setOnClickListener { action() }
-                io.addView(button)
-            }
-            column.addView(io)
-
-            val review = Ui.card(this)
-            review.addView(Ui.section(this, "课堂回顾"))
-            review.addView(Ui.body(this, "查询这堂课讲了什么、干了什么、同学表现怎么样。联网时读教师机，离线时读本地缓存。"))
-            val query = Ui.button(this, "查询这堂课", primary = true)
-            query.setOnClickListener { showLessonReview() }
-            review.addView(query)
-            column.addView(review)
+        // 「更多」= 少量设置入口 + 关于（课堂记录已移入「班级」页自然展示）
+        pages[4] = scrollPage { column ->
+            val settings = Ui.card(this)
+            settings.addView(Ui.section(this, "设置"))
+            settings.addView(Ui.body(this, "导入导出、同步与工具集中在这里，不再铺满整页。"))
+            val tools = Ui.button(this, "导入导出与工具", primary = true)
+            tools.setOnClickListener { showMoreTools() }
+            settings.addView(tools)
+            val syncTimetable = Ui.button(this, "从教师机同步课表")
+            syncTimetable.setOnClickListener { pullTimetableFromTeacher() }
+            settings.addView(syncTimetable)
+            column.addView(settings)
 
             val about = Ui.card(this)
             about.addView(Ui.section(this, "关于"))
@@ -418,15 +406,15 @@ class MainActivity : AppCompatActivity() {
             ).apply { bottomMargin = Ui.dp(this@MainActivity, 14) }
             elevation = 0f
         }
-        val mark = TextView(this).apply {
-            text = "CK"
-            textSize = 22f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(getColor(R.color.white))
+        // Real ClassKeep launcher icon instead of the "CK" text placeholder.
+        val mark = ImageView(this).apply {
+            setImageResource(R.mipmap.ic_launcher_round)
+            scaleType = ImageView.ScaleType.FIT_CENTER
             background = Ui.shape(this@MainActivity, 0x33FFFFFF, 12)
-            val p = Ui.dp(this@MainActivity, 10)
+            val p = Ui.dp(this@MainActivity, 6)
             setPadding(p, p, p, p)
         }
+        header.addView(mark, LinearLayout.LayoutParams(Ui.dp(this, 52), Ui.dp(this, 52)))
         val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val name = TextView(this).apply {
             this.text = "ClassKeep"
@@ -441,7 +429,6 @@ class MainActivity : AppCompatActivity() {
         }
         text.addView(name)
         text.addView(sub)
-        header.addView(mark)
         header.addView(text, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
             marginStart = Ui.dp(this@MainActivity, 14)
         })
@@ -460,7 +447,22 @@ class MainActivity : AppCompatActivity() {
             )
         }
         bottomBar.select(index)
-        if (index == 1) refreshSchedule()
+        if (index == 0) refreshConnectionHint()
+        if (index == 1) refreshClassRecords()
+        if (index == 2) refreshSchedule()
+    }
+
+    /** Unconfigured: shrink the status card to a hint, leave the page to control + roster. */
+    private fun refreshConnectionHint() {
+        if (::setupHint.isInitialized.not()) return
+        val configured = ::ipField.isInitialized && currentIp().isNotEmpty() && currentKey().isNotEmpty()
+        setupHint.text = if (configured) ""
+        else "尚未配置：请到「配置」页填写教师机 IP 与本堂课密钥，才能下发指令和读取名单。"
+        setupHint.visibility = if (configured) View.GONE else View.VISIBLE
+        goConfigButton.visibility = if (configured) View.GONE else View.VISIBLE
+        statusActions.visibility = if (configured) View.VISIBLE else View.GONE
+        revisionView.visibility = if (configured) View.VISIBLE else View.GONE
+        messageView.visibility = if (configured) View.VISIBLE else View.GONE
     }
 
     // ------------------------------------------------------------------ home
@@ -582,8 +584,11 @@ class MainActivity : AppCompatActivity() {
                     )
                     seats = loadedSeats
                     persist()
+                    classNames = state.classNames
                     refreshHome()
                     refreshSeatCards()
+                    refreshClassRecords()
+                    refreshConnectionHint()
                     message("同步完成 · 版本 ${state.revision} · ${cache.className}")
                 }
             } catch (e: UnauthorizedException) {
@@ -756,122 +761,109 @@ class MainActivity : AppCompatActivity() {
     // -------------------------------------------------------------- schedule
 
     private fun refreshSchedule() {
-        if (::scheduleGrid.isInitialized.not()) return
+        if (::timetableGrid.isInitialized.not()) return
         val timetable = timetableStore.load()
-        scheduleGrid.removeAllViews()
-        val cellWidth = resources.getDimensionPixelSize(R.dimen.timetable_cell)
-        val day = todayDay()
         val now = currentPeriod(timetable)
         val next = nextPeriod(timetable)
+        timetableAxis.timetable = timetable
+        timetableAxis.nowRow = now
+        timetableGrid.timetable = timetable
+        timetableGrid.nowRow = now
+        // Re-measure the frozen axis when the number of time columns changes.
+        val axisWidth = Ui.dp(this, if (timetable.timeLabels.size > 1) 112 else 66)
+        (timetableAxis.layoutParams as? LinearLayout.LayoutParams)?.width = axisWidth
+        timetableAxis.requestLayout()
         val nextText = next?.let { timetable.periods.getOrNull(it)?.label ?: "" } ?: "今天没有后续课程"
-        scheduleHint.text = "今天 ${WEEKDAYS[day - 1]} · " +
+        val mode = if (timetable.timeLabels.size > 1)
+            "双作息 ${timetable.timeLabels.joinToString(" / ")}" else "单作息"
+        scheduleHint.text = "今天 ${WEEKDAYS[todayDay() - 1]} · $mode · " +
             (now?.let { "正在上「${timetable.periods[it].label}」" } ?: "当前无课") +
             " · 下一节：$nextText"
-
-        // 2.0.0: single column shows "08:20-09:00", dual column splits 起/止.
-        val half = cellWidth / 2
-        val dual = timetable.config.dualTimeColumn
-        val header = Ui.row(this).apply { topMarginCompat(0) }
-        if (dual) {
-            header.addView(cellText("开始", isHeader = true),
-                LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT))
-            header.addView(cellText("结束", isHeader = true),
-                LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT))
-        } else {
-            header.addView(cellText("时间", isHeader = true),
-                LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        WEEKDAYS.forEachIndexed { i, label ->
-            header.addView(cellText(label, isHeader = true, highlighted = i + 1 == day),
-                LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        scheduleGrid.addView(header)
-
-        timetable.periods.forEachIndexed { periodIndex, period ->
-            val row = Ui.row(this).apply { topMarginCompat(0) }
-            if (dual) {
-                row.addView(
-                    cellText("${period.label}\n${period.start}", isHeader = true, highlighted = periodIndex == now),
-                    LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT),
-                )
-                row.addView(
-                    cellText(period.end, isHeader = true, highlighted = periodIndex == now),
-                    LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT),
-                )
-            } else {
-                row.addView(
-                    cellText("${period.label}\n${period.start}-${period.end}",
-                        isHeader = true, highlighted = periodIndex == now),
-                    LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT),
-                )
-            }
-            for (d in 1..7) {
-                val subject = TimetableStore.subjectAt(timetable, d, periodIndex)
-                val cell = cellText(
-                    subject,
-                    isHeader = false,
-                    highlighted = d == day && periodIndex == now,
-                    color = if (subject.isEmpty()) null else subjectColor(subject),
-                )
-                cell.setOnClickListener { editSubject(d, periodIndex, timetable) }
-                row.addView(cell, LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
-            }
-            scheduleGrid.addView(row)
-        }
     }
 
-    private fun LinearLayout.topMarginCompat(value: Int) {
-        (layoutParams as? LinearLayout.LayoutParams)?.topMargin = value
-    }
-
-    private fun cellText(
-        text: String,
-        isHeader: Boolean,
-        highlighted: Boolean = false,
-        color: Int? = null,
-    ): TextView = TextView(this).apply {
-        this.text = text
-        textSize = if (isHeader) 10f else 12f
-        gravity = Gravity.CENTER
-        minimumHeight = Ui.dp(this@MainActivity, if (isHeader) 34 else 46)
-        val fill = color ?: when {
-            highlighted -> getColor(R.color.ck_chip_pressed)
-            isHeader -> getColor(R.color.ck_input_bg)
-            else -> getColor(R.color.ck_card)
-        }
-        setTextColor(if (color != null) getColor(R.color.white) else getColor(R.color.ck_title))
-        background = Ui.shape(this@MainActivity, fill, 10, getColor(R.color.ck_border))
-        val p = Ui.dp(this@MainActivity, 4)
-        setPadding(p, p, p, p)
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-        ).apply { setMargins(2, 2, 2, 2) }
-    }
-
-    private fun editSubject(day: Int, period: Int, timetable: Timetable) {
-        val current = TimetableStore.subjectAt(timetable, day, period)
-        val input = EditText(this).apply {
-            setText(current)
-            hint = "科目名称，留空则清除"
+    /** Click a cell -> edit the course (subject, class, room, span, colour). */
+    private fun editCourse(day: Int, row: Int) {
+        val timetable = timetableStore.load()
+        val existing = courseAt(timetable, day, row)
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             val p = Ui.dp(this@MainActivity, 12)
             setPadding(p, p, p, p)
         }
+
+        fun field(label: String, value: String): EditText {
+            box.addView(Ui.body(this@MainActivity, label, 12f))
+            val edit = EditText(this@MainActivity).apply {
+                setText(value)
+                textSize = 14f
+                val pad = Ui.dp(this@MainActivity, 10)
+                setPadding(pad, pad, pad, pad)
+                background = Ui.shape(this@MainActivity, getColor(R.color.ck_input_bg), 12)
+            }
+            box.addView(edit, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            return edit
+        }
+
+        val name = field("科目 / 内容", existing?.name ?: "")
+        val className = field("班级（用于班级页归档）", existing?.className ?: "")
+        val room = field("地点 / 备注", existing?.room ?: "")
+        val span = field("连堂节数（1 = 单节）",
+            ((existing?.endSection ?: row) - (existing?.startSection ?: row) + 1).toString())
+        val color = android.widget.CheckBox(this).apply {
+            text = "换一个颜色"
+            setTextColor(getColor(R.color.ck_title))
+        }
+        box.addView(color)
+
         AlertDialog.Builder(this)
-            .setTitle("${WEEKDAYS[day - 1]} · ${timetable.periods[period].label}")
-            .setView(input)
+            .setTitle("${WEEKDAYS.getOrElse(day - 1) { "" }} · ${timetable.periods.getOrNull(row)?.label ?: ""}")
+            .setView(ScrollView(this).apply { addView(box) })
             .setPositiveButton("保存") { _, _ ->
-                timetableStore.setSubject(day, period, input.text.toString())
+                val subject = name.text.toString().trim()
+                if (subject.isEmpty()) {
+                    timetableStore.removeCourse(day, row)
+                } else {
+                    val length = span.text.toString().trim().toIntOrNull()?.coerceIn(1, 6) ?: 1
+                    val lastRow = (row + length - 1).coerceAtMost(timetable.periods.size - 1)
+                    timetableStore.setCourse(
+                        TimetableCourse(
+                            name = subject,
+                            dayOfWeek = day,
+                            startSection = row,
+                            endSection = lastRow,
+                            colorIndex = if (color.isChecked)
+                                ((existing?.colorIndex ?: 0) + 1) % COURSE_COLORS.size
+                            else existing?.colorIndex ?: 0,
+                            room = room.text.toString().trim(),
+                            className = className.text.toString().trim(),
+                        )
+                    )
+                }
                 refreshSchedule()
+                pushTimetableToTeacher()
             }
             .setNeutralButton("常用科目") { _, _ ->
                 AlertDialog.Builder(this)
                     .setItems(SUBJECT_PRESETS.toTypedArray()) { _, which ->
-                        timetableStore.setSubject(day, period, SUBJECT_PRESETS[which])
+                        timetableStore.setCourse(
+                            TimetableCourse(
+                                name = SUBJECT_PRESETS[which],
+                                dayOfWeek = day,
+                                startSection = row,
+                                endSection = row,
+                                className = existing?.className ?: "",
+                            )
+                        )
                         refreshSchedule()
+                        pushTimetableToTeacher()
                     }.show()
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton("删除") { _, _ ->
+                timetableStore.removeCourse(day, row)
+                refreshSchedule()
+                pushTimetableToTeacher()
+            }
             .show()
     }
 
@@ -914,17 +906,43 @@ class MainActivity : AppCompatActivity() {
         val noonAfter = addField("午休在第几节课后（0=不设）", config.noonAfter.toString())
         val noonMinutes = addField("午休时长（分钟）", config.noonMinutes.toString())
         val dual = android.widget.CheckBox(this).apply {
-            text = "双列时间（开始/结束分两列）"
-            isChecked = config.dualTimeColumn
+            text = "双列作息（两套并行时间，如 小学 / 初高中）"
+            isChecked = config.dualTime
             setTextColor(this@MainActivity.getColor(R.color.ck_title))
         }
         box.addView(dual)
+        val label1 = addField("第一栏标题", config.timeLabel1, numeric = false)
+        val label2 = addField("第二栏标题", config.timeLabel2, numeric = false)
+        val shift = addField("第二套作息相对偏移（分钟，可为负）", config.secondShiftMinutes.toString())
+        val name = addField("课表名称", timetableStore.load().name, numeric = false)
 
+        // 課表相关操作全部归入这一个设置面板，不再散落在配置页 / 更多页。
+        val actionLabels = arrayOf(
+            "导入作息 JSON（兼容 ClassBoard 全校作息）",
+            "导出课表 JSON",
+            "从教师机读取课表",
+            "推送课表到教师机",
+            "恢复默认作息",
+        )
+        box.addView(Ui.body(this, "导入导出与同步", 13f))
         val scroll = ScrollView(this).apply { addView(box) }
         AlertDialog.Builder(this)
-            .setTitle("作息设置")
+            .setTitle("课表设置")
             .setView(scroll)
-            .setPositiveButton("保存并生成课表") { _, _ ->
+            .setItems(actionLabels) { _, which ->
+                when (which) {
+                    0 -> timetableLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                    1 -> exportTimetable()
+                    2 -> pullTimetableFromTeacher()
+                    3 -> pushTimetableToTeacher(showResult = true)
+                    4 -> {
+                        timetableStore.save(Timetable())
+                        refreshSchedule()
+                        message("已恢复默认作息")
+                    }
+                }
+            }
+            .setPositiveButton("保存作息") { _, _ ->
                 val next = TimetableConfig(
                     lessonsPerDay = lessons.text.toString().toIntOrNull() ?: config.lessonsPerDay,
                     lessonMinutes = lessonMinutes.text.toString().toIntOrNull() ?: config.lessonMinutes,
@@ -934,14 +952,62 @@ class MainActivity : AppCompatActivity() {
                     bigBreakMinutes = bigMinutes.text.toString().toIntOrNull() ?: config.bigBreakMinutes,
                     noonAfter = noonAfter.text.toString().toIntOrNull() ?: config.noonAfter,
                     noonMinutes = noonMinutes.text.toString().toIntOrNull() ?: config.noonMinutes,
-                    dualTimeColumn = dual.isChecked,
+                    dualTime = dual.isChecked,
+                    timeLabel1 = label1.text.toString().trim().ifEmpty { config.timeLabel1 },
+                    timeLabel2 = label2.text.toString().trim().ifEmpty { config.timeLabel2 },
+                    secondShiftMinutes = shift.text.toString().trim().toIntOrNull()
+                        ?: config.secondShiftMinutes,
                 )
-                timetableStore.updateConfig(next)
+                timetableStore.updateConfig(next, name.text.toString().trim().ifEmpty { null })
                 refreshSchedule()
+                pushTimetableToTeacher()
                 message("作息已更新：${next.lessonsPerDay} 节课")
             }
-            .setNegativeButton("取消", null)
+            .setNegativeButton("关闭", null)
             .show()
+    }
+
+    /** Local copy is authoritative; also mirror it onto the teacher machine. */
+    private fun pushTimetableToTeacher(showResult: Boolean = false) {
+        val host = currentIp()
+        if (host.isEmpty() || currentKey().isEmpty()) {
+            if (showResult) message("请先在「配置」页填写 IP 与密钥")
+            return
+        }
+        val json = TimetableStore.toJson(timetableStore.load())
+        bridge.port = currentPort()
+        applyKey(currentKey())
+        background {
+            val ok = try { bridge.pushTimetable(host, json) } catch (_: Exception) { false }
+            ui { message(if (ok) "课表已同步到教师机" else "课表已存本地，教师机同步失败（稍后重试）") }
+        }
+    }
+
+    private fun pullTimetableFromTeacher() {
+        val host = currentIp()
+        if (host.isEmpty() || currentKey().isEmpty()) {
+            message("请先在「配置」页填写 IP 与密钥")
+            return
+        }
+        bridge.port = currentPort()
+        applyKey(currentKey())
+        background {
+            try {
+                val doc = bridge.timetable(host)
+                if (doc.length() == 0) {
+                    ui { message("教师机上还没有课表，可先「推送课表到教师机」") }
+                    return@background
+                }
+                val t = TimetableStore.fromJson(doc.toString())
+                ui {
+                    timetableStore.save(t)
+                    refreshSchedule()
+                    message("已从教师机读取课表：${t.name}")
+                }
+            } catch (e: Exception) {
+                ui { message("读取教师机课表失败：${e.message ?: ""}") }
+            }
+        }
     }
 
     private fun exportTimetable() {
@@ -985,90 +1051,99 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 这堂课讲了什么 / 干了什么 / 同学表现怎么样。 */
-    private fun showLessonReview() {
+    // ------------------------------------------------------------------ classes
+
+    /** Pull class rosters so the 班级 page can group records by class. */
+    private fun loadClasses() {
         val host = currentIp()
         if (host.isEmpty() || currentKey().isEmpty()) {
-            message("请先在「配置」页填写 IP 与密钥")
+            refreshClassRecords()
             return
         }
         bridge.port = currentPort()
         applyKey(currentKey())
         background {
             try {
-                bridge.connect(host)
-                val scores = bridge.scores(host)
-                val events: List<ActivityEvent> =
-                    try { bridge.events(host) } catch (_: Exception) { emptyList() }
-                ui { renderLessonReview(scores, events) }
-            } catch (e: Exception) {
+                val groups = parseClasses(bridge.classes(host))
                 ui {
-                    try {
-                        renderLessonReview(parseScoreSnapshot(cache.scoresRaw), cache.events)
-                    } catch (_: Exception) {
-                        message("查询失败，请先同步：${e.message ?: ""}")
-                    }
+                    classNames = groups.map { it.name }.filter { it.isNotBlank() }
+                    refreshClassRecords()
                 }
+            } catch (_: Exception) {
+                ui { refreshClassRecords() }
             }
         }
     }
 
-    private fun renderLessonReview(scores: ScoreSnapshot, events: List<ActivityEvent>) {
-        val lessons = scores.lessons
-        if (lessons.isEmpty()) {
-            AlertDialog.Builder(this)
-                .setTitle("课堂回顾")
-                .setMessage("还没有节次记录，请先在教师端「开始新课堂」并同步。")
-                .setPositiveButton("关闭", null)
-                .show()
+    /**
+     * Natural per-class lesson records: what was taught, what happened and how
+     * the students did. This replaces the old one-off 「查询这堂课」 dialog.
+     */
+    private fun refreshClassRecords() {
+        if (::classHost.isInitialized.not()) return
+        classHost.removeAllViews()
+        val scores = try { parseScoreSnapshot(cache.scoresRaw) } catch (_: Exception) { ScoreSnapshot() }
+        val classes = (classNames + listOf(cache.className) +
+            timetableStore.load().courses.map { it.className })
+            .filter { it.isNotBlank() }.distinct()
+        if (classes.isEmpty()) {
+            classHint.text = "尚未同步班级数据，同步后这里会按班级展示课堂记录。"
+            classHost.addView(Ui.body(this, "暂无班级记录。连接教师机并同步后，每堂课的内容、活动与表现会自动归入对应班级。"))
             return
         }
-        val labels = lessons.map { lesson ->
-            val date = lesson["date"].orEmpty()
-            val topic = lesson["topic"].orEmpty().ifEmpty { "未填写主题" }
-            "$date  $topic"
-        }.toTypedArray()
-        AlertDialog.Builder(this)
-            .setTitle("选择一堂课")
-            .setItems(labels) { _, which ->
-                val lesson = lessons[which]
-                val id = lesson["id"].orEmpty()
-                val date = lesson["date"].orEmpty()
-                val topic = lesson["topic"].orEmpty()
-                val entries = scores.entries.filter { it["lessonId"]?.toString().orEmpty() == id }
-                val totals = LinkedHashMap<String, Int>()
-                entries.forEach { entry ->
-                    val name = entry["student"]?.toString().orEmpty()
-                        .ifEmpty { entry["seat"]?.toString().orEmpty() }
-                    val delta = (entry["delta"] as? Number)?.toInt() ?: 0
-                    totals[name] = (totals[name] ?: 0) + delta
+        classHint.text = "共 ${classes.size} 个班级 · ${scores.lessons.size} 堂课"
+        classes.forEach { className ->
+            val card = Ui.card(this)
+            card.addView(Ui.section(this, className))
+
+            val lessons = scores.lessons.takeLast(5).reversed()
+            if (lessons.isEmpty()) {
+                card.addView(Ui.body(this, "暂无课堂记录"))
+            } else {
+                lessons.forEach { lesson ->
+                    val date = lesson["date"].orEmpty()
+                    val topic = lesson["topic"].orEmpty().ifEmpty { "未填写主题" }
+                    val id = lesson["id"].orEmpty()
+                    val rows = scores.entries.filter { it["lessonId"]?.toString().orEmpty() == id }
+                    val deltas = rows.sumOf { (it["delta"] as? Number)?.toInt() ?: 0 }
+                    val happened = cache.events
+                        .filter { date.isEmpty() || it.timestamp.startsWith(date) }
+                        .takeLast(3).reversed()
+                        .joinToString("；") { "${it.time()} ${it.detail}" }
+                        .ifEmpty { "无活动记录" }
+                    val item = Ui.body(
+                        this,
+                        "$date · 讲了什么：$topic\n" +
+                            "干了什么：$happened\n" +
+                            "同学表现：${rows.size} 条加减分，合计 ${if (deltas > 0) "+" else ""}$deltas 分",
+                        12f,
+                    )
+                    card.addView(item)
                 }
-                val ranked = totals.entries.sortedByDescending { it.value }
-                val performance = if (ranked.isEmpty()) {
-                    "  本节暂无加减分记录"
-                } else {
-                    ranked.take(10).joinToString("\n") { item ->
-                        val sign = if (item.value > 0) "+" else ""
-                        "  ${item.key}：$sign${item.value} 分"
-                    }
-                }
-                val happened = events
-                    .filter { date.isEmpty() || it.timestamp.startsWith(date) }
-                    .takeLast(12)
-                    .reversed()
-                    .joinToString("\n") { "  ${it.time()} ${it.label()} ${it.detail}" }
-                    .ifEmpty { "  本节暂无活动记录" }
-                val text = buildString {
-                    append("讲了什么：").append(topic.ifEmpty { "未填写" }).append("\n\n")
-                    append("这堂课干了什么（活动记录）：\n").append(happened).append("\n\n")
-                    append("同学表现（本节加减分）：\n").append(performance)
-                }
-                AlertDialog.Builder(this)
-                    .setTitle("$date 课堂回顾")
-                    .setMessage(text)
-                    .setPositiveButton("关闭", null)
-                    .show()
             }
+            classHost.addView(card)
+        }
+    }
+
+    /** Import/export & tools collapsed into one settings dialog. */
+    private fun showMoreTools() {
+        val items: List<Pair<String, () -> Unit>> = listOf(
+            "导入本堂课密钥 (.key)" to {
+                keyLauncher.launch(arrayOf("text/plain", "application/json", "application/octet-stream", "*/*"))
+            },
+            "导入作息 JSON（ClassBoard 格式）" to {
+                timetableLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+            },
+            "导出课表 JSON" to { exportTimetable() },
+            "导出本地缓存数据" to { exportLocalData() },
+            "导出期末成绩表" to { exportReport() },
+            "查看班级词云" to { showWordCloud() },
+            "刷新班级记录" to { loadClasses() },
+        )
+        AlertDialog.Builder(this)
+            .setTitle("导入导出与工具")
+            .setItems(items.map { it.first }.toTypedArray()) { _, which -> items[which].second() }
+            .setNegativeButton("关闭", null)
             .show()
     }
 
