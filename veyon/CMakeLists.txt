@@ -52,9 +52,11 @@ if (NOT VERSION_STRING MATCHES "^v.*")
 endif()
 
 if(VERSION_STRING STREQUAL "")
-	set(VERSION_MAJOR 4)
-	set(VERSION_MINOR 11)
-	set(VERSION_PATCH 4)
+	# ClassKeep release baseline (the upstream Veyon tree this fork is based on
+	# is 4.11.4). A v* tag or GITHUB_REF_NAME overrides this in CI.
+	set(VERSION_MAJOR 2)
+	set(VERSION_MINOR 3)
+	set(VERSION_PATCH 0)
 	set(VERSION_BUILD 0)
 	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 else()

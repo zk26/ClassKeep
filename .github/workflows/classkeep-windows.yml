@@ -180,8 +180,8 @@ jobs:
           mkdir -p dist
           # Unicode true requires a UTF-8 BOM for the Chinese UI strings.
           { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-          makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
-          makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
+          makensis -DVERSION=2.3.0 -DROLE=teacher installer.nsi
+          makensis -DVERSION=2.3.0 -DROLE=student installer.nsi
           ls -lh dist
 
       - uses: actions/upload-artifact@v6

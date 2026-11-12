@@ -17,7 +17,7 @@ on:
       version:
         description: 'Version without the v prefix (e.g. 2.2.0)'
         required: true
-        default: '2.2.0'
+        default: '2.3.0'
 
 permissions:
   contents: write
@@ -178,7 +178,7 @@ jobs:
         run: |
           $v = '${{ github.event.inputs.version }}'
           if ([string]::IsNullOrEmpty($v)) { $v = $env:GITHUB_REF_NAME -replace '^v', '' }
-          if ([string]::IsNullOrEmpty($v)) { $v = '2.2.0' }
+          if ([string]::IsNullOrEmpty($v)) { $v = '2.3.0' }
           "value=$v" >> $env:GITHUB_OUTPUT
 
       # A hand-written DLL whitelist produced installs that failed with
@@ -245,7 +245,7 @@ jobs:
         run: |
           $v = '${{ github.event.inputs.version }}'
           if ([string]::IsNullOrEmpty($v)) { $v = $env:GITHUB_REF_NAME -replace '^v', '' }
-          if ([string]::IsNullOrEmpty($v)) { $v = '2.2.0' }
+          if ([string]::IsNullOrEmpty($v)) { $v = '2.3.0' }
           "value=$v" >> $env:GITHUB_OUTPUT
 
       - name: Assemble the three artifacts
