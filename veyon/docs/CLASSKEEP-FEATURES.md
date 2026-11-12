@@ -13,6 +13,31 @@
 
 ---
 
+## 2.2.0 三项遗留整改（第五轮）
+
+| # | 审计结论 | 状态 | 实现位置与说明 |
+|---|---|---|---|
+| A2 | 工具栏「登陆/注销」仍是 Veyon 原生用户名+密码 | ✅ | `MainWindow.cpp::addFeaturesToToolBar()` 按 feature name 过滤掉 `UserLogin`/`UserLogoff`；新增 `ClassroomSignInDialog`（班级 / 姓名 / 座位号，无密码）+ 两个 `Action\|Master` feature；`ClassroomPlugin::startFeature()` 下发 `SetIdentity` / `ForceLogout`。**完全不触碰 `prepareLogon()` 与密码链路**，上游插件仍编译但不暴露入口 |
+| A3/B3 | 托盘无图标、10+ 个 `ClassKeep-worker.exe` | ✅ | 托盘：`ClassroomPlugin::ensureTrayIcon()` 在 worker 会话内自建 `QSystemTrayIcon`（ClassKeep 图标 + 显示卡片/积分/AI/受保护退出菜单 + 班级座位姓名 tooltip），不再依赖 core builtin tray worker。进程收敛见下表 |
+| B4 | 「将 ClassKeep 功能迁移至指定区域」 | ✅ | 采用**主界面内嵌**：`ClassroomMasterDialog` 由 `QDialog` 改为 `QWidget`，`ClassroomPlugin::startFeature()` 把它放进 `QDockWidget`（objectName `ClassKeepConsoleDock`）停靠在主窗口右侧；工具栏按钮改为显示/隐藏该面板；`ClassroomConsole`/`ClassroomSignIn`/`ClassroomSignOut` 一并移入主工具栏第一组。无 QMainWindow 时回退独立窗口 |
+
+### Worker 进程收敛的具体改动
+
+| 根因 | 修复 |
+|---|---|
+| 打开控制台连发 `SetSettings`/`SetRoster`/`SetSessionKey` 三条消息，每条都会走一次 worker 启动路径 | 合并为一条 `Command::ApplySession`（枚举末尾追加，保持线上协议兼容），worker 侧一次性应用设置/名册/密钥 |
+| watchdog 每 5s 检查并在 worker 认证期间反复 `startClient()` | 间隔改为 30s，与 `WorkerAuthenticationTimeout` 对齐；保留 `m_restartPending` 单次重启闩 |
+| `StopClient` 也被无条件转发给 `sendMessageToUnmanagedSessionWorker`，等于「为了停掉而新起一个 worker」 | 仅在 worker 确实运行时才转发 |
+| `startUnmanagedSessionWorker()` 开头无条件 `stopWorker()` | 改为幂等：已在运行直接返回；新增 30s 启动冷却，重试定时器的消息进入队列而不是反复拉起进程 |
+| `stopWorker()` 延迟 5s 才 terminate/kill | 立即 `terminate()`，1s 后 `kill()` 兜底；显式停止时清除冷却，教师端可立刻重新启动客户端 |
+| `enqueueSessionWorkerMessage()` 在队列不存在时直接 return，而队列从未被创建 → 会话就绪前的消息全部丢失 | 用 `operator[]` 惰性创建队列，`retryPendingSessionWorkerMessages()` 在 worker 认证后统一投递 |
+
+> 说明：Veyon 架构本身是「每个带 `Flag::Worker` 的 feature 一个 worker 进程」，
+> 本轮不重写该架构（风险过高且无真实机房回归），而是消除 ClassKeep 侧造成的
+> **重复启动与残留**，把进程数从持续增长的十几个收敛到稳定的一组。
+
+---
+
 ## 2.1.0 逐项核对：审计发现与整改（第四轮）
 
 | # | 审计发现 | 状态 | 整改结果 |

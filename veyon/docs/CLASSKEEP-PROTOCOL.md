@@ -103,6 +103,21 @@
 | 43 | `SetAppBlockRules` | M→S→W | 禁用应用（模糊匹配规则数组） | `RulesJson` |
 | 44 | `SetWebBlockRules` | M→S→W | 禁用地址（模糊匹配规则数组） | `RulesJson` |
 | 45 | `ProtectionStateReport` | W→S→M | 客户端保护状态回报 | `Enabled` |
+| 46 | `ApplySession` | M→S→W | 合并的设置 / 名册 / 密钥 / 会话号，替代旧的三连发 | `SettingsJson`、`RosterJson`、`SessionKey`、`SessionId` |
+
+> 新增命令一律追加在枚举末尾，因为枚举数值就是线上协议；旧版 worker 收到
+> 未知命令时走 `default: return false`，不会崩溃。
+
+### 2.2.0 新增 Feature（工具栏）
+
+| Feature | UID 末段 | Flag | 行为 |
+|---|---|---|---|
+| `ClassroomSignIn` | `...0003` | `Action\|Master` | 弹出班级 + 姓名 + 座位号对话框，下发 `SetIdentity`；**不使用 Windows 用户名/密码** |
+| `ClassroomSignOut` | `...0004` | `Action\|Master` | 下发 `ForceLogout` |
+
+`MainWindow::addFeaturesToToolBar()` 过滤掉上游 `UserLogin` / `UserLogoff` 两个按钮，
+因此教师端只暴露 ClassKeep 的姓名+座位号登录入口。上游 `usersessioncontrol` 插件
+仍参与编译，但其 `prepareLogon()` / 密码加密路径不再被调用。
 
 ### 手机端 ↔ 教师机 HTTP 路由（2.1.0 新增）
 

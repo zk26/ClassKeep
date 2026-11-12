@@ -382,6 +382,24 @@ void ClassroomClientWidget::handleLogin()
 }
 
 
+void ClassroomClientWidget::openAiAssistant()
+{
+	showAiChat();
+}
+
+
+void ClassroomClientWidget::requestProtectedQuit()
+{
+	requestQuit();
+}
+
+
+void ClassroomClientWidget::requestScore()
+{
+	Q_EMIT scoreRequested();
+}
+
+
 void ClassroomClientWidget::showAiChat()
 {
 	if( m_aiEnabled == false )

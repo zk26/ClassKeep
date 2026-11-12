@@ -48,6 +48,10 @@ public:
 	//! Only the teacher's StopClient command may hide the card.
 	void allowHide();
 	void reactivate();
+	//! Used by the ClassKeep tray icon context menu.
+	void openAiAssistant();
+	void requestProtectedQuit();
+	void requestScore();
 
 	QString className() const { return m_className; }
 	QString seat() const { return m_seat; }

@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <QHash>
+#include <QMap>
 #include <QPointer>
 #include <QProcess>
 #include <QTcpServer>
@@ -78,6 +80,7 @@ private:
 	static constexpr auto UnmanagedSessionProcessRetryInterval = 5000;
 	static constexpr auto MaximumPendingSessionWorkerMessages = 256;
 	static constexpr auto WorkerAuthenticationTimeout = 30000;
+	static constexpr qint64 WorkerStartCooldown = 30000;
 
 	VeyonServerInterface& m_server;
 	QTcpServer m_tcpServer;
@@ -93,6 +96,7 @@ private:
 
 	using WorkerMap = QMap<Feature::Uid, Worker>;
 	WorkerMap m_workers;
+	QHash<Feature::Uid, qint64> m_lastUnmanagedStart;
 
 	QRecursiveMutex m_workersMutex;
 

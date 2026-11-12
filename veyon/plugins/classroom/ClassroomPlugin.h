@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <QDockWidget>
 #include <QJsonObject>
 #include <QObject>
 #include <QPointer>
@@ -24,6 +25,7 @@
 #include "MessageContext.h"
 #include "PluginInterface.h"
 
+class QSystemTrayIcon;
 class QTimer;
 class ClassroomClientWidget;
 class ClassroomLogStore;
@@ -84,6 +86,8 @@ private:
 	void registerContext( const MessageContext& context );
 	bool hasActiveContext() const;
 	void ensureClientUi( VeyonWorkerInterface& worker );
+	void ensureTrayIcon();
+	void updateTrayTooltip();
 	void reportEvent( const QString& type, const QString& detail, const QString& app );
 	void applyWorkerSettings( const QJsonObject& settingsObject );
 	QString localIpAddress() const;
@@ -91,12 +95,15 @@ private:
 	ClassroomConfiguration m_configuration;
 	const Feature m_consoleFeature;
 	const Feature m_clientFeature;
+	const Feature m_signInFeature;
+	const Feature m_signOutFeature;
 	const FeatureList m_features;
 
 	std::unique_ptr<ClassroomRoster> m_roster;
 	std::unique_ptr<ClassroomLogStore> m_store;
 	std::unique_ptr<ClassroomSettings> m_settings;
 	QPointer<ClassroomMasterDialog> m_dialog;
+	QPointer<QDockWidget> m_consoleDock;
 
 	VeyonServerInterface* m_server = nullptr;
 	QVector<MessageContext> m_contexts;
@@ -107,6 +114,8 @@ private:
 
 	VeyonWorkerInterface* m_worker = nullptr;
 	ClassroomClientWidget* m_clientWidget = nullptr;
+	QSystemTrayIcon* m_trayIcon = nullptr;
+	int m_trayIconRetries = 0;
 	ClassroomMonitor* m_monitor = nullptr;
 	QJsonObject m_workerSettings;
 

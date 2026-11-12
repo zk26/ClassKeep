@@ -23,6 +23,7 @@
  */
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QThread>
 #include <QTimer>
@@ -140,7 +141,28 @@ bool FeatureWorkerManager::startUnmanagedSessionWorker( Feature::Uid featureUid 
 		return false;
 	}
 
-	stopWorker( featureUid );
+	// ClassKeep 2.2.0: starting a session worker must be idempotent. The old
+	// unconditional stopWorker() tore down a worker that had only just been
+	// launched (its authentication takes up to 30s) and started a brand new OS
+	// process on every queued message, leaving the previous processes behind.
+	if( isWorkerRunning( featureUid ) )
+	{
+		return true;
+	}
+
+	// Hard cooldown: a worker that failed to authenticate is removed after
+	// 30s, and the 5s message-retry timer used to spawn yet another OS process
+	// on every retry. Never launch the same feature more than once per
+	// WorkerAuthenticationTimeout window; queued messages are delivered as soon
+	// as the pending worker authenticates.
+	const auto now = QDateTime::currentMSecsSinceEpoch();
+	const auto lastStart = m_lastUnmanagedStart.value( featureUid );
+	if( lastStart > 0 && now - lastStart < WorkerStartCooldown )
+	{
+		vDebug() << "worker for feature" << featureUid << "is within its start cooldown";
+		return false;
+	}
+	m_lastUnmanagedStart[featureUid] = now;
 
 	Worker worker{};
 
@@ -202,14 +224,21 @@ bool FeatureWorkerManager::stopWorker( Feature::Uid featureUid )
 
 		if( worker.process )
 		{
+			// Terminate immediately. Waiting 5s while a replacement is already
+			// being started is what left several ClassKeep-worker.exe instances
+			// alive at the same time (visible as ~10 entries in Task Manager).
+			worker.process->terminate();
 			auto killTimer = new QTimer;
-			connect( killTimer, &QTimer::timeout, worker.process, &QProcess::terminate );
 			connect( killTimer, &QTimer::timeout, worker.process, &QProcess::kill );
 			connect( killTimer, &QTimer::timeout, killTimer, &QTimer::deleteLater );
-			killTimer->start( 5000 );
+			killTimer->start( 1000 );
 		}
 
 		m_workers.remove( featureUid );
+		// An explicit stop (StopClient / RequestQuit) must allow the teacher to
+		// start the client again immediately - the cooldown only guards against
+		// automatic retry storms, not deliberate restarts.
+		m_lastUnmanagedStart.remove( featureUid );
 	}
 
 	return false;
@@ -250,12 +279,11 @@ void FeatureWorkerManager::sendMessageToUnmanagedSessionWorker( const FeatureMes
 
 void FeatureWorkerManager::enqueueSessionWorkerMessage(const FeatureMessage& message)
 {
-	if (m_pendingSessionWorkerMessages.contains(message.featureUid()) == false)
-	{
-		vWarning() << "message queue does not exist for feature" << message.featureUid();
-		return;
-	}
-
+	// ClassKeep 2.2.0: the map operator[] below IS the creation. Upstream
+	// bailed out here whenever the queue did not exist yet - and nothing ever
+	// created it - so every message sent before a session worker was ready was
+	// silently dropped. Keep the queue instead so retryPendingSessionWorker-
+	// Messages() can deliver it once the worker authenticates.
 	auto& queue = m_pendingSessionWorkerMessages[message.featureUid()];
 	if (queue.size() >= MaximumPendingSessionWorkerMessages)
 	{

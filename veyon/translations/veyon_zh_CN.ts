@@ -6543,6 +6543,10 @@ Example: [^-]*-(PC[0-9]*)</source>
         <source>Timetable &amp; lesson</source>
         <translation>课表与课堂</translation>
     </message>
+    <message>
+        <source>Hide panel</source>
+        <translation>隐藏面板</translation>
+    </message>
 </context>
 <context>
     <name>ClassroomPlugin</name>
@@ -6557,6 +6561,46 @@ Example: [^-]*-(PC[0-9]*)</source>
     <message>
         <source>Student is calling the teacher</source>
         <translation>学生正在呼叫老师</translation>
+    </message>
+    <message>
+        <source>Sign in</source>
+        <translation>登录</translation>
+    </message>
+    <message>
+        <source>Sign in a student by name and seat number</source>
+        <translation>输入姓名和座位号登录学生机</translation>
+    </message>
+    <message>
+        <source>Sign out</source>
+        <translation>注销</translation>
+    </message>
+    <message>
+        <source>Sign out the current student</source>
+        <translation>注销当前学生</translation>
+    </message>
+    <message>
+        <source>signed out by teacher</source>
+        <translation>教师端注销</translation>
+    </message>
+    <message>
+        <source>Show ClassKeep card</source>
+        <translation>显示 ClassKeep 卡片</translation>
+    </message>
+    <message>
+        <source>My score</source>
+        <translation>查询积分</translation>
+    </message>
+    <message>
+        <source>AI assistant</source>
+        <translation>AI 助手</translation>
+    </message>
+    <message>
+        <source>Exit (protected)</source>
+        <translation>退出（需授权）</translation>
+    </message>
+    <message>
+        <source>Seat</source>
+        <translation>座位</translation>
     </message>
 </context>
 <context>
@@ -6867,6 +6911,41 @@ Example: [^-]*-(PC[0-9]*)</source>
     <message>
         <source>unknown - use Query UWF</source>
         <translation>未知 · 请点「查询 UWF」</translation>
+    </message>
+</context>
+<context>
+    <name>ClassroomSignInDialog</name>
+    <message>
+        <source>Student sign-in</source>
+        <translation>学生登录</translation>
+    </message>
+    <message>
+        <source>(no classes in roster)</source>
+        <translation>（名册中暂无班级）</translation>
+    </message>
+    <message>
+        <source>Student name</source>
+        <translation>学生姓名</translation>
+    </message>
+    <message>
+        <source>Seat number</source>
+        <translation>座位号</translation>
+    </message>
+    <message>
+        <source>Class:</source>
+        <translation>班级：</translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation>姓名：</translation>
+    </message>
+    <message>
+        <source>Seat:</source>
+        <translation>座位号：</translation>
+    </message>
+    <message>
+        <source>Sign-in is by name and seat number only. No Windows password is required or stored.</source>
+        <translation>仅按姓名和座位号登录，不需要也不保存 Windows 密码。</translation>
     </message>
 </context>
 </TS>

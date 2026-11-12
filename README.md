@@ -68,7 +68,7 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 > | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
 > 三类产物全部真实编译，不含占位包或伪造二进制。
-> **当前最新为 [v2.1.0](https://github.com/zk26/ClassKeep/releases/tag/v2.1.0)**：
+> **当前最新为 [v2.2.0](https://github.com/zk26/ClassKeep/releases/tag/v2.2.0)**：
 > 全量统一英文 `ClassKeep` 命名；**修复 1.5.1 升级安装时
 > 「无法打开要写入的文件 … veyon-worker.exe」**——安装前先停止并清理
 > 新/旧服务与全部客户端进程，等待文件句柄释放后再写入；
@@ -77,6 +77,8 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 > 安装/卸载详情不再打印 `sc`/`taskkill` 的无害报错与 GBK 乱码。
 > 教师端新增「课表与课堂」页签（课表导入导出、当堂课讲授内容、当堂课表现评分、
 > 按班级归档的课堂记录），补齐与手机端对等的能力。
+> **2.2.0**：教师端登录改为「班级 + 姓名 + 座位号」（不再出现 Veyon 用户名/密码框）、
+> 学生端新增 ClassKeep 托盘图标、Worker 进程数收敛、控制台由弹窗改为主界面右侧停靠面板。
 > APP 为 **5 个底部标签（课堂 / 班级 / 课表 / 配置 / 更多）**：真实应用图标、
 > 未配置时收缩提示、ClassBoard 样式双作息课表（彩色跨节卡片 + 今天高亮）、
 > 按班级自然展示课堂记录、导入导出收进设置、课表本地 + 教师机双写同步。
@@ -115,8 +117,8 @@ cd mobile
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 ```
 
 详见 [`veyon/scripts/README.md`](veyon/scripts/README.md)。

@@ -472,14 +472,24 @@ void MainWindow::addFeaturesToToolBar()
 		QStringLiteral("monitoring"), QStringLiteral("demo"), QStringLiteral("lock"),
 		QStringLiteral("remoteview"), QStringLiteral("remoteaccess"),
 		QStringLiteral("textmessage"), QStringLiteral("screenshot"),
-		QStringLiteral("classroom"), QStringLiteral("classkeep")
+		QStringLiteral("classroom"), QStringLiteral("classkeep"),
+		QStringLiteral("ClassroomConsole"), QStringLiteral("ClassroomSignIn"),
+		QStringLiteral("ClassroomSignOut")
+	};
+
+	// ClassKeep 2.2.0: Veyon's native UserLogin/UserLogoff actions open a
+	// Windows username+password dialog. ClassKeep signs students in by NAME and
+	// SEAT instead, so those two upstream buttons must not be shown at all.
+	static const QStringList supersededNames{
+		QStringLiteral("UserLogin"), QStringLiteral("UserLogoff")
 	};
 
 	QVector<Feature> primary;
 	QVector<Feature> secondary;
 	for( const auto& feature : m_master.features() )
 	{
-		if( feature.testFlag( Feature::Flag::Meta ) )
+		if( feature.testFlag( Feature::Flag::Meta ) ||
+			supersededNames.contains( feature.name(), Qt::CaseInsensitive ) )
 		{
 			continue;
 		}

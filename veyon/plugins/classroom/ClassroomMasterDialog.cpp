@@ -14,6 +14,7 @@
 #include <QDateEdit>
 #include <QDateTime>
 #include <QDesktopServices>
+#include <QDialog>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFile>
@@ -79,7 +80,7 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 											 ClassroomLogStore& store,
 											 ClassroomSettings& settings,
 											 QWidget* parent ) :
-	QDialog( parent ),
+	QWidget( parent ),
 	m_master( master ),
 	m_configuration( configuration ),
 	m_roster( roster ),
@@ -110,8 +111,8 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 	setupToolsTab();
 	m_tabs->setCurrentIndex( 0 );
 
-	auto* closeButton = new QPushButton( tr( "Close" ), this );
-	connect( closeButton, &QPushButton::clicked, this, &QDialog::close );
+	auto* closeButton = new QPushButton( tr( "Hide panel" ), this );
+	connect( closeButton, &QPushButton::clicked, this, [this]() { Q_EMIT hideRequested(); } );
 	auto* footer = new QHBoxLayout;
 	footer->addStretch( 1 );
 	footer->addWidget( closeButton );

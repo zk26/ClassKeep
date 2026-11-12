@@ -51,6 +51,19 @@ inline Feature::Uid clientFeatureUid()
 	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000002") };
 }
 
+//! 2.2.0: ClassKeep's own name+seat sign-in replaces Veyon's username/password
+//! logon in the Master tool bar. These are Action|Master features; the messages
+//! they send still travel over clientFeatureUid() so the wire format is unchanged.
+inline Feature::Uid signInFeatureUid()
+{
+	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000003") };
+}
+
+inline Feature::Uid signOutFeatureUid()
+{
+	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000004") };
+}
+
 enum class Command
 {
 	StartClient = 1,
@@ -120,7 +133,13 @@ enum class Command
 	OpenWebsite,
 	SetAppBlockRules,
 	SetWebBlockRules,
-	ProtectionStateReport
+	ProtectionStateReport,
+
+	// 2.2.0 worker consolidation. ALWAYS append (numeric values are the wire
+	// protocol). One ApplySession message replaces the old SetSettings +
+	// SetRoster + SetSessionKey burst, which used to re-arm the session worker
+	// restart logic three times every time the teacher opened the console.
+	ApplySession
 };
 
 enum class Argument

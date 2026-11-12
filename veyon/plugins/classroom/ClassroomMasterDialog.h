@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <QDialog>
+#include <QWidget>
 #include <QDate>
 #include <QDateTime>
 #include <QJsonObject>
@@ -41,7 +41,7 @@ class ClassroomSettings;
 class FeatureMessage;
 class VeyonMasterInterface;
 
-class ClassroomMasterDialog : public QDialog
+class ClassroomMasterDialog : public QWidget
 {
 	Q_OBJECT
 public:
@@ -57,6 +57,10 @@ public:
 	void syncNow();
 	//! Called by the plugin when a student submits the attendance prompt.
 	void recordCheckIn( const QString& className, const QString& seat, const QString& typedName );
+
+Q_SIGNALS:
+	//! Emitted by the Close button so the host QDockWidget can hide itself.
+	void hideRequested();
 
 private:
 	void setupClassTab();

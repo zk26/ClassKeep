@@ -8,17 +8,24 @@
 #include <QtGlobal>
 
 #include <QAbstractSocket>
+#include <QDockWidget>
+#include <QMainWindow>
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDesktopServices>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkInterface>
+#include <QMenu>
 #include <QProcess>
 #include <QSettings>
+#include <QSystemTrayIcon>
+#include <QIcon>
 #include <QStringList>
 #include <QTimer>
 #include <QUrl>
@@ -30,6 +37,7 @@
 #include "ClassroomPlugin.h"
 #include "ClassroomProtocol.h"
 #include "ClassroomScore.h"
+#include "ClassroomSignInDialog.h"
 #include "ClassroomSystem.h"
 #include "ComputerControlInterface.h"
 #include "FeatureWorkerManager.h"
@@ -59,7 +67,22 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 							  Feature::Flag::Session | Feature::Flag::Service | Feature::Flag::Worker,
 							  clientFeatureUid(), Feature::Uid(),
 							  tr( "Classroom client" ), {}, {} ) ),
-	m_features( { m_consoleFeature, m_clientFeature } ),
+	// Name + seat sign-in replaces Veyon's username/password logon buttons.
+	// Action|Master only (like the console feature): no Worker flag, so no
+	// extra worker process; startFeature() never calls prepareLogon().
+	m_signInFeature( Feature( QStringLiteral("ClassroomSignIn"),
+							  Feature::Flag::Action | Feature::Flag::Master,
+							  signInFeatureUid(), Feature::Uid(),
+							  tr( "Sign in" ), {},
+							  tr( "Sign in a student by name and seat number" ),
+							  QStringLiteral(":/core/user-group-new.png") ) ),
+	m_signOutFeature( Feature( QStringLiteral("ClassroomSignOut"),
+							   Feature::Flag::Action | Feature::Flag::Master,
+							   signOutFeatureUid(), Feature::Uid(),
+							   tr( "Sign out" ), {},
+							   tr( "Sign out the current student" ),
+							   QStringLiteral(":/core/edit-delete.png") ) ),
+	m_features( { m_consoleFeature, m_clientFeature, m_signInFeature, m_signOutFeature } ),
 	m_hostName( QHostInfo::localHostName() )
 {
 	m_ipAddress = localIpAddress();
@@ -68,8 +91,77 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 
 ClassroomPlugin::~ClassroomPlugin()
 {
+	if( m_trayIcon )
+	{
+		// setContextMenu() does not transfer ownership.
+		delete m_trayIcon->contextMenu();
+	}
+	delete m_trayIcon;
+	m_trayIcon = nullptr;
 	delete m_clientWidget;
 	m_clientWidget = nullptr;
+}
+
+
+void ClassroomPlugin::ensureTrayIcon()
+{
+	// The ClassKeep worker always runs in the interactive user session, so it
+	// can own the tray icon itself. Veyon's built-in SystemTrayIcon feature is
+	// a separate worker process which is exactly what we want to avoid here.
+	if( m_trayIcon ) { return; }
+	if( QSystemTrayIcon::isSystemTrayAvailable() == false )
+	{
+		// Explorer's tray may not be ready when the worker starts. Retry a few
+		// times instead of silently giving up on the icon forever.
+		if( m_trayIconRetries < 5 )
+		{
+			++m_trayIconRetries;
+			QTimer::singleShot( 3000, this, [this]() { ensureTrayIcon(); } );
+		}
+		return;
+	}
+
+	m_trayIcon = new QSystemTrayIcon( QIcon( QStringLiteral(":/core/icon32.png") ), this );
+	m_trayIcon->setToolTip( Classroom::productName() );
+
+	auto* menu = new QMenu;
+	menu->addAction( tr( "Show ClassKeep card" ), this, [this]() {
+		if( m_clientWidget ) { m_clientWidget->reactivate(); }
+	} );
+	menu->addAction( tr( "My score" ), this, [this]() {
+		if( m_clientWidget ) { m_clientWidget->requestScore(); }
+	} );
+	menu->addAction( tr( "AI assistant" ), this, [this]() {
+		if( m_clientWidget ) { m_clientWidget->openAiAssistant(); }
+	} );
+	menu->addSeparator();
+	menu->addAction( tr( "Exit (protected)" ), this, [this]() {
+		if( m_clientWidget ) { m_clientWidget->requestProtectedQuit(); }
+	} );
+	m_trayIcon->setContextMenu( menu );
+
+	connect( m_trayIcon, &QSystemTrayIcon::activated, this,
+			 [this]( QSystemTrayIcon::ActivationReason reason ) {
+				 if( reason != QSystemTrayIcon::Context && m_clientWidget )
+				 {
+					 m_clientWidget->reactivate();
+				 }
+			 } );
+	m_trayIcon->show();
+	updateTrayTooltip();
+}
+
+
+void ClassroomPlugin::updateTrayTooltip()
+{
+	if( m_trayIcon == nullptr ) { return; }
+	QString text = Classroom::productName();
+	if( m_student.isEmpty() == false )
+	{
+		text += QStringLiteral("\n%1 · %2 %3").arg( m_className, tr( "Seat" ), m_seat );
+		text += QStringLiteral("\n%1").arg( m_student );
+	}
+	m_trayIcon->setToolTip( text );
 }
 
 
@@ -147,32 +239,104 @@ bool ClassroomPlugin::controlFeature( Feature::Uid featureUid, Operation operati
 bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature& feature,
 									const ComputerControlInterfaceList& computerControlInterfaces )
 {
+	// ---------------------------------------------------------------- sign-in
+	if( feature.uid() == signInFeatureUid() )
+	{
+		const auto classNames = roster()->classNames();
+		const auto currentClass = settings()->object().value( QStringLiteral("className") ).toString();
+		ClassroomSignInDialog dialog( classNames, currentClass, master.mainWindow() );
+		if( dialog.exec() != QDialog::Accepted ) { return true; }
+
+		auto message = Classroom::message( Command::SetIdentity );
+		message.addArgument( Argument::ClassName, dialog.className() );
+		message.addArgument( Argument::Seat, dialog.seat() );
+		message.addArgument( Argument::Student, dialog.studentName() );
+		message.addArgument( Argument::SessionId,
+							 QDateTime::currentDateTime().toString( QStringLiteral("yyyyMMdd-HHmmss") ) );
+		sendFeatureMessage( message, computerControlInterfaces );
+
+		ClassroomEvent event;
+		event.timestamp = QDateTime::currentDateTime();
+		event.className = dialog.className();
+		event.seat = dialog.seat();
+		event.student = dialog.studentName();
+		event.type = EventType::assign();
+		event.detail = QStringLiteral("signed in by name and seat");
+		store()->append( event );
+		return true;
+	}
+
+	// --------------------------------------------------------------- sign-out
+	if( feature.uid() == signOutFeatureUid() )
+	{
+		auto message = Classroom::message( Command::ForceLogout );
+		message.addArgument( Argument::Reason, tr( "signed out by teacher" ) );
+		sendFeatureMessage( message, computerControlInterfaces );
+
+		ClassroomEvent event;
+		event.timestamp = QDateTime::currentDateTime();
+		event.type = EventType::logout();
+		event.detail = tr( "signed out by teacher" );
+		store()->append( event );
+		return true;
+	}
+
 	if( feature.uid() != consoleFeatureUid() ) { return false; }
 
-	if( m_dialog.isNull() )
+	// ClassKeep 2.2.0: the console is no longer a floating QDialog. It lives in
+	// a docked panel inside the Veyon Master main window so the monitoring view
+	// and the classroom tools are visible at the same time. Fall back to a
+	// standalone widget only when there is no QMainWindow (e.g. headless tests).
+	auto* mainWindow = qobject_cast<QMainWindow*>( master.mainWindow() );
+	if( mainWindow )
 	{
-		m_dialog = new ClassroomMasterDialog( master, m_configuration, *roster(), *store(), *settings(),
-											  master.mainWindow() );
+		if( m_consoleDock.isNull() )
+		{
+			m_dialog = new ClassroomMasterDialog( master, m_configuration, *roster(), *store(), *settings() );
+			auto* dock = new QDockWidget( Classroom::productName(), mainWindow );
+			dock->setObjectName( QStringLiteral("ClassKeepConsoleDock") );
+			dock->setAllowedAreas( Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea );
+			dock->setFeatures( QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
+							   QDockWidget::DockWidgetFloatable );
+			dock->setMinimumWidth( 900 );
+			dock->setWidget( m_dialog.data() );
+			mainWindow->addDockWidget( Qt::RightDockWidgetArea, dock );
+			m_consoleDock = dock;
+			connect( m_dialog.data(), &ClassroomMasterDialog::hideRequested, dock, [dock]() {
+				dock->hide();
+			} );
+		}
+		m_consoleDock->show();
+		m_consoleDock->raise();
 	}
-	m_dialog->show();
-	m_dialog->raise();
-	m_dialog->activateWindow();
+	else
+	{
+		if( m_dialog.isNull() )
+		{
+			m_dialog = new ClassroomMasterDialog( master, m_configuration, *roster(), *store(), *settings() );
+			m_dialog->setWindowFlag( Qt::Window );
+			connect( m_dialog.data(), &ClassroomMasterDialog::hideRequested, m_dialog.data(), [this]() {
+				if( m_dialog ) { m_dialog->hide(); }
+			} );
+		}
+		m_dialog->show();
+		m_dialog->raise();
+		m_dialog->activateWindow();
+	}
 
-	auto settingsMessage = Classroom::message( Command::SetSettings );
-	settingsMessage.addArgument( Argument::SettingsJson,
-								 QString::fromUtf8( QJsonDocument( settings()->object() ).toJson( QJsonDocument::Compact ) ) );
-	sendFeatureMessage( settingsMessage, computerControlInterfaces );
-
-	auto rosterMessage = Classroom::message( Command::SetRoster );
-	rosterMessage.addArgument( Argument::RosterJson, roster()->toJson() );
-	sendFeatureMessage( rosterMessage, computerControlInterfaces );
-
-	auto keyMessage = Classroom::message( Command::SetSessionKey );
-	keyMessage.addArgument( Argument::SessionKey,
-							settings()->object().value( QStringLiteral("sessionKey") ).toString() );
-	keyMessage.addArgument( Argument::SessionId,
-							QDateTime::currentDateTime().toString( QStringLiteral("yyyyMMdd-HHmmss") ) );
-	sendFeatureMessage( keyMessage, computerControlInterfaces );
+	// One message, one session-worker wake-up. The old three-message burst
+	// re-armed the watchdog and repeatedly called startUnmanagedSessionWorker()
+	// while the previous worker was still being torn down (5s kill timer),
+	// which is what produced a dozen ClassKeep-worker.exe processes.
+	auto stateMessage = Classroom::message( Command::ApplySession );
+	stateMessage.addArgument( Argument::SettingsJson,
+							  QString::fromUtf8( QJsonDocument( settings()->object() ).toJson( QJsonDocument::Compact ) ) );
+	stateMessage.addArgument( Argument::RosterJson, roster()->toJson() );
+	stateMessage.addArgument( Argument::SessionKey,
+							  settings()->object().value( QStringLiteral("sessionKey") ).toString() );
+	stateMessage.addArgument( Argument::SessionId,
+							  QDateTime::currentDateTime().toString( QStringLiteral("yyyyMMdd-HHmmss") ) );
+	sendFeatureMessage( stateMessage, computerControlInterfaces );
 
 	return true;
 }
@@ -202,7 +366,10 @@ void ClassroomPlugin::startSessionFeature( VeyonServerInterface& server )
 	startClient( server );
 
 	m_watchdog = new QTimer( this );
-	m_watchdog->setInterval( 5000 );
+	// 30s matches FeatureWorkerManager's authentication timeout. Polling every
+	// 5s used to re-enter startClient() while the previous worker was still
+	// authenticating, multiplying ClassKeep-worker.exe processes.
+	m_watchdog->setInterval( 30000 );
 	connect( m_watchdog, &QTimer::timeout, this, [this]() {
 		if( m_stopAllowed || m_server == nullptr || m_configuration.enabled() == false ) { return; }
 		if( m_server->featureWorkerManager().isWorkerRunning( clientFeatureUid() ) )
@@ -292,7 +459,14 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonServerInterface& server, const 
 		if( m_watchdog && m_watchdog->isActive() == false ) { m_watchdog->start(); }
 	}
 
-	server.featureWorkerManager().sendMessageToUnmanagedSessionWorker( message );
+	// StopClient may only be delivered to an EXISTING worker. Forwarding it
+	// unconditionally used to start a brand new session worker just so that
+	// worker could hide the card again.
+	if( command != Command::StopClient ||
+		server.featureWorkerManager().isWorkerRunning( clientFeatureUid() ) )
+	{
+		server.featureWorkerManager().sendMessageToUnmanagedSessionWorker( message );
+	}
 	return true;
 }
 
@@ -432,6 +606,7 @@ void ClassroomPlugin::ensureClientUi( VeyonWorkerInterface& worker )
 	m_worker = &worker;
 	m_clientWidget = new ClassroomClientWidget;
 	m_monitor = new ClassroomMonitor( m_clientWidget );
+	ensureTrayIcon();
 
 	connect( m_clientWidget, &ClassroomClientWidget::eventOccurred, this,
 			 [this]( const QString& type, const QString& detail, const QString& app ) {
@@ -442,6 +617,7 @@ void ClassroomPlugin::ensureClientUi( VeyonWorkerInterface& worker )
 				 m_seat = seat;
 				 m_student = student;
 				 if( loggedIn == false ) { m_sessionId.clear(); }
+				 updateTrayTooltip();
 			 } );
 	connect( m_clientWidget, &ClassroomClientWidget::quitAuthorized, this, [this]() {
 		if( m_worker ) { m_worker->sendFeatureMessageReply( Classroom::message( Command::RequestQuit ) ); }
@@ -561,6 +737,20 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		m_clientWidget->reactivate();
 		VeyonCore::platform().coreFunctions().raiseWindow( m_clientWidget, false );
 		reportEvent( EventType::connection(), QStringLiteral("classroom client connected"), {} );
+		break;
+
+	case Command::ApplySession:
+		// Combined console-open state. Keeping it to one message avoids
+		// repeatedly restarting the unmanaged session worker.
+		applyWorkerSettings( settingsFromJson() );
+		m_clientWidget->setRoster(
+			QJsonDocument::fromJson( message.argument( Argument::RosterJson ).toString().toUtf8() ).object() );
+		if( m_className.isEmpty() ) { m_className = m_clientWidget->className(); }
+		m_sessionKey = message.argument( Argument::SessionKey ).toString();
+		m_sessionId = message.argument( Argument::SessionId ).toString();
+		m_clientWidget->setSessionKey( m_sessionKey );
+		m_clientWidget->reactivate();
+		updateTrayTooltip();
 		break;
 
 	case Command::SetSettings:

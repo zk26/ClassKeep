@@ -247,8 +247,8 @@ cd /g/veyon
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 ```
 
 `collect-windows-runtime.sh` 会校验 `plugins/classroom.dll`、`ClassKeep-wcli.exe`、

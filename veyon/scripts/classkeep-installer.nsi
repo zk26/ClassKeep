@@ -1,9 +1,9 @@
 ; ClassKeep - Windows installer (based on upstream Veyon nsis/veyon.nsi.in)
 ;
 ; Compile twice from the repository root (the release workflow supplies VERSION;
-; 2.1.0 is only the fallback defined below):
-;   makensis -DVERSION=2.1.0 -DROLE=teacher installer.nsi
-;   makensis -DVERSION=2.1.0 -DROLE=student installer.nsi
+; 2.2.0 is only the fallback defined below):
+;   makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
+;   makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 ;
 ; ROLE=teacher : component page with "Service" (read-only, registers/starts the
 ;                ClassKeepService service) and "Master" (optional console).
@@ -23,7 +23,7 @@ Unicode true
 !include "FileFunc.nsh"
 
 !ifndef VERSION
-  !define VERSION "2.1.0"
+  !define VERSION "2.2.0"
 !endif
 !ifndef ROLE
   !define ROLE "teacher"

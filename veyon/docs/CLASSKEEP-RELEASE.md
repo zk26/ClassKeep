@@ -101,8 +101,8 @@ Windows 依赖、3rdparty 锁定 SHA 与编译目标详见
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 ```
 
 `payload/` 由第一条命令从 `build/` 组装；图标 `.ico` 已提交进仓库，CI 不重新生成。

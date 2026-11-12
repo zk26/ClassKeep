@@ -64,8 +64,8 @@ CI 已把 `windows-platform` 设为必需的独立构建步骤，不再静默跳
 
 ```bash
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=2.1.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 ```
 
 输出：`dist/ClassKeep-Teacher-<ver>-win64-setup.exe`、
