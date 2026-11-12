@@ -65,5 +65,5 @@ AboutDialog::~AboutDialog()
 
 void AboutDialog::openDonationWebsite()
 {
-	  QDesktopServices::openUrl( QUrl( QStringLiteral( "https://www.paypal.com/cgi-bin/webscr?item_name=Donation+to+Veyon+-+OpenSource+classroom+management&cmd=_donations&business=donate%40veyon.io" ) ) );
+	  QDesktopServices::openUrl( QUrl( QStringLiteral( "https://github.com/zk26/ClassKeep" ) ) );
 }

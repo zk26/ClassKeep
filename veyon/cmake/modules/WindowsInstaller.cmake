@@ -19,7 +19,7 @@ add_custom_target(windows-binaries
 	COMMAND cp ${CMAKE_SOURCE_DIR}/3rdparty/interception/* ${WINDOWS_INSTALL_FILES}/interception
 	COMMAND cp ${CMAKE_SOURCE_DIR}/3rdparty/ddengine/${DLL_DDENGINE} ${WINDOWS_INSTALL_FILES}
 	COMMAND cp core/veyon-core.dll ${WINDOWS_INSTALL_FILES}
-	COMMAND find . -mindepth 2 -name 'veyon-*.exe' -exec cp '{}' ${WINDOWS_INSTALL_FILES}/ '\;'
+	COMMAND find . -mindepth 2 -name 'ClassKeep-*.exe' -exec cp '{}' ${WINDOWS_INSTALL_FILES}/ '\;'
 	COMMAND mkdir -p ${WINDOWS_INSTALL_FILES}/plugins
 	COMMAND find plugins/ -name '*.dll' -exec cp '{}' ${WINDOWS_INSTALL_FILES}/plugins/ '\;'
 	COMMAND mv ${WINDOWS_INSTALL_FILES}/plugins/lib*.dll ${WINDOWS_INSTALL_FILES}
@@ -72,7 +72,7 @@ add_custom_target(windows-binaries
 
 add_custom_target(create-windows-installer
 	COMMAND makensis ${WINDOWS_INSTALL_FILES}/veyon.nsi
-	COMMAND mv ${WINDOWS_INSTALL_FILES}/veyon-*setup.exe .
+	COMMAND mv ${WINDOWS_INSTALL_FILES}/ClassKeep-*setup.exe .
 	COMMAND rm -rf ${WINDOWS_INSTALL_FILES}
 	DEPENDS windows-binaries
 )

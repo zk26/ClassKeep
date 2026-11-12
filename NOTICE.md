@@ -1,4 +1,4 @@
-# 课守 ClassKeep — 版权、许可与声明 / NOTICE
+# ClassKeep — 版权、许可与声明 / NOTICE
 
 本文件用于明确本仓库的权利归属、授权范围与责任边界，避免任何归属或授权上的歧义。
 若本文件与其他说明有冲突，**以 `LICENSE`（GPL v2 全文）与 `veyon/docs/CLASSKEEP-LICENSE.md` 为准**。
@@ -7,7 +7,7 @@
 
 ## 1. 项目性质
 
-- 名称：中文「课守」，英文 `ClassKeep`。
+- 名称：`ClassKeep`（**自 2.0.0 起只使用英文名称**，不再使用中文「课守」作为产品名）。
 - 性质：基于开源项目 [Veyon](https://veyon.io/) 4.x 的**修改 / 衍生作品**（derivative work），
   用于课堂教学管理场景的定制分支。
 - 仓库：<https://github.com/zk26/ClassKeep>
@@ -53,6 +53,42 @@ SPDX-License-Identifier: GPL-2.0-or-later
 - 修改内容总览：[`veyon/docs/CLASSKEEP.md`](veyon/docs/CLASSKEEP.md)。
 - 通信协议（命令字、路由、认证、数据格式）：[`veyon/docs/CLASSKEEP-PROTOCOL.md`](veyon/docs/CLASSKEEP-PROTOCOL.md)。
 
+### 4.1 名称与标识变更声明（自 2.0.0 起）
+
+依 GPL 第 2(a) 条，此处明确列出本分支对上游 **Veyon** 名称所做的全部改变。
+改名只涉及**用户可感知的名称与标识**，不改变软件来源、版权归属或许可；
+上游 Veyon 的版权与 GPL 声明在所有文件中均予保留。
+
+| 类别 | 上游名称（≤ 1.5.1） | ClassKeep 2.0.0 |
+|---|---|---|
+| 产品 / 应用名 | 课守 ClassKeep、Veyon | `ClassKeep`（仅英文） |
+| 教师控制台进程 | `veyon-master.exe` | `ClassKeep-master.exe` |
+| 配置器进程 | `veyon-configurator.exe` | `ClassKeep-configurator.exe` |
+| 命令行进程 | `veyon-cli.exe` / `veyon-wcli.exe` | `ClassKeep-cli.exe` / `ClassKeep-wcli.exe` |
+| 服务进程 | `veyon-service.exe` | `ClassKeep-service.exe` |
+| 被控端进程 | `veyon-server.exe` | `ClassKeep-server.exe` |
+| 学生端悬浮卡片进程 | `veyon-worker.exe` | `ClassKeep-worker.exe` |
+| Windows 服务名 | `VeyonService` | `ClassKeepService` |
+| SAS 事件名 | `Global\VeyonServiceSasEvent` | `Global\ClassKeepServiceSasEvent` |
+| 防火墙规则名 | `Veyon Server` / `Veyon Worker` | `ClassKeep Server` / `ClassKeep Worker` |
+| 安装目录 | `%PROGRAMFILES64%\ClassKeep\Teacher` / `Student` | `%PROGRAMFILES64%\ClassKeep\Master` / `Student` |
+| 开始菜单 / 快捷方式 | `课守 ClassKeep 控制台` 等 | `ClassKeep Master`、`ClassKeep Configurator` |
+| 窗口标题 / 关于 / 菜单 | `About Veyon`、`Veyon Configurator` 等 | `About ClassKeep`、`ClassKeep Configurator` 等 |
+| Linux 桌面项显示名 | `Veyon Master` / `Veyon Service` 等 | `ClassKeep Master` / `ClassKeep Service` 等 |
+
+**为兼容而刻意保留的上游技术标识**（不属于用户可见名称，故未改动）：
+C++ 类/命名空间 `VeyonCore`、`VeyonServiceControl` 等，`VEYON_*` 编译宏与配置键，
+CMake 构建目标 `veyon-master` …（仅编译期标识，实际产物名见上表），
+核心库 `veyon-core.dll`、插件 DLL 名、翻译目录 `veyon_zh_CN.qm`，
+配置与密钥数据目录 `%APPDATA%\Veyon` / `%PROGRAMDATA%\Veyon`
+（**保留是为了 2.0.0 升级时不丢失既有认证密钥与课堂数据**），
+以及 D-Bus 总线名 `io.veyon.*` 与上游 Linux 桌面项文件名。
+
+**升级提示**：2.0.0 安装程序会自动停止并清理旧 `veyon-*.exe` 进程、
+`VeyonService` 服务注册、旧的 `Teacher` 安装目录与旧卸载注册表项；
+`QCoreApplication` 组织名/应用名改为 `ClassKeep`，因此部分界面偏好设置会回到默认值，
+需要在 `ClassKeep Configurator` 中重新确认一次。
+
 ## 5. 第三方与参考项目（无代码复制声明）
 
 | 名称 | 关系 | 说明 |
@@ -83,7 +119,7 @@ Android 启动图标由仓库根的 `ClassKeep_logo.png` 经 `mobile/tools/gener
 ## 6. 商标与名称
 
 - 「Veyon」名称、徽标及相关标识归其各自权利人所有；本仓库保留它们仅为说明来源，不构成商标授权或背书。
-- 「课守 / ClassKeep」是本定制分支的名称与标识，由仓库所有者提供，不主张对「Veyon」商标的任何权利。
+- 「ClassKeep」是本定制分支的名称与标识，由仓库所有者提供，不主张对「Veyon」商标的任何权利；完整的改名清单见 §4.1。
 - `ClassKeep_logo.png` 及其派生的应用图标仅用于识别本分支；不得据此推断与 Veyon 或任何第三方存在授权、背书或隶属关系。
 - 上游 README 中保留的徽章、文档链接与 Transifex 链接为原样引用，仅用于标示上游来源，不代表本分支由上游维护。
 

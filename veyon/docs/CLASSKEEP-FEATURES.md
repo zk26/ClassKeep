@@ -1,4 +1,4 @@
-# 课守 ClassKeep — 全部功能验收总表
+# ClassKeep — 全部功能验收总表
 
 本文件把需求讨论中**逐条列出过的每一项功能**与当前实现一一对照，作为验收总账。
 仓库：<https://github.com/zk26/ClassKeep> · 许可 **GPL-2.0-or-later**。
@@ -10,6 +10,47 @@
 | ✅ | 代码完成，且已被 Linux/Qt6/GCC 与 Windows/MinGW 编译覆盖 |
 | ◐ | 代码完成，但依赖特定运行环境，尚未在真实机房联调 |
 | ❌ | 未实现（明确列出，不含糊） |
+
+---
+
+## 2.0.0 常用工具 / 座位视图 / 学生卡片（第三轮）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| T1 | 教师端**常用工具放在页面上**（首个页签） | ◐ | `ClassroomMasterDialog.cpp` → `setupToolsTab()` | 教师端「Quick tools」页 |
+| T2 | 全部广播 / 选中广播；广播默认禁 USB 但**屏幕正常显示** | ◐ | `runFeature(ShareOwnScreenFullScreen)` + `InputDevicesLock` | 全部广播 / 选中广播 |
+| T3 | 边看边做（窗口演示，学生仍可操作） | ◐ | `runFeature(ShareOwnScreenWindow)`，不启 USB 锁 | 边看边做 |
+| T4 | **启动/关闭保护**（防止学生端自行退出程序） | ◐ | `SetExitProtection` → `exitProtection`；`closeEvent()` 拒绝 + 守护定时器 | 客户端保护 启动 / 关闭 |
+| T5 | **启动/关闭 UWF**（还原，防掉线 / 装软件前关闭） | ◐ | `UwfSetFilter`；工具面板**不自动重启** | UWF 还原 启动 / 关闭 / 查询 / 重启学生机 |
+| T6 | 卸载保护（独立于以上两者） | ◐ | `SetUninstallProtection` + `HKLM\SOFTWARE\ClassKeep\Student` | 「系统设备」页 |
+| T7 | 禁用 / 启用网关 | ◐ | `SetInternetBlock` | 网关 禁用 / 启用 |
+| T8 | 肃静页面（文案可设置） | ◐ | `ShowSilencePage` / `HideSilencePage` + `silencePageText` | 肃静页面 文案框 + 显示 / 隐藏 |
+| T9 | 禁用应用 / 禁用地址（**模糊匹配**） | ◐ | `SetAppBlockRules` / `SetWebBlockRules` → `ClassroomMonitor` 子串匹配 → `taskkill` + 事件上报 | 规则输入框 + 应用 / 清空 |
+| T10 | 打开软件 / 打开网页 | ◐ | `OpenSoftware` / `OpenWebsite` | 路径 / 网址输入 + 打开按钮 |
+| T11 | 全班加减分 | ✅ | `scoreWholeClass()` → `addEntryForSeat()` | +5/+1/-1/-5/自定义 |
+| T12 | 座位**网格可拖动** + **列表视图**（不抓屏，含 UWF 保护情况） | ◐ | `ClassroomSeatGrid` `ViewMode::{Grid,List}`、`QTableWidget` 9 列 | 座位页「切换列表/网格视图」按钮 |
+| T13 | 网格卡片下显示 **🛡 + 名字 + [积分]** | ◐ | `protectionIcon()` + `refresh()` caption | 座位网格 |
+| T14 | 学生端悬浮卡片：姓名 + 座位号 + 积分/AI 两个按钮 | ◐ | `ClassroomClientWidget::updateStatus()` / `updateVisibility()` | 学生桌面 |
+| T15 | 悬浮卡片**不置顶**，且 server 不退出就**关不掉** | ◐ | `keepFloating()`（无 `WindowStaysOnTopHint`）、`closeEvent()` + 1.5s 守护定时器；仅 `StopClient` 可隐藏 | 自动 |
+| T16 | 点击按钮弹窗查询积分 / AI | ◐ | `ClassroomScoreView` / `ClassroomAiChatWidget` | 卡片按钮 |
+
+> 「◐」表示代码已完成但**尚未在真实机房 / Windows UWF 环境联调**，且需由
+> GitHub Actions 的 Qt6/MinGW 编译验证。本机无 Qt/MinGW 工具链，桌面端未做本地编译。
+
+## 2.0.0 移动端（底部栏 / 课表 / 更多）
+
+| # | 需求 | 状态 | 实现位置 | 使用入口 |
+|---|---|---|---|---|
+| M1 | 底部栏**图标 + 名称常显**（不再用单字假图标） | ✅ | `BottomBar.kt` + 4 个 `res/drawable/ck_tab_*.xml` 矢量图标 | 四个标签 |
+| M2 | 课堂 = **课堂控制 + 加分减分** | ✅ | `MainActivity.kt` → `buildPages()` 的 `pages[0]` | 「课堂」 |
+| M3 | 课表：一天几节课 / 大课间 / 中午 / 单列双列时间可调 | ✅ | `TimetableStore.kt` → `TimetableConfig` / `buildPeriods()`；`showTimetableSettings()` | 「课表」→ 作息设置 |
+| M4 | 配置页（IP / 密钥 / 端口 / 时间列切换） | ✅ | `MainActivity.kt` → `pages[2]` | 「配置」 |
+| M5 | 更多页：导入导出 + 查询这堂课讲了什么/干了什么/同学表现 | ✅ | `exportTimetable()` / `exportLocalData()` / `showLessonReview()` / `renderLessonReview()` | 「更多」 |
+| M6 | 名称只用英文 `ClassKeep` | ✅ | `strings.xml` / `brandHeader()` / `mobile/README.md` | 应用名与品牌头 |
+
+> 移动端已用本机 JDK 23 + Android SDK 实测：`:app:assembleDebug` +
+> `:app:testDebugUnitTest` **BUILD SUCCESSFUL，7 个单测全绿**（含新增的
+> 节次生成 / 大课间 / 午休 / 配置断言）。
 
 ---
 
@@ -142,7 +183,7 @@
 | G9 | 安装器、依赖闭包与自检 | ✅ | `collect_mingw_deps.py`(ntldd 递归)、`collect-windows-runtime.sh`、`classkeep-installer.nsi`、`generate_windows_icons.py`、`ClassroomSelfTest.cpp`、`ClassKeepUnitTest.kt` |
 | G10 | **桌面端统一改名与换图标** | ✅ | `WindowsBuildHelpers.cmake` 产品名改 ClassKeep；Logo 生成 master/configurator/installer/uninstaller `.ico`；安装器与快捷方式显示「课守 ClassKeep 教师端/学生端」 |
 | G11 | **沿用上游组件式安装**，学生端不出现 Master | ✅ | `classkeep-installer.nsi` 基于 `nsis/veyon.nsi.in`：教师端「服务端(RO) + 教师控制台(可选)」，学生端只有「服务端(RO)」，自动注册/启动服务 |
-| G12 | 安装/卸载 **不再弹 `__fastfail` 崩溃框**（沿用原有 `veyon-wcli.exe`） | ✅ | 补齐并硬校验启动必需的 `windows-platform.dll` 与 Qt6 版 `libqca-ossl.dll`；用自制 `interception.h` 桩与 MinGW 头文件兼容修复让平台插件可编译；安装流程保持上游 wcli 不变 |
+| G12 | 安装/卸载 **不再弹 `__fastfail` 崩溃框**（沿用原有 `ClassKeep-wcli.exe`） | ✅ | 补齐并硬校验启动必需的 `windows-platform.dll` 与 Qt6 版 `libqca-ossl.dll`；用自制 `interception.h` 桩与 MinGW 头文件兼容修复让平台插件可编译；安装流程保持上游 wcli 不变 |
 | G13 | APP 密钥支持**手动输入 + 上传 `.key` 文件** | ✅ | `ActivityResultContracts.OpenDocument`，支持纯文本 / `key=…` / JSON（`sessionKey`/`key`/`lessonKey`/`密钥`）三种格式 |
 | G14 | APP **底部导航栏 5 项** + 学生加减分 | ✅ | 课堂 / 加分 / 控制 / 课表 / 更多；加分页点卡片选 -5…+5、填原因、乐观更新失败回滚 |
 | G15 | **教师端网格拖拽排序**（下次开机不变）+ 手机按序生成卡片 | ✅ | `ClassroomSeatGrid` 拖放交换 → `seat-order-<班级>.json` 即时持久化 → Bridge `/seats` 按序返回 → APP 按序渲染 |

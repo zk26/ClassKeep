@@ -36,15 +36,15 @@
 ## 2. 两个安装程序的差别
 
 沿用上游 `nsis/veyon.nsi.in` 的组件式安装流程：安装器通过原有的
-`veyon-wcli.exe` 注册/启动 Veyon Service、放行防火墙、启用 SAS。
+`ClassKeep-wcli.exe` 注册/启动 Veyon Service、放行防火墙、启用 SAS。
 该 CLI 在平台插件或 QCA 插件缺失时会 `qFatal`（UCRT `__fastfail`）并弹出
 「快速异常检测失败」对话框，因此 payload 必须包含且硬校验
 `windows-platform.dll` 与 Qt6 版 `libqca-ossl.dll`（见下节）。
 
 | ROLE | 组件页 | 安装的额外文件 |
 |---|---|---|
-| `teacher` | 「服务端（必选，只读）」+「教师控制台（可选，默认勾选）」 | `veyon-master.exe` + 控制台快捷方式 |
-| `student` | **只有「服务端（必选，只读）」** | **不含 `veyon-master.exe`，组件页也没有 Master 选项** |
+| `teacher` | 「服务端（必选，只读）」+「教师控制台（可选，默认勾选）」 | `ClassKeep-master.exe` + 控制台快捷方式 |
+| `student` | **只有「服务端（必选，只读）」** | **不含 `ClassKeep-master.exe`，组件页也没有 Master 选项** |
 
 两者共用同一份 `payload/`（Veyon 可执行文件、`veyon-core.dll`、全部 Veyon 插件、
 Qt6/CRT 运行时 DLL、Qt 插件、QCA 加密插件、文档与 `ClassKeep.ico`），差别在编译期
@@ -53,9 +53,9 @@ Qt6/CRT 运行时 DLL、Qt 插件、QCA 加密插件、文档与 `ClassKeep.ico`
 ### payload 目录结构
 
 ```
-veyon-server.exe / veyon-service.exe / veyon-worker.exe
-veyon-configurator.exe / veyon-cli.exe / veyon-wcli.exe
-veyon-master.exe                    （教师端安装器才释放）
+ClassKeep-server.exe / ClassKeep-service.exe / ClassKeep-worker.exe
+ClassKeep-configurator.exe / ClassKeep-cli.exe / ClassKeep-wcli.exe
+ClassKeep-master.exe                    （教师端安装器才释放）
 veyon-core.dll + 全部 Qt6/CRT 运行时 DLL
 plugins/classroom.dll + windows-platform.dll + 其它 Veyon 插件 DLL
 platforms/qwindows.dll
@@ -101,8 +101,8 @@ Windows 依赖、3rdparty 锁定 SHA 与编译目标详见
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=student installer.nsi
 ```
 
 `payload/` 由第一条命令从 `build/` 组装；图标 `.ico` 已提交进仓库，CI 不重新生成。
@@ -133,10 +133,10 @@ Get-Content SHA256SUMS.txt | ForEach-Object {
 ## 6. 安装顺序
 
 1. **学生机**：以管理员运行学生端 `setup.exe`，保持「服务端」勾选；安装完成后
-   Veyon Service 已自动注册并启动。再以管理员运行 `veyon-configurator.exe`
+   Veyon Service 已自动注册并启动。再以管理员运行 `ClassKeep-configurator.exe`
    导入教师机导出的认证配置。
 2. **教师机**：以管理员运行教师端 `setup.exe`，保持「教师控制台」勾选；
-   用 Veyon Configurator 完成认证配置，再运行 `veyon-master.exe`。
+   用 Veyon Configurator 完成认证配置，再运行 `ClassKeep-master.exe`。
 3. **手机**：安装 APK，输入本堂课密钥与教师机 IP/端口。
 
 安装目录内的 `README.TXT` 有中文说明；完整流程见

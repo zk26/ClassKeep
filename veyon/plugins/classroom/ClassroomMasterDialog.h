@@ -67,6 +67,18 @@ private:
 	void setupSystemTab();
 	void setupSeatTab();
 	void refreshSeatGrid();
+	void refreshUwfStatus();
+
+	//! 2.0.0 quick tools. "Client protection" and "UWF" are separate switches.
+	void setupToolsTab();
+	QStringList toolTargets() const;
+	void sendToTargets( const FeatureMessage& message );
+	void setToolStatus( const QString& text );
+	void setClientProtection( bool enabled );
+	void setUwfFilter( bool enabled );
+	void applyFuzzyRules( const QString& key, const QString& text );
+	void openOnTargets( bool website, const QString& target );
+	void scoreWholeClass( int delta );
 	void startCheckIn();
 	void refreshCheckIn();
 
@@ -189,6 +201,16 @@ private:
 
 	ClassroomSeatGrid* m_seatGrid = nullptr;
 	QTableWidget* m_checkInTable = nullptr;
+
+	// Quick tools tab (inserted as the first tab).
+	QComboBox* m_toolScope = nullptr;
+	QLabel* m_toolsStatus = nullptr;
+	QLineEdit* m_toolSilence = nullptr;
+	QLineEdit* m_toolAppRules = nullptr;
+	QLineEdit* m_toolWebRules = nullptr;
+	QLineEdit* m_toolSoftware = nullptr;
+	QLineEdit* m_toolWebsite = nullptr;
+	QMap<QString, QString> m_uwfStatus; //!< seat -> latest UWF report from that machine
 	QLabel* m_checkInSummary = nullptr;
 	QMap<QString, QString> m_checkInNames;
 	QMap<QString, QDateTime> m_checkInTimes;

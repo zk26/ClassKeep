@@ -1,12 +1,12 @@
-!define APP_NAME "Veyon"
-!define COMP_NAME "Veyon Solutions"
-!define WEB_SITE "https://veyon.io"
+!define APP_NAME "ClassKeep"
+!define COMP_NAME "ClassKeep"
+!define WEB_SITE "https://github.com/zk26/ClassKeep"
 !define VERSION "@VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@.@VERSION_BUILD@"
 !define COPYRIGHT "2004-2026 Veyon Solutions / Tobias Junghans"
-!define DESCRIPTION "Veyon Installer"
+!define DESCRIPTION "ClassKeep Installer"
 !define LICENSE_TXT "COPYING"
-!define INSTALLER_NAME "veyon-${VERSION}-@VEYON_WINDOWS_ARCH@-setup.exe"
-!define MAIN_APP_EXE "veyon-master.exe"
+!define INSTALLER_NAME "ClassKeep-${VERSION}-@VEYON_WINDOWS_ARCH@-setup.exe"
+!define MAIN_APP_EXE "ClassKeep-master.exe"
 !define INSTALL_TYPE "SetShellVarContext all"
 !define REG_ROOT "HKLM"
 !define REG_APP_PATH "Software\Microsoft\Windows\CurrentVersion\App Paths\${MAIN_APP_EXE}"
@@ -31,7 +31,7 @@ OutFile "${INSTALLER_NAME}"
 BrandingText "${APP_NAME} ${VERSION}"
 XPStyle on
 InstallDirRegKey "${REG_ROOT}" "${REG_APP_PATH}" ""
-InstallDir "$PROGRAMFILES64\Veyon"
+InstallDir "$PROGRAMFILES64\ClassKeep"
 ShowInstDetails hide
 RequestExecutionLevel admin
 
@@ -68,10 +68,10 @@ RequestExecutionLevel admin
 !insertmacro MUI_PAGE_INSTFILES
 
 !define MUI_FINISHPAGE_RUN
-!define MUI_FINISHPAGE_RUN_TEXT "Run Veyon Configurator now"
+!define MUI_FINISHPAGE_RUN_TEXT "Run ClassKeep Configurator now"
 !define MUI_FINISHPAGE_RUN_FUNCTION "RunConfigurator"
-!define MUI_FINISHPAGE_LINK "Support Veyon project with a donation"
-!define MUI_FINISHPAGE_LINK_LOCATION "https://www.paypal.com/cgi-bin/webscr?item_name=Donation+to+Veyon+-+OpenSource+classroom+management&cmd=_donations&business=donate%40veyon.io"
+!define MUI_FINISHPAGE_LINK "Support ClassKeep project with a donation"
+!define MUI_FINISHPAGE_LINK_LOCATION "https://github.com/zk26/ClassKeep"
 
 !insertmacro MUI_PAGE_FINISH
 
@@ -144,13 +144,13 @@ RequestExecutionLevel admin
 
 ######################################################################
 
-Section "Veyon Service" SEC_SERVICE
+Section "ClassKeep Service" SEC_SERVICE
 SectionIn RO
 ${INSTALL_TYPE}
 ClearErrors
-ExecWait '"$INSTDIR\veyon-wcli.exe" service unregister'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
 ${If} $0 != 0
-  ExecWait '"$INSTDIR\veyon-ctl.exe" service unregister'
+  ExecWait '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
 ${EndIf}
 Delete "$INSTDIR\*.dll"
 Delete "$INSTDIR\*.exe"
@@ -160,12 +160,12 @@ RmDir /r "$INSTDIR\translations"
 SetOverwrite on
 SetOutPath "$INSTDIR"
 # core components
-File "veyon-server.exe"
-File "veyon-service.exe"
-File "veyon-configurator.exe"
-File "veyon-cli.exe"
-File "veyon-wcli.exe"
-File "veyon-worker.exe"
+File "ClassKeep-server.exe"
+File "ClassKeep-service.exe"
+File "ClassKeep-configurator.exe"
+File "ClassKeep-cli.exe"
+File "ClassKeep-wcli.exe"
+File "ClassKeep-worker.exe"
 File "*.dll"
 File "LICENSE.TXT"
 File "README.TXT"
@@ -190,35 +190,35 @@ File "styles/*.dll"
 SetOutPath "$INSTDIR\tls"
 File "tls/qopensslbackend.dll"
 # configuration
-ExecWait '"$INSTDIR\veyon-wcli.exe" service register'
-ExecWait '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 1'
-ExecWait '"$INSTDIR\veyon-wcli.exe" config set Windows/SoftwareSASEnabled 1'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" service register'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" config set Network/FirewallExceptionEnabled 1'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" config set Windows/SoftwareSASEnabled 1'
 # disable forced guest logon as otherwise logon authentication fails
 WriteRegDWORD ${REG_ROOT} "SYSTEM\CurrentControlSet\Control\Lsa"  "ForceGuest" "0"
 ${GetParameters} $R0
 ${GetOptions} $R0 "/ApplyConfig=" $R1
 ${If} $R1 != ""
   ClearErrors
-  ExecWait '"$INSTDIR\veyon-wcli.exe" config import "$R1"' $0
+  ExecWait '"$INSTDIR\ClassKeep-wcli.exe" config import "$R1"' $0
   ${If} $0 != 0
 	   MessageBox MB_OK|MB_ICONSTOP "Could not apply specified configuration file!"
   ${EndIf}
 ${EndIf}
-ExecWait '"$INSTDIR\veyon-wcli.exe" service start'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" service start'
 SectionEnd
 
-Section "Veyon Master" SEC_MASTER
+Section "ClassKeep Master" SEC_MASTER
 ${INSTALL_TYPE}
 SetOutPath "$INSTDIR"
-File "veyon-master.exe"
+File "ClassKeep-master.exe"
 
 ${GetParameters} $R0
 ${GetOptions} $R0 "/NoStartMenuFolder" $R1
 ${If} ${Errors}
-CreateDirectory "$SMPROGRAMS\Veyon"
-CreateShortCut "$SMPROGRAMS\Veyon\Veyon Master.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+CreateDirectory "$SMPROGRAMS\ClassKeep"
+CreateShortCut "$SMPROGRAMS\ClassKeep\ClassKeep Master.lnk" "$INSTDIR\${MAIN_APP_EXE}"
 ${EndIf}
-CreateShortCut "$DESKTOP\Veyon Master.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+CreateShortCut "$DESKTOP\ClassKeep Master.lnk" "$INSTDIR\${MAIN_APP_EXE}"
 SectionEnd
 
 Section "Interception driver" SEC_INTERCEPTION
@@ -228,7 +228,7 @@ File "interception/*"
 SectionEnd
 
 Function RunConfigurator
-	Exec '"$INSTDIR\veyon-configurator.exe"'
+	Exec '"$INSTDIR\ClassKeep-configurator.exe"'
 FunctionEnd
 
 
@@ -262,15 +262,15 @@ WriteUninstaller "$INSTDIR\uninstall.exe"
 ${GetParameters} $R0
 ${GetOptions} $R0 "/NoStartMenuFolder" $R1
 ${If} ${Errors}
-CreateDirectory "$SMPROGRAMS\Veyon"
-CreateShortCut "$SMPROGRAMS\Veyon\Veyon Configurator.lnk" "$INSTDIR\veyon-configurator.exe"
-CreateShortCut "$SMPROGRAMS\Veyon\Uninstall Veyon.lnk" "$INSTDIR\uninstall.exe"
-WriteIniStr "$INSTDIR\Veyon website.url" "InternetShortcut" "URL" "${WEB_SITE}"
-CreateShortCut "$SMPROGRAMS\Veyon\Veyon Website.lnk" "$INSTDIR\Veyon website.url"
+CreateDirectory "$SMPROGRAMS\ClassKeep"
+CreateShortCut "$SMPROGRAMS\ClassKeep\ClassKeep Configurator.lnk" "$INSTDIR\ClassKeep-configurator.exe"
+CreateShortCut "$SMPROGRAMS\ClassKeep\Uninstall ClassKeep.lnk" "$INSTDIR\uninstall.exe"
+WriteIniStr "$INSTDIR\ClassKeep website.url" "InternetShortcut" "URL" "${WEB_SITE}"
+CreateShortCut "$SMPROGRAMS\ClassKeep\ClassKeep Website.lnk" "$INSTDIR\ClassKeep website.url"
 ${EndIf}
 
 WriteRegStr ${REG_ROOT} "${REG_APP_PATH}" "" "$INSTDIR\${MAIN_APP_EXE}"
-WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayName" "Veyon"
+WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayName" "ClassKeep"
 WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "UninstallString" "$INSTDIR\uninstall.exe"
 WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayIcon" "$INSTDIR\${MAIN_APP_EXE}"
 WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayVersion" "${VERSION}"
@@ -283,9 +283,9 @@ SectionEnd
 Section Uninstall
 ${INSTALL_TYPE}
 
-ExecWait '"$INSTDIR\veyon-wcli.exe" config set Service/SoftwareSASEnabled 0'
-ExecWait '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 0'
-ExecWait '"$INSTDIR\veyon-wcli.exe" service unregister'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" config set Service/SoftwareSASEnabled 0'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" config set Network/FirewallExceptionEnabled 0'
+ExecWait '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
 ExecWait '"$INSTDIR\interception\install-interception.exe" /uninstall'
 # make sure the service is stopped and all file handles are released
 Sleep 2000
@@ -293,7 +293,7 @@ Sleep 2000
 ${GetParameters} $R0
 ${GetOptions} $R0 "/ClearConfig" $R1
 ${IfNot} ${Errors}
-	ExecWait '"$INSTDIR\veyon-wcli.exe" config clear'
+	ExecWait '"$INSTDIR\ClassKeep-wcli.exe" config clear'
 ${EndIf}
 
 Delete "$INSTDIR\*.exe"
@@ -311,13 +311,13 @@ RmDir /r "$INSTDIR\interception"
 
 RmDir "$INSTDIR"
 
-Delete "$SMPROGRAMS\Veyon\Veyon Master.lnk"
-Delete "$SMPROGRAMS\Veyon\Veyon Configurator.lnk"
-Delete "$SMPROGRAMS\Veyon\Uninstall Veyon.lnk"
-Delete "$SMPROGRAMS\Veyon\Veyon Website.lnk"
-RmDir "$SMPROGRAMS\Veyon"
+Delete "$SMPROGRAMS\ClassKeep\ClassKeep Master.lnk"
+Delete "$SMPROGRAMS\ClassKeep\ClassKeep Configurator.lnk"
+Delete "$SMPROGRAMS\ClassKeep\Uninstall ClassKeep.lnk"
+Delete "$SMPROGRAMS\ClassKeep\ClassKeep Website.lnk"
+RmDir "$SMPROGRAMS\ClassKeep"
 
-Delete "$DESKTOP\Veyon Master.lnk"
+Delete "$DESKTOP\ClassKeep Master.lnk"
 
 DeleteRegKey ${REG_ROOT} "${REG_APP_PATH}"
 DeleteRegKey ${REG_ROOT} "${UNINSTALL_PATH}"
@@ -331,10 +331,10 @@ FunctionEnd
 
 ######################################################################
 
-LangString DESC_SEC_SERVICE ${LANG_ENGLISH} "Veyon service and common files required on all computers"
-LangString DESC_SEC_SERVICE ${LANG_GERMAN} "Veyon-Dienst und gemeinsame Dateien, die auf allen Computern benötigt werden"
-LangString DESC_SEC_MASTER ${LANG_ENGLISH} "Master application for monitoring and controlling Veyon client computers"
-LangString DESC_SEC_MASTER ${LANG_GERMAN} "Master-Applikation zum Beobachten und Steuern von Veyon-Client-Computern"
+LangString DESC_SEC_SERVICE ${LANG_ENGLISH} "ClassKeep service and common files required on all computers"
+LangString DESC_SEC_SERVICE ${LANG_GERMAN} "ClassKeep-Dienst und gemeinsame Dateien, die auf allen Computern benötigt werden"
+LangString DESC_SEC_MASTER ${LANG_ENGLISH} "Master application for monitoring and controlling ClassKeep client computers"
+LangString DESC_SEC_MASTER ${LANG_GERMAN} "Master-Applikation zum Beobachten und Steuern von ClassKeep-Client-Computern"
 LangString DESC_SEC_INTERCEPTION ${LANG_ENGLISH} "Special input device driver required for intercepting keyboard shortcuts such as Ctrl+Alt+Del in screen lock mode"
 LangString DESC_SEC_INTERCEPTION ${LANG_GERMAN} "Spezieller Eingabegerätetreiber, der zum Abfangen von Tastenkombinationen wie Strg+Alt+Entf im Bildschirmsperr-Modus benötigt wird"
 

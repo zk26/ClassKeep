@@ -32,8 +32,8 @@
 ```bash
 cmake -S veyon -B build -G Ninja -DCMAKE_PREFIX_PATH=/ucrt64 \
   -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
-cmake --build build --target classroom veyon-master veyon-configurator \
-                    veyon-cli veyon-wcli veyon-service veyon-server veyon-worker
+cmake --build build --target classroom ClassKeep-master ClassKeep-configurator \
+                    ClassKeep-cli ClassKeep-wcli ClassKeep-service ClassKeep-server ClassKeep-worker
 bash veyon/scripts/collect-windows-runtime.sh
 ```
 
@@ -50,8 +50,8 @@ bash veyon/scripts/collect-windows-runtime.sh
    「服务端（必选）」**，不会安装也不会出现 Master；安装器会自动注册并启动
    Veyon Service、放行防火墙、启用 SAS。
 2. **教师机**：以管理员运行 `ClassKeep-Teacher-<ver>-win64-setup.exe`，组件页另含可选项
-   「教师控制台」（`veyon-master.exe`），保持勾选。
-3. 两端再分别用 `veyon-configurator.exe` 完成 Veyon 认证配置（教师机导出、学生机导入）。
+   「教师控制台」（`ClassKeep-master.exe`），保持勾选。
+3. 两端再分别用 `ClassKeep-configurator.exe` 完成 Veyon 认证配置（教师机导出、学生机导入）。
 
 安装器沿用上游 `nsis/veyon.nsi.in` 的安装流程；`classroom.dll` 等插件安装在
 `plugins/` 子目录，运行时 DLL 由 `ntldd` 递归收集，**不要**自己手工拷贝 DLL 白名单。
@@ -70,7 +70,7 @@ cd mobile
 
 ## 3. 学生机首次准备
 
-1. 安装带课守插件的 Veyon，确认 `VeyonService` 正在运行。
+1. 安装带课守插件的 Veyon，确认 `ClassKeepService` 正在运行。
 2. 用 Veyon Configurator 打开「课守 ClassKeep」页，按需设置：
    - 退出保护 / 退出需超管账号 / 超管账户名
    - 允许学生自助登录

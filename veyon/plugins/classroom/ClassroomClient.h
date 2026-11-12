@@ -1,5 +1,5 @@
 /*
- * ClassroomClient.h - always-on-top student widgets and activity sampler
+ * ClassroomClient.h - non-topmost, non-closable student card, popups and sampler
  *
  * This file is part of the Veyon classroom modification.
  */
@@ -11,6 +11,7 @@
 #include <QPair>
 #include <QPoint>
 #include <QString>
+#include <QStringList>
 #include <QVariantList>
 #include <QWidget>
 
@@ -44,6 +45,9 @@ public:
 	void setScoreHtml( const QString& html );
 	void setSilence( bool visible, const QString& text );
 	void showCheckIn();
+	//! Only the teacher's StopClient command may hide the card.
+	void allowHide();
+	void reactivate();
 
 	QString className() const { return m_className; }
 	QString seat() const { return m_seat; }
@@ -69,9 +73,11 @@ private:
 	void showAiChat();
 	void requestQuit();
 	void updateStatus();
+	void updateVisibility();
 	void placeOnScreen();
 	bool rosterAccepts( const QString& seat, const QString& name ) const;
 
+	QLabel* m_identityLabel = nullptr;
 	QLabel* m_statusLabel = nullptr;
 	QLabel* m_lockLabel = nullptr;
 	QLineEdit* m_seatEdit = nullptr;
@@ -102,6 +108,9 @@ private:
 	bool m_exitRequiresAdmin = true;
 	QString m_exitAdminUsername;
 	QPoint m_dragPosition;
+	//! The card must stay on screen for as long as the ClassKeep service runs.
+	QTimer* m_guardTimer = nullptr;
+	bool m_hideAllowed = false;
 };
 
 
@@ -191,6 +200,8 @@ public:
 
 Q_SIGNALS:
 	void activity( const QString& app, const QString& title, bool browser );
+	//! Emitted when a fuzzy (case-insensitive substring) app / website rule matches.
+	void blockedActivity( const QString& app, const QString& title, const QString& rule, bool browser );
 
 private:
 	void sample();
@@ -198,6 +209,8 @@ private:
 
 	QTimer* m_timer = nullptr;
 	QString m_lastSample;
+	QStringList m_blockedApps;
+	QStringList m_blockedWebsites;
 	bool m_enabled = true;
 	bool m_captureWindowTitle = true;
 	bool m_captureProcess = true;

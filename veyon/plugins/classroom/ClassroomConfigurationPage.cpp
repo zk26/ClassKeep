@@ -20,7 +20,7 @@ ClassroomConfigurationPage::ClassroomConfigurationPage( ClassroomConfiguration& 
 	ConfigurationPage( parent ),
 	m_configuration( configuration )
 {
-	setWindowTitle( QStringLiteral("课守 ClassKeep") );
+	setWindowTitle( QStringLiteral("ClassKeep") );
 	setWindowIcon( QIcon( QStringLiteral(":/core/icon32.png") ) );
 
 	auto* form = new QFormLayout( this );

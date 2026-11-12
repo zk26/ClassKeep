@@ -216,7 +216,7 @@ bool WindowsUserFunctions::performLogon( const QString& username, const Password
 	DesktopInputController input( config.logonKeyPressInterval() );
 
 	const auto ctrlAltDel = []() {
-		SmartHandle sasEvent{OpenEvent(EVENT_MODIFY_STATE, false, L"Global\\VeyonServiceSasEvent" )};
+		SmartHandle sasEvent{OpenEvent(EVENT_MODIFY_STATE, false, L"Global\\ClassKeepServiceSasEvent" )};
 		if (sasEvent.isValid())
 		{
 			SetEvent(sasEvent.get());

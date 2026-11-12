@@ -57,7 +57,7 @@ QString VeyonServiceControl::filePath()
 	return QDir::toNativeSeparators(
 				QCoreApplication::applicationDirPath() +
 				QDir::separator() +
-				QStringLiteral("veyon-service") + VeyonCore::executableSuffix() );
+				QStringLiteral("ClassKeep-service") + VeyonCore::executableSuffix() );
 }
 
 

@@ -1,11 +1,11 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=@CMAKE_INSTALL_PREFIX@/bin/veyon-configurator
+Exec=@CMAKE_INSTALL_PREFIX@/bin/ClassKeep-configurator
 Icon=veyon-configurator
 Terminal=false
-Name=Veyon Configurator
-Comment=Configuration tool for Veyon (Virtual Eye On Networks)
-Comment[de]=Einrichtungswerkzeug für Veyon (Virtual Eye On Networks)
+Name=ClassKeep Configurator
+Comment=Configuration tool for ClassKeep
+Comment[de]=Einrichtungswerkzeug für ClassKeep
 Categories=Qt;Education;Network;Settings;System;RemoteAccess;
 Keywords=classroom,control,computer,room,lab,monitoring,teacher,student,settings,configuration

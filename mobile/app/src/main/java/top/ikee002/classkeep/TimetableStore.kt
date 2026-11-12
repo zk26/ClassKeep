@@ -28,10 +28,67 @@ data class TimetableCourse(
     val subject: String,
 )
 
+/**
+ * 2.0.0 可调作息参数：一天几节课、每节时长、大课间/午休放在第几节之后、
+ * 单列时间还是双列时间。改完由 [buildPeriods] 重新生成节次。
+ */
+data class TimetableConfig(
+    val lessonsPerDay: Int = 8,
+    val lessonMinutes: Int = 40,
+    val shortBreakMinutes: Int = 10,
+    val dayStart: String = "08:20",
+    val bigBreakAfter: Int = 2,      // 0 = 不设大课间
+    val bigBreakMinutes: Int = 30,
+    val noonAfter: Int = 4,          // 0 = 不设午休
+    val noonMinutes: Int = 130,
+    val dualTimeColumn: Boolean = true, // true = 起/止两列，false = 一列显示 起-止
+)
+
+fun defaultTimetableConfig(): TimetableConfig = TimetableConfig()
+
+private fun formatMinutes(total: Int): String {
+    val t = ((total % 1440) + 1440) % 1440
+    return "%02d:%02d".format(t / 60, t % 60)
+}
+
+/** Regenerate the period list from the configurable timetable parameters. */
+fun buildPeriods(config: TimetableConfig): List<TimetablePeriod> {
+    val result = mutableListOf<TimetablePeriod>()
+    var cursor = minutes(config.dayStart) ?: (8 * 60 + 20)
+    val count = config.lessonsPerDay.coerceIn(1, 12)
+    val lesson = config.lessonMinutes.coerceIn(10, 120)
+    val shortBreak = config.shortBreakMinutes.coerceIn(0, 60)
+    for (i in 1..count) {
+        val end = cursor + lesson
+        result.add(TimetablePeriod("第${i}节", formatMinutes(cursor), formatMinutes(end)))
+        cursor = end
+        if (i >= count) break
+        when {
+            config.bigBreakAfter in 1..count && i == config.bigBreakAfter -> {
+                val stop = cursor + config.bigBreakMinutes.coerceIn(5, 180)
+                result.add(
+                    TimetablePeriod("大课间", formatMinutes(cursor), formatMinutes(stop), isBreak = true)
+                )
+                cursor = stop
+            }
+            config.noonAfter in 1..count && i == config.noonAfter -> {
+                val stop = cursor + config.noonMinutes.coerceIn(10, 300)
+                result.add(
+                    TimetablePeriod("午休", formatMinutes(cursor), formatMinutes(stop), isBreak = true)
+                )
+                cursor = stop
+            }
+            else -> cursor += shortBreak
+        }
+    }
+    return result
+}
+
 data class Timetable(
     val name: String = "默认作息",
     val periods: List<TimetablePeriod> = defaultPeriods(),
     val courses: List<TimetableCourse> = emptyList(),
+    val config: TimetableConfig = defaultTimetableConfig(),
 )
 
 val WEEKDAYS = listOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")
@@ -53,19 +110,11 @@ fun subjectColor(subject: String): Int {
     return SUBJECT_COLORS[index]
 }
 
-fun defaultPeriods(): List<TimetablePeriod> = listOf(
-    TimetablePeriod("早读", "07:50", "08:20"),
-    TimetablePeriod("第一节", "08:20", "09:00"),
-    TimetablePeriod("第二节", "09:10", "09:50"),
-    TimetablePeriod("大课间", "09:50", "10:20", isBreak = true),
-    TimetablePeriod("第三节", "10:20", "11:00"),
-    TimetablePeriod("第四节", "11:10", "11:50"),
-    TimetablePeriod("午休", "11:50", "14:00", isBreak = true),
-    TimetablePeriod("第五节", "14:00", "14:40"),
-    TimetablePeriod("第六节", "14:50", "15:30"),
-    TimetablePeriod("第七节", "15:40", "16:20"),
-    TimetablePeriod("第八节", "16:30", "17:10"),
-)
+/**
+ * The default schedule is generated from [defaultTimetableConfig], so the
+ * values shown in 「作息设置」 always describe the grid the teacher actually sees.
+ */
+fun defaultPeriods(): List<TimetablePeriod> = buildPeriods(defaultTimetableConfig())
 
 fun todayDay(): Int {
     val value = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) // 1=Sun
@@ -124,6 +173,19 @@ class TimetableStore(context: Context) {
         val courses = current.courses.filterNot { it.day == day && it.period == period }.toMutableList()
         if (subject.isNotBlank()) courses.add(TimetableCourse(day, period, subject.trim()))
         save(current.copy(courses = courses))
+    }
+
+    /** Rebuild the period rows from new settings, dropping courses beyond the new range. */
+    fun updateConfig(config: TimetableConfig) {
+        val current = load()
+        val periods = buildPeriods(config)
+        val courses = current.courses.filter { it.period in periods.indices }
+        save(current.copy(periods = periods, courses = courses, config = config))
+    }
+
+    fun setDualTimeColumn(dual: Boolean) {
+        val current = load()
+        save(current.copy(config = current.config.copy(dualTimeColumn = dual)))
     }
 
     companion object {
@@ -186,10 +248,24 @@ class TimetableStore(context: Context) {
                 }
             } else periods
 
+            val cfg = root.optJSONObject("config")
+            val config = if (cfg != null) TimetableConfig(
+                lessonsPerDay = cfg.optInt("lessonsPerDay", 8),
+                lessonMinutes = cfg.optInt("lessonMinutes", 40),
+                shortBreakMinutes = cfg.optInt("shortBreakMinutes", 10),
+                dayStart = cfg.optString("dayStart").ifEmpty { "08:20" },
+                bigBreakAfter = cfg.optInt("bigBreakAfter", 2),
+                bigBreakMinutes = cfg.optInt("bigBreakMinutes", 30),
+                noonAfter = cfg.optInt("noonAfter", 4),
+                noonMinutes = cfg.optInt("noonMinutes", 130),
+                dualTimeColumn = cfg.optBoolean("dualTimeColumn", true),
+            ) else defaultTimetableConfig()
+
             return Timetable(
                 name = root.optString("name").ifEmpty { nested?.optString("name") ?: "默认作息" },
                 periods = effectivePeriods.ifEmpty { defaultPeriods() },
                 courses = courses,
+                config = config,
             )
         }
 
@@ -213,10 +289,21 @@ class TimetableStore(context: Context) {
                         .put("subject", it.subject)
                 )
             }
+            val config = JSONObject()
+                .put("lessonsPerDay", timetable.config.lessonsPerDay)
+                .put("lessonMinutes", timetable.config.lessonMinutes)
+                .put("shortBreakMinutes", timetable.config.shortBreakMinutes)
+                .put("dayStart", timetable.config.dayStart)
+                .put("bigBreakAfter", timetable.config.bigBreakAfter)
+                .put("bigBreakMinutes", timetable.config.bigBreakMinutes)
+                .put("noonAfter", timetable.config.noonAfter)
+                .put("noonMinutes", timetable.config.noonMinutes)
+                .put("dualTimeColumn", timetable.config.dualTimeColumn)
             return JSONObject()
                 .put("name", timetable.name)
                 .put("periods", periods)
                 .put("courses", courses)
+                .put("config", config)
                 .toString()
         }
     }

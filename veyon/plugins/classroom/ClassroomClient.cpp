@@ -1,5 +1,5 @@
 /*
- * ClassroomClient.cpp - always-on-top student widgets and activity sampler
+ * ClassroomClient.cpp - non-topmost student card, popups and activity sampler
  *
  * This file is part of the Veyon classroom modification.
  */
@@ -64,6 +64,15 @@ static void keepOnTop( QWidget* widget )
 }
 
 
+//! The student floating card is deliberately NOT always-on-top: it must not
+//! cover the student's work. Only the popups opened from it stay on top.
+static void keepFloating( QWidget* widget )
+{
+	widget->setWindowFlags( Qt::Tool | Qt::CustomizeWindowHint | Qt::FramelessWindowHint );
+	VeyonCore::platform().coreFunctions().raiseWindow( widget, false );
+}
+
+
 static QPoint mouseGlobalPoint( QMouseEvent* event )
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -81,7 +90,7 @@ ClassroomClientWidget::ClassroomClientWidget( QWidget* parent ) :
 	setObjectName( QStringLiteral("classroomClient") );
 	setWindowTitle( Classroom::productName() );
 	setAttribute( Qt::WA_DeleteOnClose, false );
-	keepOnTop( this );
+	keepFloating( this );
 
 	const auto dark = VeyonCore::useDarkMode();
 	setStyleSheet( QStringLiteral(
@@ -93,16 +102,16 @@ ClassroomClientWidget::ClassroomClientWidget( QWidget* parent ) :
 			 dark ? QStringLiteral("#555555") : QStringLiteral("#9fc4d0"),
 			 dark ? QStringLiteral("#f0f0f0") : QStringLiteral("#202020") ) );
 
+	m_identityLabel = new QLabel( this );
+	m_identityLabel->setStyleSheet( QStringLiteral("font-size: 15px; font-weight: bold;") );
 	m_statusLabel = new QLabel( this );
 	m_statusLabel->setWordWrap( true );
+	m_statusLabel->setStyleSheet( QStringLiteral("font-size: 10px;") );
 	m_lockLabel = new QLabel( this );
 	m_lockLabel->setAlignment( Qt::AlignRight | Qt::AlignVCenter );
 
 	auto* header = new QHBoxLayout;
-	auto* title = new QLabel( tr( "Classroom client" ), this );
-	title->setStyleSheet( QStringLiteral("font-weight: bold;") );
-	header->addWidget( title );
-	header->addStretch( 1 );
+	header->addWidget( m_identityLabel, 1 );
 	header->addWidget( m_lockLabel );
 
 	m_seatEdit = new QLineEdit( this );
@@ -123,16 +132,19 @@ ClassroomClientWidget::ClassroomClientWidget( QWidget* parent ) :
 	m_loginButton = new QPushButton( tr( "Sign in" ), this );
 	m_aiButton = new QPushButton( tr( "AI assistant" ), this );
 	m_aiButton->setEnabled( false );
-	m_scoreButton = new QPushButton( tr( "Score" ), this );
+	m_scoreButton = new QPushButton( tr( "My score" ), this );
 	m_callButton = new QPushButton( tr( "Call teacher" ), this );
 
+	// The card exposes exactly TWO action buttons: score query and AI. The
+	// sign-in and call-teacher controls stay available but are only shown while
+	// nobody is signed in (call-teacher also lives in the context menu).
 	auto* buttonLayout = new QHBoxLayout;
 	buttonLayout->addWidget( m_loginButton );
-	buttonLayout->addWidget( m_aiButton );
-	buttonLayout->addWidget( m_scoreButton );
 	buttonLayout->addWidget( m_callButton );
+	buttonLayout->addWidget( m_scoreButton );
+	buttonLayout->addWidget( m_aiButton );
 
-	auto* hint = new QLabel( tr( "Right-click for the protected exit dialog" ), this );
+	auto* hint = new QLabel( tr( "Right-click: call the teacher / protected exit" ), this );
 	hint->setStyleSheet( QStringLiteral("font-size: 9px; opacity: 0.7;") );
 
 	auto* mainLayout = new QVBoxLayout( this );
@@ -147,13 +159,38 @@ ClassroomClientWidget::ClassroomClientWidget( QWidget* parent ) :
 	setFixedWidth( 360 );
 	adjustSize();
 	placeOnScreen();
+	updateVisibility();
 	updateStatus();
+
+	// "server 不退出就关闭不了": close requests are ignored and a watchdog
+	// restores the card if anything else hides it (taskkill of the worker is
+	// handled by the service watchdog, so this card lives as long as it does).
+	m_guardTimer = new QTimer( this );
+	m_guardTimer->setInterval( 1500 );
+	connect( m_guardTimer, &QTimer::timeout, this, [this]() {
+		if( m_hideAllowed == false && m_exitProtection && isVisible() == false ) { show(); }
+	} );
+	m_guardTimer->start();
 
 	connect( m_loginButton, &QPushButton::clicked, this, &ClassroomClientWidget::handleLogin );
 	connect( m_aiButton, &QPushButton::clicked, this, &ClassroomClientWidget::showAiChat );
 	connect( m_keyEdit, &QLineEdit::returnPressed, this, &ClassroomClientWidget::handleLogin );
 	connect( m_scoreButton, &QPushButton::clicked, this, [this]() { Q_EMIT scoreRequested(); } );
 	connect( m_callButton, &QPushButton::clicked, this, [this]() { Q_EMIT callTeacherRequested(); } );
+}
+
+
+void ClassroomClientWidget::updateVisibility()
+{
+	const auto signedIn = m_loggedIn;
+	m_seatEdit->setVisible( signedIn == false );
+	m_nameEdit->setVisible( signedIn == false );
+	m_keyEdit->setVisible( signedIn == false );
+	m_loginButton->setVisible( signedIn == false && m_allowSelfLogin );
+	m_callButton->setVisible( signedIn == false );
+	m_scoreButton->setVisible( true );
+	m_aiButton->setVisible( true );
+	adjustSize();
 }
 
 
@@ -186,6 +223,7 @@ void ClassroomClientWidget::setSettings( const QJsonObject& settings )
 
 	m_aiButton->setEnabled( m_aiEnabled );
 	m_loginButton->setEnabled( m_allowSelfLogin );
+	updateVisibility();
 	updateStatus();
 }
 
@@ -219,12 +257,8 @@ void ClassroomClientWidget::setIdentity( const QString& className, const QString
 	m_seatEdit->setText( seat );
 	m_nameEdit->setText( student );
 	m_keyEdit->clear();
-	m_seatEdit->setVisible( false );
-	m_nameEdit->setVisible( false );
-	m_keyEdit->setVisible( false );
-	m_loginButton->setText( tr( "Sign in again" ) );
-	m_loginButton->setVisible( m_allowSelfLogin );
-
+	m_loginButton->setText( tr( "Sign in" ) );
+	updateVisibility();
 	updateStatus();
 	Q_EMIT identityChanged( m_seat, m_student, true );
 }
@@ -238,11 +272,8 @@ void ClassroomClientWidget::clearIdentity()
 	m_seatEdit->clear();
 	m_nameEdit->clear();
 	m_keyEdit->clear();
-	m_seatEdit->setVisible( true );
-	m_nameEdit->setVisible( true );
-	m_keyEdit->setVisible( true );
 	m_loginButton->setText( tr( "Sign in" ) );
-	m_loginButton->setVisible( true );
+	updateVisibility();
 	updateStatus();
 	Q_EMIT identityChanged( {}, {}, false );
 }
@@ -257,12 +288,16 @@ void ClassroomClientWidget::setLocked( bool locked )
 
 void ClassroomClientWidget::updateStatus()
 {
-	const auto studentText = m_loggedIn ? QStringLiteral("%1 (%2)").arg( m_student, m_seat ) : tr( "not signed in" );
-	m_statusLabel->setText( tr( "Class: %1  |  Student: %2  |  Key: %3" ).
+	m_statusLabel->setText( tr( "Class: %1  |  Key: %2" ).
 							arg( m_className.isEmpty() ? tr( "not selected" ) : m_className,
-								 studentText,
 								 m_sessionKey.isEmpty() ? tr( "none" ) : tr( "active" ) ) );
 	m_lockLabel->setText( m_locked ? tr( "locked" ) : tr( "unlocked" ) );
+
+	// Prominent line: shield (client protection) + signed-in name + seat number.
+	const auto shield = QString::fromUtf8( "\xF0\x9F\x9B\xA1" );
+	m_identityLabel->setText( m_loggedIn ?
+		QStringLiteral("%1 %2  |  %3 %4").arg( shield ).arg( m_student ).arg( tr( "Seat" ) ).arg( m_seat ) :
+		QStringLiteral("%1 %2").arg( shield ).arg( tr( "Not signed in" ) ) );
 }
 
 
@@ -338,9 +373,7 @@ void ClassroomClientWidget::handleLogin()
 	if( m_loggedIn )
 	{
 		m_loggedIn = false;
-		m_seatEdit->setVisible( true );
-		m_nameEdit->setVisible( true );
-		m_keyEdit->setVisible( true );
+		updateVisibility();
 	}
 
 	setIdentity( m_className, seat, name );
@@ -430,10 +463,39 @@ void ClassroomClientWidget::requestQuit()
 }
 
 
+void ClassroomClientWidget::allowHide()
+{
+	m_hideAllowed = true;
+	if( m_guardTimer ) { m_guardTimer->stop(); }
+	hide();
+}
+
+
+void ClassroomClientWidget::reactivate()
+{
+	m_hideAllowed = false;
+	if( m_guardTimer && m_guardTimer->isActive() == false ) { m_guardTimer->start(); }
+	show();
+	raise();
+}
+
+
 void ClassroomClientWidget::closeEvent( QCloseEvent* event )
 {
+	// The card cannot be closed while the ClassKeep service is running. Only
+	// the teacher's StopClient command (or an authorized protected exit) may
+	// stop it; a plain close/hide request is simply refused.
+	// With client protection OFF (teacher switched it off) the student may hide
+	// the card; the worker itself is still kept alive by the service watchdog.
+	if( m_hideAllowed || m_exitProtection == false )
+	{
+		event->accept();
+		hide();
+		return;
+	}
 	event->ignore();
-	hide();
+	show();
+	raise();
 }
 
 
@@ -441,6 +503,8 @@ void ClassroomClientWidget::contextMenuEvent( QContextMenuEvent* event )
 {
 	QMenu menu( this );
 	menu.addAction( tr( "Show AI assistant" ), this, &ClassroomClientWidget::showAiChat );
+	menu.addAction( tr( "Show my score" ), this, [this]() { Q_EMIT scoreRequested(); } );
+	menu.addAction( tr( "Call the teacher" ), this, [this]() { Q_EMIT callTeacherRequested(); } );
 	menu.addSeparator();
 	menu.addAction( tr( "Exit client (protected)..." ), this, &ClassroomClientWidget::requestQuit );
 	menu.exec( event->globalPos() );
@@ -782,6 +846,19 @@ void ClassroomMonitor::setSettings( const QJsonObject& settings )
 	m_enabled = settings.value( Classroom::SettingKey::monitoringEnabled() ).toBool( true );
 	m_captureWindowTitle = settings.value( Classroom::SettingKey::captureWindowTitle() ).toBool( true );
 	m_captureProcess = settings.value( Classroom::SettingKey::captureProcess() ).toBool( true );
+
+	const auto toStringList = [&settings]( const QString& key ) {
+		QStringList rules;
+		for( const auto& value : settings.value( key ).toArray() )
+		{
+			const auto rule = value.toString().trimmed();
+			if( rule.isEmpty() == false ) { rules.append( rule ); }
+		}
+		return rules;
+	};
+	m_blockedApps = toStringList( Classroom::SettingKey::blockedApps() );
+	m_blockedWebsites = toStringList( Classroom::SettingKey::blockedWebsites() );
+
 	const auto interval = settings.value( Classroom::SettingKey::captureInterval() ).toInt( 5 );
 	m_timer->setInterval( std::max( 1, interval ) * 1000 );
 	if( m_enabled ) { start(); }
@@ -821,6 +898,25 @@ void ClassroomMonitor::sample()
 	for( const auto& candidate : browsers )
 	{
 		if( application.toLower().contains( candidate ) ) { browser = true; break; }
+	}
+
+	// Fuzzy blocking: every rule is a case-insensitive substring of either the
+	// foreground process name (apps) or the browser window title (websites).
+	const auto matchRule = []( const QString& value, const QStringList& rules ) {
+		for( const auto& rule : rules )
+		{
+			if( rule.isEmpty() == false && value.contains( rule, Qt::CaseInsensitive ) ) { return rule; }
+		}
+		return QString{};
+	};
+	const auto appRule = matchRule( application, m_blockedApps );
+	const auto webRule = browser ?
+		matchRule( title + QLatin1Char(' ') + application, m_blockedWebsites ) : QString{};
+	if( appRule.isEmpty() == false || webRule.isEmpty() == false )
+	{
+		Q_EMIT blockedActivity( application, title,
+								appRule.isEmpty() ? webRule : appRule,
+								appRule.isEmpty() );
 	}
 
 	Q_EMIT activity( application, title, browser );

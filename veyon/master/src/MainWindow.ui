@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string notr="true">课守 ClassKeep 教师端</string>
+   <string notr="true">ClassKeep Master</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../../core/resources/core.qrc">
@@ -110,7 +110,7 @@
         </rect>
        </property>
        <property name="toolTip">
-        <string>About Veyon</string>
+        <string>About ClassKeep</string>
        </property>
        <property name="text">
         <string>About</string>

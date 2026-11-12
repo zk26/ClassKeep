@@ -47,9 +47,9 @@ public:
 	Plugin::Uid uid() const override { return Classroom::pluginUid(); }
 	QVersionNumber version() const override { return QVersionNumber( 1, 0 ); }
 	QString name() const override { return QStringLiteral("ClassKeep"); }
-	QString description() const override { return tr( "课守 ClassKeep - classes, logs, scoring, analysis and control" ); }
-	QString vendor() const override { return QStringLiteral("课守 ClassKeep"); }
-	QString copyright() const override { return QStringLiteral("课守 ClassKeep"); }
+	QString description() const override { return tr( "ClassKeep - classes, logs, scoring, analysis and control" ); }
+	QString vendor() const override { return QStringLiteral("ClassKeep"); }
+	QString copyright() const override { return QStringLiteral("ClassKeep"); }
 
 	const FeatureList& featureList() const override;
 

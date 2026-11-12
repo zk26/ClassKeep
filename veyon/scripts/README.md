@@ -19,7 +19,7 @@
 
 早期版本用「DLL 文件名前缀白名单」手工复制运行时库，漏掉了
 `libbz2-1.dll`、`libmd4c.dll`、`libbrotli*.dll` 等间接依赖，安装后
-`veyon-server.exe` 直接报「找不到 DLL」。`collect_mingw_deps.py` 改为：
+`ClassKeep-server.exe` 直接报「找不到 DLL」。`collect_mingw_deps.py` 改为：
 
 1. 遍历 `payload/` 下所有 `.exe` / `.dll`（含子目录）；
 2. 对每个文件跑 `ntldd`，解析输出里所有 DLL 名；
@@ -32,10 +32,10 @@
 
 | ROLE | 组件页 |
 |---|---|
-| `teacher` | 「服务端（必选，只读）」+「教师控制台（可选，`veyon-master.exe`）」 |
+| `teacher` | 「服务端（必选，只读）」+「教师控制台（可选，`ClassKeep-master.exe`）」 |
 | `student` | **只有「服务端（必选，只读）」**；编译时就不包含 Master 段 |
 
-> 安装/卸载**沿用上游原有的 `veyon-wcli.exe`**
+> 安装/卸载**沿用上游原有的 `ClassKeep-wcli.exe`**
 > （`service register/unregister`、`config set`、`service start`）。
 > 该 CLI 启动时会构造完整 `VeyonCore`，任何 `*-platform.dll` 或 QCA `rsa`
 > 插件缺失都会 `qFatal` → UCRT `__fastfail`（「快速异常检测失败」对话框）。
@@ -64,8 +64,8 @@ CI 已把 `windows-platform` 设为必需的独立构建步骤，不再静默跳
 
 ```bash
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=student installer.nsi
 ```
 
 输出：`dist/ClassKeep-Teacher-<ver>-win64-setup.exe`、

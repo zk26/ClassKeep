@@ -17,7 +17,7 @@ namespace Classroom
 
 inline QString productName()
 {
-	return QStringLiteral("课守 ClassKeep");
+	return QStringLiteral("ClassKeep");
 }
 
 inline QString productNameEn()
@@ -106,7 +106,21 @@ enum class Command
 
 	// student uninstall protection (ALWAYS append: values are the wire protocol)
 	// Argument::Enabled carries on/off.
-	SetUninstallProtection
+	SetUninstallProtection,
+
+	// 2.0.0 teacher quick tools. ALWAYS append: numeric values are the wire
+	// protocol and must stay compatible with already deployed 1.x workers.
+	// "Protection" and "UWF" are TWO INDEPENDENT switches:
+	//   SetExitProtection = client process protection (student cannot quit the
+	//                       ClassKeep worker / floating card).
+	//   UwfSetFilter      = OS-level write filter / restore-on-reboot, used to
+	//                       survive reboots and to install software.
+	SetExitProtection,
+	OpenSoftware,
+	OpenWebsite,
+	SetAppBlockRules,
+	SetWebBlockRules,
+	ProtectionStateReport
 };
 
 enum class Argument
@@ -208,6 +222,10 @@ inline QString demo()         { return QStringLiteral("demo"); }
 inline QString checkIn()      { return QStringLiteral("check-in"); }
 inline QString quickScore()   { return QStringLiteral("quick-score"); }
 inline QString protection()   { return QStringLiteral("protection"); }
+inline QString appBlock()     { return QStringLiteral("app-block"); }
+inline QString webBlock()     { return QStringLiteral("web-block"); }
+inline QString software()     { return QStringLiteral("software"); }
+inline QString website()      { return QStringLiteral("website"); }
 }
 
 namespace SettingKey
@@ -237,6 +255,9 @@ inline QString bridgeEnabled()      { return QStringLiteral("bridgeEnabled"); }
 inline QString syncEnabled()        { return QStringLiteral("syncEnabled"); }
 inline QString silencePageText()    { return QStringLiteral("silencePageText"); }
 inline QString wordCloudStopWords() { return QStringLiteral("wordCloudStopWords"); }
+//! Fuzzy (case-insensitive substring) rules persisted on the teacher machine.
+inline QString blockedApps()        { return QStringLiteral("blockedApps"); }
+inline QString blockedWebsites()    { return QStringLiteral("blockedWebsites"); }
 }
 
 }

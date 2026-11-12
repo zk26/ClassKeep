@@ -1,8 +1,9 @@
-# 课守 ClassKeep
+# ClassKeep
 
-> 基于 [Veyon](https://veyon.io/) 4.x 的教学管理定制分支。中文名「课守」，英文名 `ClassKeep`。
+> 基于 [Veyon](https://veyon.io/) 4.x 的教学管理定制分支。**自 2.0.0 起产品名只使用英文 `ClassKeep`**。
 > 仓库：<https://github.com/zk26/ClassKeep> · 许可：**GPL-2.0-or-later**
 > 本分支不是 Veyon 官方版本，与上游项目无隶属关系。
+> 全部进程名 / 服务名 / 窗口名的改名清单与 GPL 修改声明见 [`NOTICE.md` §4.1](NOTICE.md)。
 
 一个课堂上真正能用的「看得见、管得住、记得下、评得准」的整套方案：
 教师机控制台 + 学生机常驻客户端 + 教师机数据主库 + Android 教室端 App + 本地 AI。
@@ -33,6 +34,14 @@ G:\veyon\  (= 仓库根)
 ```
 
 `ClassKeep_logo.png` 是唯一的品牌图标来源，桌面端 `.ico` 与 Android `mipmap` 图标均由它生成。
+
+**2.0.0 命名**：所有进程均为 `ClassKeep-master.exe` / `ClassKeep-server.exe` /
+`ClassKeep-worker.exe` / `ClassKeep-service.exe` / `ClassKeep-configurator.exe` /
+`ClassKeep-cli.exe` / `ClassKeep-wcli.exe`，Windows 服务名为 `ClassKeepService`，
+安装目录为 `%PROGRAMFILES64%\ClassKeep\Master`（教师机）与 `...\Student`（学生机）。
+CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目录仍沿用上游标识，
+详见 `NOTICE.md` §4.1。
+
 本仓库保留了上游 Veyon 的完整提交历史（详见 `git log`）；早期留下的
 `veyon/mobile/` 历史副本与废弃的 ZIP 打包脚本已清理。
 
@@ -59,13 +68,16 @@ G:\veyon\  (= 仓库根)
 > | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
 > 三类产物全部真实编译，不含占位包或伪造二进制。
-> **当前最新为 [v1.5.1](https://github.com/zk26/ClassKeep/releases/tag/v1.5.1)**：
-> 沿用原有 `veyon-wcli.exe` 安装流程并补齐启动必需的平台/QCA 插件；
-> 安装器现在会**自检服务是否真的 RUNNING** 并把返回码写入 `install.log`。
+> **当前最新为 [v2.0.0](https://github.com/zk26/ClassKeep/releases/tag/v2.0.0)**：
+> 全量统一英文 `ClassKeep` 命名；**修复 1.5.1 升级安装时
+> 「无法打开要写入的文件 … veyon-worker.exe」**——安装前先停止并清理
+> 新/旧服务与全部客户端进程，等待文件句柄释放后再写入；
+> 安装器仍会自检服务 RUNNING 并把返回码写入 `install.log`。
 > 桌面端**默认简体中文**（Configurator → General → Language 可切换），
-> 窗口标题/任务栏/启动页/配置器/关于/服务名与图标统一为「课守 ClassKeep」。
+> 界面与中文译文中的 Veyon 品牌串统一为 ClassKeep。
 > 教师端支持座位拖拽排序（下次开机不变）、监控缩略图显示姓名+当前分数、
-> 学生端卸载保护、常用功能置顶的小图标工具栏；APP 为 5 个底部标签。
+> 学生端卸载保护、常用功能置顶的小图标工具栏；APP 为 **4 个底部标签
+> （课堂 / 课表 / 配置 / 更多）**，矢量图标 + 常显名称，课表作息可调、更多页含导入导出与课堂回顾。
 > 旧版 ZIP / preset 包与有缺陷的 Release 已删除。
 > Windows 编译路线见 [`CLASSKEEP-BUILD.md` 路线 D](veyon/docs/CLASSKEEP-BUILD.md)。
 
@@ -101,8 +113,8 @@ cd mobile
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=student installer.nsi
 ```
 
 详见 [`veyon/scripts/README.md`](veyon/scripts/README.md)。
@@ -156,7 +168,7 @@ makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
 - Android 端：本机与 GitHub Actions 均实测通过（`assembleDebug` + `testDebugUnitTest`）。
 - 桌面端 Linux/Qt6/GCC：**ClassKeep Build Check 全绿**，`classroom.so` 编译链接成功。
 - 桌面端 Windows/Qt6/MinGW：**ClassKeep Windows Build 全绿**，`classroom.dll` 与
-  `veyon-master.exe` / `veyon-service.exe` 等全部编译成功，UWF / Core Audio / WFP 专属代码已过编译器。
+  `ClassKeep-master.exe` / `ClassKeep-service.exe` 等全部编译成功，UWF / Core Audio / WFP 专属代码已过编译器。
 - 仍未完成：在真实 UWF 学生机上的**安装联调**与功能验证（需实际机房环境）。
 - 编译或部署如遇报错，请通过仓库 Issues 反馈。
 

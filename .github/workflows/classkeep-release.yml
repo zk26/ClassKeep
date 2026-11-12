@@ -15,9 +15,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version without the v prefix (e.g. 1.0.1)'
+        description: 'Version without the v prefix (e.g. 2.0.0)'
         required: true
-        default: '1.0.1'
+        default: '2.0.0'
 
 permissions:
   contents: write
@@ -178,7 +178,7 @@ jobs:
         run: |
           $v = '${{ github.event.inputs.version }}'
           if ([string]::IsNullOrEmpty($v)) { $v = $env:GITHUB_REF_NAME -replace '^v', '' }
-          if ([string]::IsNullOrEmpty($v)) { $v = '1.3.0' }
+          if ([string]::IsNullOrEmpty($v)) { $v = '2.0.0' }
           "value=$v" >> $env:GITHUB_OUTPUT
 
       # A hand-written DLL whitelist produced installs that failed with
@@ -245,7 +245,7 @@ jobs:
         run: |
           $v = '${{ github.event.inputs.version }}'
           if ([string]::IsNullOrEmpty($v)) { $v = $env:GITHUB_REF_NAME -replace '^v', '' }
-          if ([string]::IsNullOrEmpty($v)) { $v = '1.3.0' }
+          if ([string]::IsNullOrEmpty($v)) { $v = '2.0.0' }
           "value=$v" >> $env:GITHUB_OUTPUT
 
       - name: Assemble the three artifacts
@@ -317,7 +317,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
-          name: 课守 ClassKeep ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
+          name: ClassKeep ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
           body_path: dist/RELEASE-NOTES.md
           files: |
             dist/ClassKeep-Teacher-*-win64-setup.exe

@@ -1,4 +1,4 @@
-# 课守 ClassKeep {VER}
+# ClassKeep {VER}
 
 三种产物均由 GitHub Actions **真实编译**，不是占位包：
 
@@ -9,39 +9,60 @@
 | APP | `ClassKeep-Mobile-{VER}.apk` | Ubuntu + JDK 21 + Android SDK，`:app:assembleDebug` + 单元测试 |
 | 校验 | `SHA256SUMS.txt` | 覆盖上述三者 |
 
-安装器沿用 Veyon 官方安装流程：自动注册并启动 Veyon Service、放行防火墙、启用 SAS，
+安装器自动注册并启动 `ClassKeepService`、放行防火墙、启用 SAS，
 并把 `classroom.dll` 等插件、Qt6/CRT 运行时 DLL 与 Qt 插件安装到对应目录。
-自 {VER} 起运行时依赖由 `ntldd` 递归解析 PE 导入闭包收集，**不再使用手工 DLL 白名单**
-（旧版会报 `libbz2-1.dll` / `libmd4c.dll` 缺失）。
-安装/卸载沿用 Veyon 原有的 `veyon-wcli.exe`；该 CLI 启动必需
+运行时依赖由 `ntldd` 递归解析 PE 导入闭包收集，**不使用手工 DLL 白名单**。
+安装/卸载使用 `ClassKeep-wcli.exe`；该 CLI 启动必需
 `plugins/windows-platform.dll` 与 Qt6 版 `crypto/libqca-ossl.dll`，
-发布流水线已对两者做硬校验，不再出现「快速异常检测失败」崩溃框。
+发布流水线已对两者做硬校验。
 
-## 本版新增
+## {VER} 重要变更：全量英文命名
 
-- 教师端座位网格支持**拖拽排序**，顺序即时保存、下次开机不变；
-  Bridge 按该顺序返回学生，APP 加分页据此生成卡片。
-- APP 重做为 5 个底部标签：课堂 / 加分 / 控制 / 课表 / 更多。
-  密钥可手动输入或导入 `.key` 文件；学生加减分 `-5…+5` 步长 1，
-  填原因后乐观更新、失败回滚；新增周课表与平板适配（`sw600dp` / `sw720dp`）。
-- UI 按交互规范重做：卡片去阴影、同心圆角、常驻标签与帮助文字、
-  底部胶囊指示随选中项平滑移动。详见 `veyon/docs/CLASSKEEP-UI.md`。
-- {VER} 修复手机端适配：底部导航栏改为固定高度、所有子控件使用显式高度，
-  解决窄屏上胶囊被竖向拉满全屏、内容区变白屏的问题。
+所有进程名、服务名与用户可见名称统一为英文 `ClassKeep` 前缀，
+避免教师/管理员在任务管理器、服务控制台、防火墙规则里分不清程序归属：
 
-## 桌面端本版更新
+| 旧（≤ 1.5.1） | 新（2.0.0） |
+|---|---|
+| `veyon-master.exe` / `veyon-configurator.exe` | `ClassKeep-master.exe` / `ClassKeep-configurator.exe` |
+| `veyon-service.exe` / `veyon-server.exe` / `veyon-worker.exe` | `ClassKeep-service.exe` / `ClassKeep-server.exe` / `ClassKeep-worker.exe` |
+| `veyon-cli.exe` / `veyon-wcli.exe` | `ClassKeep-cli.exe` / `ClassKeep-wcli.exe` |
+| `VeyonService` | `ClassKeepService` |
+| `课守 ClassKeep 教师端` 等中文产品名 | `ClassKeep Master` / `ClassKeep Student` |
 
-- **服务自检（重要）**：安装器现在捕获 `veyon-wcli.exe service register/start`
-  的退出码并写入 `$INSTDIR\install.log`，再用 `sc query` 确认 `VeyonService`
-  处于 RUNNING；未启动时用系统服务控制兜底并弹出中文提示，不再出现
-  「装完了但 127.0.0.1 连不上」的静默失败。
-- **默认中文界面**：随包提供 `translations/veyon_zh_CN.qm` 与 Qt 中文翻译，
-  Configurator → General → Language 里可切换到其它语言。
-- **名称与图标全部统一**：窗口标题、任务栏、启动页、配置器、关于对话框、
-  服务显示名均为「课守 ClassKeep」；Qt 窗口图标改用 `ClassKeep_logo.png`。
-- **监控缩略图显示姓名 + 当前分数**；教师端「System & devices」页新增
-  学生端**卸载保护**开关（保护开启时卸载器会拒绝运行）。
-- Master 工具栏图标缩小，常用功能置顶、不常用功能折叠进 `>>` 菜单。
+改名清单、为兼容而保留的上游技术标识与 GPL 修改声明见 `NOTICE.md` §4.1。
+CMake 构建目标仍为 `veyon-*`（仅编译期标识），实际产物名已全部改变。
+
+## 修复
+
+- **修复 1.5.1 升级安装失败**：报「无法打开要写入的文件
+  `C:\Program Files\ClassKeep\Teacher\veyon-worker.exe`」的根因是
+  `service unregister` 不会停止服务，旧 `VeyonService` 派生的 worker 仍占用文件句柄。
+  现在安装/卸载前会 `sc stop` + `sc delete` 新旧服务、`taskkill` 新旧全部进程，
+  最多等待 10 秒轮询文件句柄释放，仍被占用时给出可操作的中文提示而不是 NSIS 原始报错框。
+- 自动清理 1.5.1 遗留的 `Teacher` 安装目录与旧卸载注册表项。
+- 修正中文翻译目录与源码 `tr()` 源串不一致导致「关于」等界面回退英文的问题；
+  中文译文中的 Veyon 品牌串统一为 ClassKeep。
+- 统一版本号：`classkeep-windows.yml` 不再硬编码 1.3.0，APK `versionName` 同步为 {VER}。
+
+## 教师端 / 移动端功能
+
+- 教师端新增首个页签 **Quick tools**：全部/选中广播（默认禁 USB 输入但**屏幕正常显示**）、
+  边看边做、启动/关闭客户端保护、启动/关闭 UWF（**不自动重启**，便于装软件）、
+  禁用/启用网关、可设置文案的肃静页、模糊匹配的禁用应用/禁用地址、打开软件/网页、全班加减分等。
+  **客户端保护（防止学生端自行退出）、卸载保护、UWF 还原是三个独立开关**。
+- 座位视图支持**可拖拽网格 + 列表视图**：网格卡片显示 `🛡 姓名 [积分]`，
+  列表视图不抓学生机屏、显示登录名 / IP / 在线 / 客户端保护 / UWF 状态 / 积分。
+- 学生端悬浮卡片**不置顶、服务不退就关不掉**，显示姓名与座位号，只保留查询积分 / AI 两个弹窗按钮。
+- APP 底部栏改为 **4 个标签：课堂 / 课表 / 配置 / 更多**，矢量图标 + 常显名称；
+  「课堂」合并课堂控制与加分减分；课表可设置一天几节课、大课间/午休位置与时长、
+  单列或双列时间；「更多」提供导入导出与课堂回顾（讲了什么 / 干了什么 / 同学表现）。
+
+## 升级注意
+
+- 2.0.0 安装程序会停止并移除旧服务与旧进程，安装过程可能需要十几秒，请耐心等待。
+- `QCoreApplication` 组织名/应用名改为 `ClassKeep`，部分界面偏好会回到默认值；
+  首次升级后请在 `ClassKeep Configurator` 中确认一次配置。
+- 认证密钥与课堂数据目录刻意保持原路径（见 `NOTICE.md` §4.1），不会丢失。
 
 ## 校验
 
@@ -55,7 +76,7 @@ Get-Content SHA256SUMS.txt | ForEach-Object {
 ## 安装顺序
 
 1. **学生机**：以管理员运行学生端安装 EXE，保持「服务端」勾选；安装完即已自动注册并启动服务。
-2. **教师机**：以管理员运行教师端安装 EXE，保持「教师控制台」勾选；再用 Veyon Configurator
+2. **教师机**：以管理员运行教师端安装 EXE，保持「教师控制台」勾选；再用 `ClassKeep Configurator`
    导入/配置认证密钥。
 3. **手机**：安装 APK，输入本堂课密钥与教师机 IP/端口。
 
@@ -66,8 +87,9 @@ Get-Content SHA256SUMS.txt | ForEach-Object {
 - Android APK 是 **debug 签名**（非发布签名），仅供内测；正式分发请自行签名。
 - 构建产物来自 MSYS2 UCRT64/MinGW，未在真实 UWF 学生机上做安装联调；部署前请先在单台机器验证。
 - 学生机须为 Windows 10/11 企业版、教育版或 IoT 企业版（UWF 仅这些版本支持）。
-- 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都无法编译，未包含在安装包中；
-  远程装软件功能请通过课守控制台的「分发并安装」或系统自带部署方式完成。
+- 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都无法编译，未包含在安装包中。
+- 上游 CLI 帮助文本等少量英文字符串仍含 `Veyon` 字样（非产品名、非进程名），
+  中文界面已统一显示为 ClassKeep。
 
 ## 合规
 

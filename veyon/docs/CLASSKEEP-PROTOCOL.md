@@ -37,10 +37,18 @@
 |---|---|
 | `InputDevicesLock`（禁 USB 输入，桌面可见） | `e4a77879-e544-4fec-bc18-e534f33b934c` |
 | `RemoteControl` | `ca00ad68-1709-4abe-85e2-48dff6ccf8a2` |
-| `FullScreenDemo` | `7b6231bd-eb89-45d3-af32-f70663b2f878` |
-| `DemoAllScreens` | `2aca1e9f-25f9-4d0f-9729-01b03c80ab28` |
+| `FullScreenDemo`（demo client meta） | `7b6231bd-eb89-45d3-af32-f70663b2f878` |
+| `Demo`（demo mode） | `6f4cd922-b63e-40bf-9451-536065c7cdf9` |
+| `ShareOwnScreenFullScreen`（真·全屏广播） | `07b375e1-8ab6-4b48-bcb7-75fb3d56035b` |
+| `ShareOwnScreenWindow`（真·窗口演示 / 边看边做） | `68c55fb9-127e-4c9f-9c90-28b998bf1a47` |
+| `DemoAllScreens`（**仅选项，不启动演示**） | `2aca1e9f-25f9-4d0f-9729-01b03c80ab28` |
 | `StartApp` | `da9ca56a-b2ad-4fff-8f8a-929b2927b442` |
 | `DistributeFiles` | `4a70bd5a-fab2-4a4b-a92a-a1e81d2b75ed` |
+
+> **2.0.0 修正**：旧版「广播」按钮对 `DemoAllScreens` 调 `controlFeature()`，
+> 该 UID 只是多屏选项、`DemoFeaturePlugin::controlFeature()` 并不处理，实际什么也没发生。
+> 现在通过 `FeatureManager::startFeature()` 启动 `ShareOwnScreenFullScreen` /
+> `ShareOwnScreenWindow`，再叠加 `InputDevicesLock`（**桌面仍可见**，只禁键鼠输入）。
 
 ---
 
@@ -88,12 +96,34 @@
 | 36 | `SyncReply` | 保留 | 同上 | `SyncDataJson` |
 | 37 | `StartCheckIn` | M→S→W | 教师端「开始签到」，学生机弹出姓名输入框 | `ClassName` |
 | 38 | `CheckInReply` | W→S→M | 学生提交姓名，教师端按「座位号 → 名单姓名」比对 | `ClassName`、`Seat`、`Student`、`CheckInName`、`Host`、`Ip` |
-| 39 | `SetUninstallProtection` | M→S→W | 教师端开启/解除学生端卸载保护 | `Enabled` |
+| 39 | `SetUninstallProtection` | M→S→W | 教师端开启/解除学生端**卸载**保护 | `Enabled` |
+| 40 | `SetExitProtection` | M→S→W | **客户端保护**：禁止学生自行退出 ClassKeep worker / 悬浮卡片 | `Enabled` |
+| 41 | `OpenSoftware` | M→S→W | 在学生机打开指定程序 | `SoftwarePath`、`SoftwareArgs` |
+| 42 | `OpenWebsite` | M→S→W | 在学生机打开指定网址 | `Message`(URL) |
+| 43 | `SetAppBlockRules` | M→S→W | 禁用应用（模糊匹配规则数组） | `RulesJson` |
+| 44 | `SetWebBlockRules` | M→S→W | 禁用地址（模糊匹配规则数组） | `RulesJson` |
+| 45 | `ProtectionStateReport` | W→S→M | 客户端保护状态回报 | `Enabled` |
 
 > `SetUninstallProtection` 收到后，学生端 worker（以 `LocalSystem` 运行）写
 > `HKLM\SOFTWARE\ClassKeep\Student\UninstallProtection` = 1/0；独立的
 > `uninstall.exe` 启动时读同一 DWORD，为 1 则弹提示并 `Abort`。
 > 不需要卸载器联网，教师端离线时保护仍然有效。
+
+> ### 三种「保护」互不相同，请勿混淆
+>
+> | 名称 | 开关 | 作用 |
+> |---|---|---|
+> | **客户端保护** | `SetExitProtection` / `exitProtection` | 防止学生端**进程/悬浮卡片**被自行退出；开启时关闭请求被 `closeEvent()` 拒绝，1.5s 守护定时器会把它重新显示；**关闭保护后允许隐藏卡片**（worker 仍由服务看门狗保活） |
+> | **卸载保护** | `SetUninstallProtection` | 防止学生把安装好的 ClassKeep **卸载**掉 |
+> | **UWF 还原** | `UwfSetFilter` / `UwfQuery` / `UwfRestart` | **系统级写过滤**，重启后还原；用于防学生机改动后掉线，以及**安装软件前先关闭** |
+>
+> 启用/关闭 UWF 只改过滤器状态（重启生效），工具面板**不会自动重启**，
+> 便于教师先关闭 UWF → 安装软件 → 再启用 UWF。需要重启时单独点「重启学生机」。
+>
+> **模糊匹配规则**：`SetAppBlockRules` / `SetWebBlockRules` 下发 `QStringList` JSON 数组，
+> 规则为不区分大小写的子串。学生端 `ClassroomMonitor` 每次采样前台进程名 / 浏览器窗口标题，
+> 命中即以 `app-block` / `web-block` 事件上报教师机，并用用户态 `taskkill` 结束该进程
+> （无驱动、无注入）。规则同时持久化在教师机设置 `blockedApps` / `blockedWebsites`。
 
 > 标注「保留」的命令已在协议中占位但尚未接线；收到时 `default` 分支返回 `false`，不会静默吞掉。
 >

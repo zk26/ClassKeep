@@ -61,7 +61,7 @@ bool ConfigurationManager::applyConfiguration()
 	auto& network = VeyonCore::platform().networkFunctions();
 
 	if( network.configureFirewallException( VeyonCore::filesystem().serverFilePath(),
-											QStringLiteral("Veyon Server"),
+											QStringLiteral("ClassKeep Server"),
 											m_configuration.isFirewallExceptionEnabled() ) == false )
 	{
 		m_errorString = tr("Could not configure the firewall configuration for the Veyon Server.");
@@ -69,7 +69,7 @@ bool ConfigurationManager::applyConfiguration()
 	}
 
 	if( network.configureFirewallException( VeyonCore::filesystem().workerFilePath(),
-											QStringLiteral("Veyon Worker"),
+											QStringLiteral("ClassKeep Worker"),
 											m_configuration.isFirewallExceptionEnabled() ) == false )
 	{
 		m_errorString = tr("Could not configure the firewall configuration for the Veyon Worker.");

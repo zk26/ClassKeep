@@ -8,12 +8,14 @@
 
 #include <QtGlobal>
 
+#include <QAbstractItemView>
 #include <QCursor>
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFrame>
 #include <QGridLayout>
+#include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
@@ -22,6 +24,8 @@
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPushButton>
+#include <QTableWidget>
+#include <QTableWidgetItem>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -41,19 +45,60 @@ ClassroomSeatGrid::ClassroomSeatGrid( ClassroomRoster& roster, QWidget* parent )
 	m_roster( roster )
 {
 	auto* root = new QVBoxLayout( this );
+
+	auto* bar = new QHBoxLayout;
+	m_viewButton = new QPushButton( tr( "Switch to list view" ), this );
+	m_viewButton->setToolTip( tr( "List view shows every detail (including UWF state) without student screen captures" ) );
+	bar->addWidget( m_viewButton );
+	bar->addStretch( 1 );
+	root->addLayout( bar );
+
 	m_summary = new QLabel( this );
 	m_summary->setWordWrap( true );
 	root->addWidget( m_summary );
 
+	// Grid view: draggable cards with live thumbnails.
+	m_gridPage = new QWidget( this );
+	auto* gridWrapper = new QVBoxLayout( m_gridPage );
 	m_grid = new QGridLayout;
 	m_grid->setSpacing( 10 );
-	root->addLayout( m_grid );
-	root->addStretch( 1 );
+	gridWrapper->addLayout( m_grid );
+	gridWrapper->addStretch( 1 );
+	root->addWidget( m_gridPage, 1 );
+
+	// List view: full information, deliberately NO student screen capture.
+	m_table = new QTableWidget( 0, 9, this );
+	m_table->setHorizontalHeaderLabels( QStringList{
+		tr( "Seat" ), tr( "Roster name" ), tr( "Signed in" ), tr( "IP address" ),
+		tr( "Online" ), tr( "Client protection" ), tr( "UWF restore" ),
+		tr( "Score" ), tr( "Last activity" ) } );
+	m_table->horizontalHeader()->setSectionResizeMode( QHeaderView::ResizeToContents );
+	m_table->setEditTriggers( QAbstractItemView::NoEditTriggers );
+	m_table->setSelectionBehavior( QAbstractItemView::SelectRows );
+	m_table->setAlternatingRowColors( true );
+	m_table->setVisible( false );
+	root->addWidget( m_table, 1 );
+
+	connect( m_viewButton, &QPushButton::clicked, this, [this]() {
+		setViewMode( m_viewMode == ViewMode::Grid ? ViewMode::List : ViewMode::Grid );
+	} );
 
 	m_timer = new QTimer( this );
 	m_timer->setInterval( 2000 );
 	connect( m_timer, &QTimer::timeout, this, &ClassroomSeatGrid::refresh );
 	m_timer->start();
+}
+
+
+void ClassroomSeatGrid::setViewMode( ViewMode mode )
+{
+	if( m_viewMode == mode ) { return; }
+	m_viewMode = mode;
+	const auto grid = mode == ViewMode::Grid;
+	m_gridPage->setVisible( grid );
+	m_table->setVisible( grid == false );
+	m_viewButton->setText( grid ? tr( "Switch to list view" ) : tr( "Switch to grid view" ) );
+	refresh();
 }
 
 
@@ -88,6 +133,7 @@ void ClassroomSeatGrid::rebuild()
 	if( classItem == nullptr )
 	{
 		m_summary->setText( tr( "No class selected." ) );
+		m_table->setRowCount( 0 );
 		return;
 	}
 
@@ -155,7 +201,72 @@ void ClassroomSeatGrid::rebuild()
 
 	m_summary->setText( tr( "%1 students in %2. Drag cards to reorder (persisted); click a score for -5..+5." )
 						.arg( classItem->students.size() ).arg( m_className ) );
+	rebuildList();
 	refresh();
+}
+
+
+void ClassroomSeatGrid::rebuildList()
+{
+	m_table->setRowCount( int( m_order.size() ) );
+	int row = 0;
+	for( const auto& seat : m_order )
+	{
+		const auto it = m_cards.constFind( seat );
+		if( it == m_cards.constEnd() ) { continue; }
+		const auto& card = it.value();
+		m_table->setItem( row, 0, new QTableWidgetItem( seat ) );
+		m_table->setItem( row, 1, new QTableWidgetItem( card.expectedName ) );
+		m_table->setItem( row, 2, new QTableWidgetItem( QString{} ) );
+		m_table->setItem( row, 3, new QTableWidgetItem( card.ip ) );
+		m_table->setItem( row, 4, new QTableWidgetItem( QString{} ) );
+		m_table->setItem( row, 5, new QTableWidgetItem( QString{} ) );
+		m_table->setItem( row, 6, new QTableWidgetItem( QString{} ) );
+		m_table->setItem( row, 7, new QTableWidgetItem( QString{} ) );
+		m_table->setItem( row, 8, new QTableWidgetItem( QString{} ) );
+		++row;
+	}
+	m_table->setRowCount( row );
+	refreshList();
+}
+
+
+QString ClassroomSeatGrid::protectionIcon( const QString& seat ) const
+{
+	// U+1F6E1 SHIELD = client-process protection enabled; hollow circle = off.
+	const auto enabled = m_protectionProvider ? m_protectionProvider( seat ) : false;
+	return enabled ? QString::fromUtf8( "\xF0\x9F\x9B\xA1" ) : QString::fromUtf8( "\xE2\x97\x8B" );
+}
+
+
+void ClassroomSeatGrid::refreshList()
+{
+	for( int row = 0; row < m_table->rowCount(); ++row )
+	{
+		auto* seatItem = m_table->item( row, 0 );
+		if( seatItem == nullptr ) { continue; }
+		const auto seat = seatItem->text();
+		const auto it = m_cards.constFind( seat );
+		if( it == m_cards.constEnd() ) { continue; }
+		const auto& card = it.value();
+
+		const auto online = m_onlineIps.contains( card.ip );
+		const auto identity = m_identityProvider ? m_identityProvider( seat ) : QString{};
+		const auto uwf = m_uwfProvider ? m_uwfProvider( seat ) : QString{};
+		int total = 100;
+		if( m_scoreProvider ) { total = m_scoreProvider( seat ); }
+
+		const auto set = [this, row]( int column, const QString& text ) {
+			if( auto* item = m_table->item( row, column ) ) { item->setText( text ); }
+		};
+		set( 2, identity.isEmpty() ? tr( "not signed in" ) : identity );
+		set( 4, online ? tr( "online" ) : tr( "offline" ) );
+		set( 5, ( m_protectionProvider && m_protectionProvider( seat ) ) ?
+				 tr( "on (cannot quit)" ) : tr( "off" ) );
+		set( 6, uwf.isEmpty() ? tr( "unknown - use Query UWF" ) : uwf );
+		set( 7, QString::number( total ) );
+		set( 8, online ? tr( "live" ) : tr( "-" ) );
+	}
 }
 
 
@@ -184,17 +295,25 @@ void ClassroomSeatGrid::refresh()
 
 		int total = 100;
 		if( m_scoreProvider ) { total = m_scoreProvider( card.seat ); }
-		card.score->setText( tr( "%1: %2 points" ).arg( card.seat ).arg( total ) );
+		card.score->setText( tr( "Score +/-" ) );
 		card.score->setEnabled( true );
+
+		// Caption contract: <protection icon> <name> [<score>], e.g. shield 学生1  [100].
 		const auto state = onlineNow ? tr( "online" ) : tr( "offline" );
-		card.caption->setText( QStringLiteral("%1 · %2").arg( card.expectedName, state ) );
+		card.caption->setText( QStringLiteral("%1 %2  [%3]")
+							   .arg( protectionIcon( card.seat ) ).arg( card.expectedName ).arg( total ) );
+		const auto uwf = m_uwfProvider ? m_uwfProvider( card.seat ) : QString{};
+		card.root->setToolTip( tr( "Drag this card onto another one to swap positions\n%1\nUWF: %2" )
+							   .arg( state, uwf.isEmpty() ? tr( "unknown" ) : uwf ) );
 		if( onlineNow ) { ++online; }
 	}
 	if( m_cards.isEmpty() == false )
 	{
-		m_summary->setText( tr( "%1: %2 of %3 students online. Click a score to add/deduct points." )
+		m_summary->setText( tr( "%1: %2 of %3 students online. Shield = client protection on. "
+								"Click a score to add/deduct points." )
 							.arg( m_className, QString::number( online ), QString::number( m_cards.size() ) ) );
 	}
+	refreshList();
 }
 
 

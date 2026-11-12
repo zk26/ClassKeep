@@ -161,8 +161,8 @@ workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Bui
 ```
 plugins/classroom.dll + 其它 Veyon 插件 DLL
 veyon-core.dll
-veyon-master.exe / veyon-configurator.exe / veyon-cli.exe / veyon-wcli.exe
-veyon-service.exe / veyon-server.exe / veyon-worker.exe
+ClassKeep-master.exe / ClassKeep-configurator.exe / ClassKeep-cli.exe / ClassKeep-wcli.exe
+ClassKeep-service.exe / ClassKeep-server.exe / ClassKeep-worker.exe
 Qt6*.dll / libqca-qt6.dll / libbz2-1.dll / libmd4c.dll / CRT 运行时（递归闭包）
 platforms/ styles/ tls/ imageformats/ crypto/               Qt 与 QCA 插件
 LICENSE.TXT / COPYING.TXT / README.TXT / ClassKeep.ico
@@ -229,8 +229,8 @@ cmake -S veyon -B build -G Ninja \
   -DCMAKE_SKIP_INSTALL_RULES=ON \
   -DCMAKE_CXX_FLAGS="-include cmath"
 cmake --build build --parallel 4 --target \
-  classroom veyon-master veyon-configurator veyon-cli \
-  veyon-service veyon-server veyon-worker
+  classroom ClassKeep-master ClassKeep-configurator ClassKeep-cli \
+  ClassKeep-service ClassKeep-server ClassKeep-worker
 ```
 
 > **不要跑全量 `cmake --build build`**（会撞上损坏的上游 `filetransfer` 插件），
@@ -247,11 +247,11 @@ cd /g/veyon
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=2.0.0 -DROLE=student installer.nsi
 ```
 
-`collect-windows-runtime.sh` 会校验 `plugins/classroom.dll`、`veyon-wcli.exe`、
+`collect-windows-runtime.sh` 会校验 `plugins/classroom.dll`、`ClassKeep-wcli.exe`、
 `platforms/qwindows.dll` 等关键文件，缺一即报错，不产半成品。
 详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) 与 [`../scripts/README.md`](../scripts/README.md)。
 
@@ -293,7 +293,7 @@ makensis -DVERSION=1.3.0 -DROLE=student installer.nsi
 | `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里，仅 Qt5 路线） | clone 了 KDE kldap 最新 master 而非锁定版本 | 按 v4.11.4 的 gitlink SHA 精确检出；或直接用本方案的 Qt6 `kldap` |
 | `qsizepolicy.h: bitwise operation between different enumeration types ... [-Werror=deprecated-enum-enum-conversion]` | Ubuntu 22.04 的 GCC 11+ 对 Qt5 头文件产生新警告，被 Veyon 的 `-Werror` 放大；连上游 `AboutDialog.cpp` 都失败 | 加 `-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"`，或改用 Debian 11 / GCC 10 容器 |
 | 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
-| 安装/卸载弹「veyon-wcli.exe - 快速异常检测失败」，程序也全打不开 | `windows-platform.dll` 没编出来（`-linterception` 只存在于上游私有镜像），`VeyonCore::initPlatformPlugin()` 触发 `qFatal("no platform plugin available!")` → UCRT `__fastfail` | 用自制 `3rdparty/interception/include/interception.h` 桩替代 `-linterception`；把 `windows-platform` 设为**必需**构建目标；`collect-windows-runtime.sh` 硬校验该 DLL |
+| 安装/卸载弹「ClassKeep-wcli.exe - 快速异常检测失败」，程序也全打不开 | `windows-platform.dll` 没编出来（`-linterception` 只存在于上游私有镜像），`VeyonCore::initPlatformPlugin()` 触发 `qFatal("no platform plugin available!")` → UCRT `__fastfail` | 用自制 `3rdparty/interception/include/interception.h` 桩替代 `-linterception`；把 `windows-platform` 设为**必需**构建目标；`collect-windows-runtime.sh` 硬校验该 DLL |
 | 同上但平台插件在，仍崩 | `crypto/libqca-ossl.dll` 缺失或挑到了 qca-qt5 版本，`CryptoCore.cpp:39` → `qFatal("RSA not supported!")` | 从精确路径 `/ucrt64/lib/qca-qt6/crypto/libqca-ossl.dll` 复制，并硬校验 |
 | `-linterception` 找不到（MSYS2 UCRT64） | 该库既不在上游 `3rdparty/interception/`（只有安装器 exe + bat），也不在 MSYS2 | 使用上述自制最小兼容头，去掉链接参数；Interception 驱动是可选的，默认不启用 |
 

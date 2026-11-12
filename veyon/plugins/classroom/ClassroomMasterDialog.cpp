@@ -27,6 +27,7 @@
 #include <QNetworkInterface>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonValue>
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
@@ -101,6 +102,10 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 	m_tabs->addTab( m_scorePanel, tr( "Score & reports" ) );
 
 	setupSeatTab();
+	// Created last so it can reuse widgets from the other tabs, but inserted as
+	// the FIRST tab: these are the actions a teacher uses every lesson.
+	setupToolsTab();
+	m_tabs->setCurrentIndex( 0 );
 
 	auto* closeButton = new QPushButton( tr( "Close" ), this );
 	connect( closeButton, &QPushButton::clicked, this, &QDialog::close );
@@ -1403,6 +1408,361 @@ void ClassroomMasterDialog::syncNow()
 }
 
 
+QStringList ClassroomMasterDialog::toolTargets() const
+{
+	if( m_toolScope && m_toolScope->currentIndex() == 1 ) { return selectedIps(); }
+	return onlineIps();
+}
+
+
+void ClassroomMasterDialog::sendToTargets( const FeatureMessage& message )
+{
+	if( m_toolScope && m_toolScope->currentIndex() == 1 )
+	{
+		for( const auto& ip : selectedIps() ) { sendToIp( ip, message ); }
+	}
+	else
+	{
+		sendToAll( message );
+	}
+}
+
+
+void ClassroomMasterDialog::setToolStatus( const QString& text )
+{
+	if( m_toolsStatus ) { m_toolsStatus->setText( text ); }
+	if( m_systemStatus ) { m_systemStatus->setText( text ); }
+}
+
+
+void ClassroomMasterDialog::setClientProtection( bool enabled )
+{
+	// CLIENT protection: stop the student from quitting the ClassKeep worker /
+	// floating card. Completely unrelated to UWF or the uninstall guard.
+	auto message = Classroom::message( Command::SetExitProtection );
+	message.addArgument( Argument::Enabled, enabled );
+	sendToAll( message );
+
+	auto object = settingsJson();
+	object.insert( SettingKey::exitProtection(), enabled );
+	m_settings.setObject( object );
+	m_settings.save();
+	if( m_exitProtection ) { m_exitProtection->setChecked( enabled ); }
+
+	setToolStatus( enabled ?
+		tr( "Client protection ON: students can no longer quit the ClassKeep card." ) :
+		tr( "Client protection OFF: the card may now be closed (use only for maintenance)." ) );
+	appendTeacherEvent( EventType::protection(),
+						enabled ? tr( "client protection enabled" ) : tr( "client protection disabled" ) );
+}
+
+
+void ClassroomMasterDialog::setUwfFilter( bool enabled )
+{
+	// UWF restore: OS-level write filter. Disabling it is what you do BEFORE
+	// installing software; enabling it makes the machine revert on reboot and
+	// protects against a student machine "dropping out" after changes.
+	// Deliberately does NOT reboot: the teacher may need to install right now.
+	auto message = Classroom::message( Command::UwfSetFilter );
+	message.addArgument( Argument::Enabled, enabled );
+	sendToAll( message );
+
+	setToolStatus( enabled ?
+		tr( "UWF restore queued for all students. Takes effect after reboot; use Restart students if needed." ) :
+		tr( "UWF restore disabled for all students. Install your software now, then enable it again." ) );
+	appendTeacherEvent( EventType::uwf(),
+						enabled ? tr( "UWF restore enabled" ) : tr( "UWF restore disabled" ) );
+}
+
+
+void ClassroomMasterDialog::applyFuzzyRules( const QString& key, const QString& text )
+{
+	QStringList rules;
+	for( const auto& line : text.split( QLatin1Char('\n') ) )
+	{
+		for( const auto& part : line.split( QLatin1Char(',') ) )
+		{
+			const auto rule = part.trimmed();
+			if( rule.isEmpty() == false ) { rules.append( rule ); }
+		}
+	}
+
+	QJsonArray array;
+	for( const auto& rule : rules ) { array.append( rule ); }
+
+	auto object = settingsJson();
+	object.insert( key, array );
+	m_settings.setObject( object );
+	m_settings.save();
+
+	auto message = Classroom::message( key == SettingKey::blockedApps() ?
+									   Command::SetAppBlockRules : Command::SetWebBlockRules );
+	message.addArgument( Argument::RulesJson,
+						 QString::fromUtf8( QJsonDocument( array ).toJson( QJsonDocument::Compact ) ) );
+	sendToAll( message );
+
+	setToolStatus( tr( "%1 fuzzy rule(s) applied: %2" )
+				   .arg( rules.size() ).arg( rules.isEmpty() ? tr( "(none - blocking cleared)" ) : rules.join( QStringLiteral(", ") ) ) );
+}
+
+
+void ClassroomMasterDialog::openOnTargets( bool website, const QString& target )
+{
+	const auto value = target.trimmed();
+	if( value.isEmpty() )
+	{
+		setToolStatus( website ? tr( "Enter a website address first." ) : tr( "Enter a software path first." ) );
+		return;
+	}
+
+	auto message = Classroom::message( website ? Command::OpenWebsite : Command::OpenSoftware );
+	if( website )
+	{
+		message.addArgument( Argument::Message, value );
+	}
+	else
+	{
+		message.addArgument( Argument::SoftwarePath, value );
+		message.addArgument( Argument::SoftwareArgs, QString{} );
+	}
+	sendToTargets( message );
+	setToolStatus( tr( "Sent to %1 machine(s): %2" ).arg( toolTargets().size() ).arg( value ) );
+}
+
+
+void ClassroomMasterDialog::scoreWholeClass( int delta )
+{
+	const auto* item = m_roster.findClass( currentClassName() );
+	if( item == nullptr || m_scorePanel == nullptr ) { return; }
+
+	const auto deltaText = delta > 0 ? QStringLiteral("+%1").arg( delta ) : QString::number( delta );
+	const auto label = tr( "Whole class %1" ).arg( deltaText );
+	for( const auto& student : item->students )
+	{
+		m_scorePanel->addEntryForSeat( student.seat, delta, label );
+	}
+	appendTeacherEvent( EventType::quickScore(),
+						tr( "whole class %1 points for %2 students" ).arg( deltaText ).arg( item->students.size() ) );
+	setToolStatus( tr( "%1 points applied to all %2 students." ).arg( deltaText ).arg( item->students.size() ) );
+	refreshSeatGrid();
+}
+
+
+void ClassroomMasterDialog::refreshUwfStatus()
+{
+	const auto events = m_store.load( QDate::currentDate(), QDate::currentDate() );
+	QMap<QString, QString> byIp;
+	for( const auto& event : events )
+	{
+		if( event.type == EventType::uwf() && byIp.contains( event.ip ) == false )
+		{
+			byIp.insert( event.ip, event.detail );
+		}
+	}
+	const auto* item = m_roster.findClass( currentClassName() );
+	m_uwfStatus.clear();
+	if( item == nullptr ) { return; }
+	for( const auto& student : item->students )
+	{
+		if( byIp.contains( student.ip ) ) { m_uwfStatus.insert( student.seat, byIp.value( student.ip ) ); }
+	}
+}
+
+
+void ClassroomMasterDialog::setupToolsTab()
+{
+	auto* page = new QWidget( m_tabs );
+	auto* layout = new QVBoxLayout( page );
+
+	auto* scopeRow = new QHBoxLayout;
+	m_toolScope = new QComboBox( page );
+	m_toolScope->addItem( tr( "All students" ) );
+	m_toolScope->addItem( tr( "Selected students (roster table)" ) );
+	m_toolsStatus = new QLabel( tr( "Ready." ), page );
+	m_toolsStatus->setWordWrap( true );
+	scopeRow->addWidget( new QLabel( tr( "Scope:" ), page ) );
+	scopeRow->addWidget( m_toolScope );
+	scopeRow->addWidget( m_toolsStatus, 1 );
+	layout->addLayout( scopeRow );
+
+	auto* note = new QLabel( tr( "Client protection = students cannot quit the ClassKeep card. "
+								 "UWF = Windows write filter / restore on reboot, disabled before installing software. "
+								 "They are independent switches." ), page );
+	note->setWordWrap( true );
+	note->setStyleSheet( QStringLiteral("color:#546e7a; font-size:11px;") );
+	layout->addWidget( note );
+
+	const auto group = [this, page, layout]( const QString& label,
+											const QVector<QPair<QString, std::function<void()>>>& actions ) {
+		auto* row = new QHBoxLayout;
+		row->addWidget( new QLabel( label, page ) );
+		for( const auto& action : actions )
+		{
+			auto* button = new QPushButton( action.first, page );
+			button->setMaximumWidth( 150 );
+			row->addWidget( button );
+			connect( button, &QPushButton::clicked, this, action.second );
+		}
+		row->addStretch( 1 );
+		layout->addLayout( row );
+	};
+
+	const auto input = [page, layout]( const QString& label, QLineEdit*& field, const QString& placeholder ) {
+		auto* row = new QHBoxLayout;
+		row->addWidget( new QLabel( label, page ) );
+		auto* edit = new QLineEdit( page );
+		edit->setPlaceholderText( placeholder );
+		row->addWidget( edit, 1 );
+		layout->addLayout( row );
+		field = edit;
+	};
+
+	const auto send = [this]( Command command, bool enabled, const QString& text = QString{} ) {
+		auto message = Classroom::message( command );
+		message.addArgument( Argument::Enabled, enabled );
+		message.addArgument( Argument::Ip, m_teacherIp ? m_teacherIp->text().trimmed() : QString{} );
+		if( text.isEmpty() == false ) { message.addArgument( Argument::Message, text ); }
+		sendToTargets( message );
+	};
+
+	const auto feature = [this]( const QString& uid, bool start, bool all ) {
+		ComputerControlInterfaceList list;
+		if( all ) { list = m_master.allComputerControlInterfaces(); }
+		else { list = m_master.selectedComputerControlInterfaces(); }
+		VeyonCore::featureManager().controlFeature( Feature::Uid{ uid },
+			start ? FeatureProviderInterface::Operation::Start : FeatureProviderInterface::Operation::Stop,
+			QVariantMap{}, list );
+	};
+
+	// Real demo features. NOTE: 2aca1e9f... (DemoAllScreens) is only an OPTION
+	// sub-feature and does NOT start a demo - older builds called controlFeature
+	// on it and silently did nothing.
+	const auto demoFullUid = QStringLiteral("07b375e1-8ab6-4b48-bcb7-75fb3d56035b");  //!< ShareOwnScreenFullScreen
+	const auto demoWindowUid = QStringLiteral("68c55fb9-127e-4c9f-9c90-28b998bf1a47"); //!< ShareOwnScreenWindow
+	const auto usbUid = QStringLiteral("e4a77879-e544-4fec-bc18-e534f33b934c");       //!< InputDevicesLock (desktop stays visible)
+
+	const auto runFeature = [this]( const QString& uid, bool start, bool all ) {
+		ComputerControlInterfaceList list;
+		if( all ) { list = m_master.allComputerControlInterfaces(); }
+		else { list = m_master.selectedComputerControlInterfaces(); }
+		const auto& demo = VeyonCore::featureManager().feature( Feature::Uid{ uid } );
+		if( start ) { VeyonCore::featureManager().startFeature( m_master, demo, list ); }
+		else { VeyonCore::featureManager().stopFeature( m_master, demo, list ); }
+	};
+
+	// Broadcast: the teacher screen is shown on every student display (never a
+	// black screen), USB input is blocked by default. "Watch & do" uses the
+	// WINDOW demo so students keep keyboard/mouse and can follow along.
+	const auto broadcast = [this, runFeature, feature, demoFullUid, demoWindowUid, usbUid]
+		( bool selectedOnly, bool watchAndDo ) {
+		const auto all = selectedOnly == false;
+		if( watchAndDo )
+		{
+			runFeature( demoWindowUid, true, all );
+			feature( usbUid, false, all );
+		}
+		else
+		{
+			runFeature( demoFullUid, true, all );
+			feature( usbUid, true, all );
+		}
+		setToolStatus( watchAndDo ?
+			tr( "Watch & do started (window demo, students keep keyboard/mouse, screens stay visible)." ) :
+			tr( "Broadcast started (USB input disabled, screens stay visible)." ) );
+		appendTeacherEvent( EventType::demo(),
+							watchAndDo ? tr( "watch-and-do started" ) : tr( "broadcast started" ) );
+	};
+
+	group( tr( "Broadcast:" ), {
+		{ tr( "Broadcast all" ), [broadcast]() { broadcast( false, false ); } },
+		{ tr( "Broadcast selected" ), [broadcast]() { broadcast( true, false ); } },
+		{ tr( "Watch & do" ), [broadcast]() { broadcast( false, true ); } },
+		{ tr( "Stop broadcast" ), [this, runFeature, feature, demoFullUid, demoWindowUid, usbUid]() {
+			runFeature( demoFullUid, false, true );
+			runFeature( demoWindowUid, false, true );
+			feature( usbUid, false, true );
+			setToolStatus( tr( "Broadcast stopped, USB input restored." ) );
+		} } } );
+
+	group( tr( "Client protection:" ), {
+		{ tr( "Enable" ), [this]() { setClientProtection( true ); } },
+		{ tr( "Disable" ), [this]() { setClientProtection( false ); } } } );
+
+	group( tr( "UWF restore:" ), {
+		{ tr( "Enable UWF" ), [this]() { setUwfFilter( true ); } },
+		{ tr( "Disable UWF" ), [this]() { setUwfFilter( false ); } },
+		{ tr( "Query UWF" ), [this]() {
+			sendToAll( Classroom::message( Command::UwfQuery ) );
+			QTimer::singleShot( 2000, this, [this]() { refreshUwfStatus(); refreshSeatGrid(); } );
+			setToolStatus( tr( "UWF query sent; results appear in the seat list view and activity log." ) );
+		} },
+		{ tr( "Restart students" ), [this]() {
+			sendToAll( Classroom::message( Command::UwfRestart ) );
+			setToolStatus( tr( "Reboot command sent to all students." ) );
+		} } } );
+
+	group( tr( "Gateway:" ), {
+		{ tr( "Disable gateway" ), [send]() { send( Command::SetInternetBlock, true ); } },
+		{ tr( "Enable gateway" ), [send]() { send( Command::SetInternetBlock, false ); } } } );
+
+	input( tr( "Silence page text:" ), m_toolSilence,
+		   tr( "Text shown on every student screen, e.g. Please read page 42" ) );
+	m_toolSilence->setText( settingsJson().value( SettingKey::silencePageText() ).toString() );
+	group( tr( "Silence page:" ), {
+		{ tr( "Show" ), [this, send]() {
+			auto object = settingsJson();
+			object.insert( SettingKey::silencePageText(), m_toolSilence->text() );
+			m_settings.setObject( object );
+			m_settings.save();
+			if( m_silenceText ) { m_silenceText->setText( m_toolSilence->text() ); }
+			send( Command::ShowSilencePage, true, m_toolSilence->text() );
+			setToolStatus( tr( "Silence page shown and text saved." ) );
+		} },
+		{ tr( "Hide" ), [send]() { send( Command::HideSilencePage, false ); } } } );
+
+	input( tr( "Blocked apps (fuzzy):" ), m_toolAppRules,
+		   tr( "Comma or newline separated, e.g. game, steam, notepad" ) );
+	group( tr( "App block:" ), {
+		{ tr( "Apply rules" ), [this]() { applyFuzzyRules( SettingKey::blockedApps(), m_toolAppRules->text() ); } },
+		{ tr( "Clear" ), [this]() { m_toolAppRules->clear(); applyFuzzyRules( SettingKey::blockedApps(), {} ); } } } );
+
+	input( tr( "Blocked sites (fuzzy):" ), m_toolWebRules,
+		   tr( "Comma or newline separated, e.g. douyin, bilibili, game" ) );
+	group( tr( "Site block:" ), {
+		{ tr( "Apply rules" ), [this]() { applyFuzzyRules( SettingKey::blockedWebsites(), m_toolWebRules->text() ); } },
+		{ tr( "Clear" ), [this]() { m_toolWebRules->clear(); applyFuzzyRules( SettingKey::blockedWebsites(), {} ); } } } );
+
+	input( tr( "Software path:" ), m_toolSoftware, tr( "Full path of the program on the student machine" ) );
+	input( tr( "Website URL:" ), m_toolWebsite, tr( "https://..." ) );
+	group( tr( "Open on students:" ), {
+		{ tr( "Open software" ), [this]() { openOnTargets( false, m_toolSoftware->text() ); } },
+		{ tr( "Open website" ), [this]() { openOnTargets( true, m_toolWebsite->text() ); } } } );
+
+	group( tr( "Whole class score:" ), {
+		{ tr( "+5" ), [this]() { scoreWholeClass( 5 ); } },
+		{ tr( "+1" ), [this]() { scoreWholeClass( 1 ); } },
+		{ tr( "-1" ), [this]() { scoreWholeClass( -1 ); } },
+		{ tr( "-5" ), [this]() { scoreWholeClass( -5 ); } },
+		{ tr( "Custom..." ), [this]() {
+			bool accepted = false;
+			const auto delta = QInputDialog::getInt( this, windowTitle(), tr( "Points for every student:" ),
+													 0, -100, 100, 1, &accepted );
+			if( accepted && delta != 0 ) { scoreWholeClass( delta ); }
+		} } } );
+
+	group( tr( "Other:" ), {
+		{ tr( "Mute all" ), [send]() { send( Command::SetMute, true ); } },
+		{ tr( "Unmute all" ), [send]() { send( Command::SetMute, false ); } },
+		{ tr( "Lock all" ), [this]() { lockAll( true ); } },
+		{ tr( "Unlock all" ), [this]() { lockAll( false ); } },
+		{ tr( "Start check-in" ), [this]() { startCheckIn(); } },
+		{ tr( "Refresh" ), [this]() { refreshStatus(); refreshMachines(); } } } );
+
+	layout->addStretch( 1 );
+	m_tabs->insertTab( 0, page, tr( "Quick tools" ) );
+}
+
+
 void ClassroomMasterDialog::setupSeatTab()
 {
 	auto* page = new QWidget( m_tabs );
@@ -1442,6 +1802,23 @@ void ClassroomMasterDialog::setupSeatTab()
 		appendTeacherEvent( EventType::quickScore(),
 							tr( "%1 points at seat %2: %3" ).arg( delta ).arg( seat, reason ), {} );
 	} );
+	// Shield icon = CLIENT protection (cannot quit the student card).
+	m_seatGrid->setProtectionProvider( [this]( const QString& ) {
+		return settingsJson().value( SettingKey::exitProtection() ).toBool( true );
+	} );
+	// List view additionally shows the per-machine UWF restore state.
+	m_seatGrid->setUwfProvider( [this]( const QString& seat ) {
+		return m_uwfStatus.value( seat );
+	} );
+	m_seatGrid->setIdentityProvider( [this]( const QString& seat ) {
+		const auto* classItem = m_roster.findClass( currentClassName() );
+		if( classItem == nullptr ) { return QString{}; }
+		for( const auto& student : classItem->students )
+		{
+			if( student.seat == seat ) { return m_status.value( student.ip ); }
+		}
+		return QString{};
+	} );
 
 	auto* scroller = new QScrollArea( page );
 	scroller->setWidgetResizable( true );
@@ -1471,6 +1848,9 @@ void ClassroomMasterDialog::setupSeatTab()
 void ClassroomMasterDialog::refreshSeatGrid()
 {
 	if( m_seatGrid == nullptr ) { return; }
+	// UWF reports arrive through the activity log; reading it every tick would
+	// be wasteful, so refresh at most once every ~30 s (timer interval 5 s).
+	if( m_refreshTicks % 6 == 0 ) { refreshUwfStatus(); }
 	m_seatGrid->setClassName( currentClassName() );
 	m_seatGrid->setOnlineIps( onlineIps() );
 
@@ -1633,6 +2013,12 @@ void ClassroomMasterDialog::setupSystemTab()
 			arguments, m_master.allComputerControlInterfaces() );
 	};
 
+	const auto demo = [this]( const QString& uid, bool start ) {
+		const auto& item = VeyonCore::featureManager().feature( Feature::Uid{ uid } );
+		if( start ) { VeyonCore::featureManager().startFeature( m_master, item, m_master.allComputerControlInterfaces() ); }
+		else { VeyonCore::featureManager().stopFeature( m_master, item, m_master.allComputerControlInterfaces() ); }
+	};
+
 	addRow( tr( "Audio:" ), {
 		{ tr( "Mute" ), [send]() { send( Command::SetMute, true ); } },
 		{ tr( "Unmute" ), [send]() { send( Command::SetMute, false ); } } } );
@@ -1647,8 +2033,12 @@ void ClassroomMasterDialog::setupSystemTab()
 		{ tr( "Hide" ), [send]() { send( Command::HideSilencePage, false ); } } } );
 	addRow( tr( "Screen:" ), {
 		{ tr( "Remote control" ), [feature]() { feature( QStringLiteral("ca00ad68-1709-4abe-85e2-48dff6ccf8a2"), true ); } },
-		{ tr( "Group demo" ), [feature]() { feature( QStringLiteral("7b6231bd-eb89-45d3-af32-f70663b2f878"), true ); } },
-		{ tr( "Broadcast" ), [feature]() { feature( QStringLiteral("2aca1e9f-25f9-4d0f-9729-01b03c80ab28"), true ); } } } );
+		{ tr( "Fullscreen broadcast" ), [demo]() { demo( QStringLiteral("07b375e1-8ab6-4b48-bcb7-75fb3d56035b"), true ); } },
+		{ tr( "Window demo" ), [demo]() { demo( QStringLiteral("68c55fb9-127e-4c9f-9c90-28b998bf1a47"), true ); } },
+		{ tr( "Stop demo" ), [demo]() {
+			demo( QStringLiteral("07b375e1-8ab6-4b48-bcb7-75fb3d56035b"), false );
+			demo( QStringLiteral("68c55fb9-127e-4c9f-9c90-28b998bf1a47"), false );
+		} } } );
 	addRow( tr( "UWF:" ), {
 		{ tr( "Query" ), [this]() {
 			sendToAll( Classroom::message( Command::UwfQuery ) );

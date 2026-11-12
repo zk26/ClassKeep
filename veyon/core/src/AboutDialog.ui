@@ -12,7 +12,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>About Veyon</string>
+   <string>About ClassKeep</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../resources/core.qrc">
@@ -80,7 +80,7 @@
         </font>
        </property>
        <property name="text">
-        <string>About Veyon</string>
+        <string>About ClassKeep</string>
        </property>
       </widget>
      </item>
@@ -118,7 +118,7 @@
        <item row="0" column="0" colspan="2">
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string notr="true">Veyon - Virtual Eye On Networks</string>
+          <string notr="true">ClassKeep - classroom management</string>
          </property>
         </widget>
        </item>
@@ -149,7 +149,7 @@
        <item row="3" column="0" colspan="2">
         <widget class="QLabel" name="label_8">
          <property name="text">
-          <string notr="true">课守 ClassKeep · 基于 Veyon 4.x 的定制分支（GPL-2.0-or-later）
+          <string notr="true">ClassKeep · based on Veyon 4.x (GPL-2.0-or-later)
 Copyright © 2004-2026 Tobias Junghans / Veyon Solutions</string>
          </property>
         </widget>
@@ -177,7 +177,7 @@ Copyright © 2004-2026 Tobias Junghans / Veyon Solutions</string>
        <item row="6" column="0" colspan="2">
         <widget class="QPushButton" name="donateButton">
          <property name="text">
-          <string>Support Veyon project with a donation</string>
+          <string>Visit the ClassKeep project</string>
          </property>
         </widget>
        </item>

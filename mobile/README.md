@@ -1,4 +1,4 @@
-# 课守 ClassKeep · Android 教室端（权威工程）
+# ClassKeep · Android 教室端（权威工程）
 
 这是仓库根 `mobile/`，**Android 教室端 App 的唯一工程**（历史副本已清理）。
 请用 Android Studio 打开本目录。
@@ -24,19 +24,27 @@ $env:ANDROID_HOME = 'G:\Andorid'
 
 ## 功能
 
+## 2.0.0 底部栏（4 个标签，图标 + 名称常显）
+
+不再用单个汉字假装图标，也不再只给选中项显示文字。四个标签均为
+`res/drawable/ck_tab_*.xml` 的**纯矢量图标 + 常驻名称**，选中时图标着色并回弹、
+白色胶囊平滑跟随。图标全部自绘，未使用任何第三方图标库或会话凭据。
+
 | 底部标签 | 内容 |
 |---|---|
-| 课堂 | 品牌头、连接状态、IP / 密钥 / 端口，**密钥可手动输入或导入 `.key` 文件**、立即同步、离线工作、班级概况、最近活动 |
-| 加分 | 按教师端座位网格**拖拽后的顺序**生成学生卡片；点卡片选 `-5…+5`（步长 1）→ 填原因 → 提交；乐观更新，失败回滚 |
-| 控制 | 静音 / 断网 / 肃静 / USB / 远控 / 投屏 / UWF 等指令 |
-| 课表 | 周课表网格、当天列与当前节高亮、下一节课提示、点格子填科目、常用科目预设、导入作息 JSON |
-| 更多 | 期末成绩表导出、班级词云、许可与隐私说明 |
+| 课堂 | 品牌头、连接状态、同步/离线、班级概况、最近活动，**课堂控制**（静音 / 断网 / 肃静 / USB / 远控 / 投屏 / UWF）+ **加分减分**（按教师端拖拽顺序生成卡片，`-5…+5` 选分 → 填原因 → 乐观更新失败回滚） |
+| 课表 | **作息设置**（一天几节课、每节时长、第一节开始时间、普通课间、大课间在第几节后及多长、午休在第几节后及多长）、**单列 / 双列时间**、导入 / 导出作息 JSON、恢复默认、点格子填科目、当天列与当前节高亮 |
+| 配置 | IP / 本堂课密钥 / 桥接端口、显示或导入 `.key`、同步测试、**单列 / 双列时间**快捷切换 |
+| 更多 | **导入导出**：密钥、作息 JSON、课表 JSON、本地缓存数据、期末成绩表、班级词云；**课堂回顾**：选一堂课后查看「讲了什么 / 这堂课干了什么 / 同学表现怎么样」，联网读教师机、离线读本地缓存 |
 
 设计遵循[交互与动效规范](../veyon/docs/CLASSKEEP-UI.md)的要点：
 卡片**不使用投影阴影**、只用一层细描边；外圆角 20dp / 内圆角 14dp 的同心圆角；
 浮动标签常驻框上方、帮助文字常驻框下方，不依赖会消失的 placeholder；
-底部胶囊指示随选中项平滑移动、图标回弹、仅选中项显示文字；
+底部胶囊指示随选中项平滑移动、图标回弹、**所有标签始终显示名称**；
 列表末尾留出底部栏 + 手势安全区。
+
+导出文件写入 App 私有 `Documents` 目录（`getExternalFilesDir`），
+文件名分别为 `ClassKeep-课表.json` / `ClassKeep-本地数据.json` / `ClassKeep-期末成绩表.xls`。
 
 **平板适配**：`values-sw600dp` / `values-sw720dp` 提供更大的页面边距、课表格宽度
 与学生卡片列数（手机 2 列 / 7 寸 3 列 / 10 寸 4 列），课表可横向滚动。
@@ -45,10 +53,10 @@ $env:ANDROID_HOME = 'G:\Andorid'
 
 ```
 app/src/main/java/top/ikee002/classkeep/
-  MainActivity.kt       5 个标签页、密钥导入、座位加分、课表、报表/词云
+  MainActivity.kt       4 个标签页、课堂控制/加分、作息设置、导入导出、课堂回顾
   UiKit.kt             视觉规范组件（无阴影卡片、常驻标签、无边框按钮）
-  BottomBar.kt         自定义底部导航（胶囊跟随 + 图标回弹）
-  TimetableStore.kt    零依赖周课表数据层（兼容全校作息 JSON 导入）
+  BottomBar.kt         自定义底部导航（矢量图标 + 常显名称、胶囊跟随 + 图标回弹）
+  TimetableStore.kt    零依赖周课表数据层（可配置节次/大课间/午休/单双列时间，兼容全校作息 JSON）
   BridgeClient.kt      HttpURLConnection 全部路由 + 挑战应答认证
   Discovery.kt         DatagramSocket 主动探测 + 周期广播 + MulticastLock
   ClassKeepCrypto.kt   SHA-256 挑战应答（与教师机逐字节一致）
@@ -62,7 +70,7 @@ app/src/main/java/top/ikee002/classkeep/
 
 ## 图标与界面
 
-应用图标来自仓库根的 [`../ClassKeep_logo.png`](../ClassKeep_logo.png)（课守 ClassKeep 品牌徽标）。
+应用图标来自仓库根的 [`../ClassKeep_logo.png`](../ClassKeep_logo.png)（ClassKeep 品牌徽标）。
 `tools/generate_icons.py` 从该图生成 `mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}/` 下的
 `ic_launcher.png`（圆角方形）与 `ic_launcher_round.png`（圆形），并清理 Android Studio 模板的
 自适应图标 XML / webp。更换 Logo 后重跑：

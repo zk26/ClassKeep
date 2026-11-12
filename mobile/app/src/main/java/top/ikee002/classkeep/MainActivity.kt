@@ -48,7 +48,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var contentHost: FrameLayout
     private lateinit var bottomBar: BottomBar
-    private val pages = arrayOfNulls<View>(5)
+    // 2.0.0: 课堂 / 课表 / 配置 / 更多 -- four tabs with icon + name.
+    private val pages = arrayOfNulls<View>(4)
 
     private lateinit var statusBadge: TextView
     private lateinit var messageView: TextView
@@ -91,15 +92,15 @@ class MainActivity : AppCompatActivity() {
         bottomBar = BottomBar(
             this,
             listOf(
-                BottomBar.Tab("堂", "课堂"),
-                BottomBar.Tab("分", "加分"),
-                BottomBar.Tab("控", "控制"),
-                BottomBar.Tab("表", "课表"),
-                BottomBar.Tab("更", "更多"),
+                BottomBar.Tab(R.drawable.ck_tab_class, "课堂"),
+                BottomBar.Tab(R.drawable.ck_tab_schedule, "课表"),
+                BottomBar.Tab(R.drawable.ck_tab_config, "配置"),
+                BottomBar.Tab(R.drawable.ck_tab_more, "更多"),
             ),
         ) { index -> showTab(index) }
         // Explicit height keeps the docked bar from ever eating the content area.
-        val barHeight = Ui.dp(this, 58) + Ui.dp(this, 6) * 2
+        // Must match BottomBar.barHeight (62dp) + its 6dp outer padding.
+        val barHeight = Ui.dp(this, 62) + Ui.dp(this, 6) * 2
         barHost.addView(
             bottomBar,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeight),
@@ -186,16 +187,132 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildPages() {
+        // 「课堂」= 状态概览 + 课堂控制 + 加分减分（原独立页签合并进来）
         pages[0] = scrollPage { column ->
             column.addView(brandHeader())
-            val connection = Ui.card(this)
+
+            val status = Ui.card(this)
             statusBadge = Ui.badge(this, "离线", false)
             val badgeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             badgeRow.addView(statusBadge)
-            connection.addView(badgeRow)
+            status.addView(badgeRow)
             messageView = Ui.body(this, "正在网段内查找教师机…")
-            connection.addView(messageView)
+            status.addView(messageView)
+            val actions = Ui.row(this)
+            val sync = Ui.button(this, "立即同步", primary = true)
+            val offline = Ui.button(this, "离线工作")
+            sync.setOnClickListener { doSync() }
+            offline.setOnClickListener {
+                connected = false
+                setStatus(false)
+                message("已断开，本地数据保留")
+            }
+            actions.addView(sync, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            actions.addView(offline, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            status.addView(actions)
+            revisionView = Ui.helper(this, "本地版本 - - -")
+            status.addView(revisionView)
+            column.addView(status)
 
+            val overview = Ui.card(this)
+            overview.addView(Ui.section(this, "班级概况"))
+            snapshotView = Ui.body(this)
+            overview.addView(snapshotView)
+            column.addView(overview)
+
+            val activity = Ui.card(this)
+            activity.addView(Ui.section(this, "最近活动"))
+            activityView = Ui.body(this, "暂无活动记录", 12f)
+            activity.addView(activityView)
+            column.addView(activity)
+
+            val control = Ui.card(this)
+            control.addView(Ui.section(this, "课堂控制"))
+            control.addView(Ui.body(this, "指令经教师机转发，需先在「配置」页填写 IP 与密钥。"))
+            val columns = resources.getInteger(R.integer.grid_columns).coerceAtLeast(2)
+            var controlRow: LinearLayout? = null
+            commands.forEachIndexed { index, cmd ->
+                if (index % columns == 0) {
+                    controlRow = Ui.row(this)
+                    control.addView(controlRow)
+                }
+                val button = Ui.button(this, cmd.label)
+                button.setOnClickListener { sendCommand(cmd) }
+                controlRow?.addView(
+                    button,
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        marginEnd = Ui.dp(this@MainActivity, 8)
+                    },
+                )
+            }
+            column.addView(control)
+
+            val score = Ui.card(this)
+            score.addView(Ui.section(this, "加分减分"))
+            score.addView(Ui.body(this, "卡片顺序与教师端座位网格拖拽后的顺序一致。点卡片选 -5…+5，再填原因。"))
+            val refresh = Ui.button(this, "刷新学生列表", primary = true)
+            refresh.setOnClickListener { loadSeats() }
+            score.addView(refresh)
+            seatHint = Ui.helper(this, "尚未同步学生名单")
+            score.addView(seatHint)
+            seatGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            score.addView(seatGrid)
+            column.addView(score)
+
+            refreshHome()
+            refreshSeatCards()
+        }
+
+        // 「课表」= 可调作息 + 单列/双列时间 + 导入导出
+        pages[1] = scrollPage { column ->
+            val card = Ui.card(this)
+            card.addView(Ui.section(this, "本周课表"))
+            scheduleHint = Ui.body(this)
+            card.addView(scheduleHint)
+
+            val first = Ui.row(this)
+            val setup = Ui.button(this, "作息设置", primary = true)
+            val importJson = Ui.button(this, "导入作息")
+            setup.setOnClickListener { showTimetableSettings() }
+            importJson.setOnClickListener {
+                timetableLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+            }
+            first.addView(setup, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            first.addView(importJson, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            card.addView(first)
+
+            val second = Ui.row(this)
+            val exportJson = Ui.button(this, "导出作息")
+            val reset = Ui.button(this, "恢复默认作息")
+            exportJson.setOnClickListener { exportTimetable() }
+            reset.setOnClickListener {
+                timetableStore.save(Timetable())
+                refreshSchedule()
+                message("已恢复默认作息")
+            }
+            second.addView(exportJson, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            second.addView(reset, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            card.addView(second)
+            card.addView(Ui.helper(this, "点课格改科目；当天列与当前节高亮。节数、大课间、午休与时间列样式在「作息设置」里调整。"))
+
+            val horizontal = HorizontalScrollView(this).apply {
+                isFillViewport = false
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+            }
+            scheduleGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            horizontal.addView(scheduleGrid)
+            card.addView(horizontal)
+            column.addView(card)
+            refreshSchedule()
+        }
+
+        // 「配置」= 连接参数 + 课表显示样式
+        pages[2] = scrollPage { column ->
+            val connection = Ui.card(this)
+            connection.addView(Ui.section(this, "连接配置"))
             ipField = Ui.field(this, "教师机 IP", "与学生机、教师机处于同一局域网", initial = cache.teacherIp)
             keyField = Ui.field(
                 this, "本堂课密钥", "与学生机相同；换课后需更新。支持手动输入或导入 .key 文件",
@@ -228,125 +345,62 @@ class MainActivity : AppCompatActivity() {
             keyRow.addView(importKey, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.4f))
             connection.addView(keyRow)
 
-            val actions = Ui.row(this)
-            val sync = Ui.button(this, "立即同步", primary = true)
-            val offline = Ui.button(this, "离线工作")
-            sync.setOnClickListener { doSync() }
-            offline.setOnClickListener {
-                connected = false
-                setStatus(false)
-                message("已断开，本地数据保留")
-            }
-            actions.addView(sync, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            actions.addView(offline, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            connection.addView(actions)
-
-            revisionView = Ui.helper(this, "本地版本 - - -")
-            connection.addView(revisionView)
+            val test = Ui.button(this, "立即同步并测试连接", primary = true)
+            test.setOnClickListener { doSync() }
+            connection.addView(test)
+            connection.addView(Ui.helper(this, "密钥每堂课轮换；也可在「更多」页导入。"))
             column.addView(connection)
 
-            val overview = Ui.card(this)
-            overview.addView(Ui.section(this, "班级概况"))
-            snapshotView = Ui.body(this)
-            overview.addView(snapshotView)
-            column.addView(overview)
-
-            val activity = Ui.card(this)
-            activity.addView(Ui.section(this, "最近活动"))
-            activityView = Ui.body(this, "暂无活动记录", 12f)
-            activity.addView(activityView)
-            column.addView(activity)
-            refreshHome()
-        }
-
-        pages[1] = scrollPage { column ->
-            val tip = Ui.card(this)
-            tip.addView(Ui.section(this, "课堂加分"))
-            tip.addView(Ui.body(this, "卡片顺序与教师端座位网格拖拽后的顺序一致。点卡片选 -5…+5，再填原因即可完成加减分。"))
-            val refresh = Ui.button(this, "刷新学生列表", primary = true)
-            refresh.setOnClickListener { loadSeats() }
-            tip.addView(refresh)
-            seatHint = Ui.helper(this, "尚未同步学生名单")
-            tip.addView(seatHint)
-            column.addView(tip)
-            seatGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            column.addView(seatGrid)
-            refreshSeatCards()
-        }
-
-        pages[2] = scrollPage { column ->
-            val card = Ui.card(this)
-            card.addView(Ui.section(this, "课堂控制"))
-            card.addView(Ui.body(this, "指令经教师机转发，需先同步本堂课密钥。"))
-            val columns = resources.getInteger(R.integer.grid_columns).coerceAtLeast(2)
-            var row: LinearLayout? = null
-            commands.forEachIndexed { index, cmd ->
-                if (index % columns == 0) {
-                    row = Ui.row(this)
-                    card.addView(row)
-                }
-                val button = Ui.button(this, cmd.label)
-                button.setOnClickListener { sendCommand(cmd) }
-                row?.addView(
-                    button,
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                        marginEnd = Ui.dp(this@MainActivity, 8)
-                    },
-                )
-            }
-            column.addView(card)
-        }
-
-        pages[3] = scrollPage { column ->
-            val card = Ui.card(this)
-            card.addView(Ui.section(this, "本周课表"))
-            scheduleHint = Ui.body(this)
-            card.addView(scheduleHint)
-            val row = Ui.row(this)
-            val importJson = Ui.button(this, "导入作息 JSON", primary = true)
-            val reset = Ui.button(this, "恢复默认作息")
-            importJson.setOnClickListener {
-                timetableLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
-            }
-            reset.setOnClickListener {
-                timetableStore.save(Timetable())
+            val display = Ui.card(this)
+            display.addView(Ui.section(this, "课表显示"))
+            val toggle = Ui.button(this, "切换单列 / 双列时间", primary = true)
+            toggle.setOnClickListener {
+                val before = timetableStore.load().config.dualTimeColumn
+                timetableStore.setDualTimeColumn(!before)
                 refreshSchedule()
-                message("已恢复默认作息")
+                message(if (before) "已切换为单列时间" else "已切换为双列时间")
             }
-            row.addView(importJson, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            row.addView(reset, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            card.addView(row)
-            card.addView(Ui.helper(this, "点任意课格可直接填写科目；当天列与当前节会高亮。"))
-
-            val horizontal = HorizontalScrollView(this).apply {
-                isFillViewport = false
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                )
-            }
-            scheduleGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            horizontal.addView(scheduleGrid)
-            card.addView(horizontal)
-            column.addView(card)
-            refreshSchedule()
+            display.addView(toggle)
+            display.addView(Ui.helper(this, "双列：开始/结束各占一列；单列：一列内显示 08:20-09:00。"))
+            column.addView(display)
         }
 
-        pages[4] = scrollPage { column ->
-            val tools = Ui.card(this)
-            tools.addView(Ui.section(this, "工具"))
-            val report = Ui.button(this, "导出期末成绩表")
-            val cloud = Ui.button(this, "查看班级词云")
-            report.setOnClickListener { exportReport() }
-            cloud.setOnClickListener { showWordCloud() }
-            tools.addView(report)
-            tools.addView(cloud)
-            column.addView(tools)
+        // 「更多」= 导入导出 + 课堂回顾
+        pages[3] = scrollPage { column ->
+            val io = Ui.card(this)
+            io.addView(Ui.section(this, "导入导出"))
+            io.addView(Ui.body(this, "导出文件保存在 App 私有 Documents 目录，可用文件管理器或 adb 取走。"))
+            val ioActions: List<Pair<String, () -> Unit>> = listOf(
+                "导入本堂课密钥 (.key)" to {
+                    keyLauncher.launch(arrayOf("text/plain", "application/json", "application/octet-stream", "*/*"))
+                },
+                "导入作息 JSON" to {
+                    timetableLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                },
+                "导出课表 JSON" to { exportTimetable() },
+                "导出本地缓存数据" to { exportLocalData() },
+                "导出期末成绩表" to { exportReport() },
+                "查看班级词云" to { showWordCloud() },
+            )
+            ioActions.forEach { (label, action) ->
+                val button = Ui.button(this, label)
+                button.setOnClickListener { action() }
+                io.addView(button)
+            }
+            column.addView(io)
+
+            val review = Ui.card(this)
+            review.addView(Ui.section(this, "课堂回顾"))
+            review.addView(Ui.body(this, "查询这堂课讲了什么、干了什么、同学表现怎么样。联网时读教师机，离线时读本地缓存。"))
+            val query = Ui.button(this, "查询这堂课", primary = true)
+            query.setOnClickListener { showLessonReview() }
+            review.addView(query)
+            column.addView(review)
 
             val about = Ui.card(this)
             about.addView(Ui.section(this, "关于"))
-            about.addView(Ui.body(this, "课守 ClassKeep · 教师机移动伴侣\n基于 Veyon 4.x 的教学管理定制分支\n许可：GPL-2.0-or-later"))
-            about.addView(Ui.helper(this, "本软件采集学生行为数据，部署前请阅读仓库中的 CLASSKEEP-PRIVACY.md"))
+            about.addView(Ui.body(this, "ClassKeep · 教师机移动伴侣\n基于 Veyon 4.x 的教学管理定制分支\n许可：GPL-2.0-or-later"))
+            about.addView(Ui.helper(this, "本软件采集学生行为数据，部署前请阅读 CLASSKEEP-PRIVACY.md"))
             column.addView(about)
         }
     }
@@ -375,13 +429,13 @@ class MainActivity : AppCompatActivity() {
         }
         val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val name = TextView(this).apply {
-            this.text = "课守"
+            this.text = "ClassKeep"
             textSize = 22f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(R.color.white))
         }
         val sub = TextView(this).apply {
-            this.text = "ClassKeep · 课堂看得见 · 成长记得下"
+            this.text = "课堂看得见 · 成长记得下"
             textSize = 11f
             setTextColor(getColor(R.color.ck_brand_subtext))
         }
@@ -406,7 +460,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
         bottomBar.select(index)
-        if (index == 1 && seats.isEmpty()) loadSeats()
+        if (index == 1) refreshSchedule()
     }
 
     // ------------------------------------------------------------------ home
@@ -547,7 +601,7 @@ class MainActivity : AppCompatActivity() {
     private fun loadSeats() {
         val host = currentIp()
         if (host.isEmpty() || currentKey().isEmpty()) {
-            message("请先在「课堂」页填写 IP 与密钥")
+            message("请先在「配置」页填写 IP 与密钥")
             return
         }
         bridge.port = currentPort()
@@ -613,7 +667,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
         if (seats.isEmpty()) {
-            seatGrid.addView(Ui.body(this, "暂无学生数据，请先在「课堂」页同步。"))
+            seatGrid.addView(Ui.body(this, "暂无学生数据，请先在「配置」页连接并同步。"))
         }
     }
 
@@ -714,8 +768,19 @@ class MainActivity : AppCompatActivity() {
             (now?.let { "正在上「${timetable.periods[it].label}」" } ?: "当前无课") +
             " · 下一节：$nextText"
 
+        // 2.0.0: single column shows "08:20-09:00", dual column splits 起/止.
+        val half = cellWidth / 2
+        val dual = timetable.config.dualTimeColumn
         val header = Ui.row(this).apply { topMarginCompat(0) }
-        header.addView(cellText("", isHeader = true), LinearLayout.LayoutParams(cellWidth / 2, ViewGroup.LayoutParams.WRAP_CONTENT))
+        if (dual) {
+            header.addView(cellText("开始", isHeader = true),
+                LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT))
+            header.addView(cellText("结束", isHeader = true),
+                LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT))
+        } else {
+            header.addView(cellText("时间", isHeader = true),
+                LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
         WEEKDAYS.forEachIndexed { i, label ->
             header.addView(cellText(label, isHeader = true, highlighted = i + 1 == day),
                 LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -724,10 +789,22 @@ class MainActivity : AppCompatActivity() {
 
         timetable.periods.forEachIndexed { periodIndex, period ->
             val row = Ui.row(this).apply { topMarginCompat(0) }
-            row.addView(
-                cellText("${period.label}\n${period.start}", isHeader = true, highlighted = periodIndex == now),
-                LinearLayout.LayoutParams(cellWidth / 2, ViewGroup.LayoutParams.WRAP_CONTENT),
-            )
+            if (dual) {
+                row.addView(
+                    cellText("${period.label}\n${period.start}", isHeader = true, highlighted = periodIndex == now),
+                    LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT),
+                )
+                row.addView(
+                    cellText(period.end, isHeader = true, highlighted = periodIndex == now),
+                    LinearLayout.LayoutParams(half, ViewGroup.LayoutParams.WRAP_CONTENT),
+                )
+            } else {
+                row.addView(
+                    cellText("${period.label}\n${period.start}-${period.end}",
+                        isHeader = true, highlighted = periodIndex == now),
+                    LinearLayout.LayoutParams(cellWidth, ViewGroup.LayoutParams.WRAP_CONTENT),
+                )
+            }
             for (d in 1..7) {
                 val subject = TimetableStore.subjectAt(timetable, d, periodIndex)
                 val cell = cellText(
@@ -795,6 +872,203 @@ class MainActivity : AppCompatActivity() {
                     }.show()
             }
             .setNegativeButton("取消", null)
+            .show()
+    }
+
+    // --------------------------------------------------- timetable settings & io
+
+    /** 一天几节课 / 每节时长 / 大课间 / 午休 / 单列或双列时间，全部可调。 */
+    private fun showTimetableSettings() {
+        val config = timetableStore.load().config
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = Ui.dp(this@MainActivity, 12)
+            setPadding(p, p, p, p)
+        }
+
+        fun addField(label: String, value: String, numeric: Boolean = true): EditText {
+            box.addView(Ui.body(this@MainActivity, label, 12f))
+            val edit = EditText(this@MainActivity).apply {
+                setText(value)
+                inputType = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
+                val pad = Ui.dp(this@MainActivity, 10)
+                setPadding(pad, pad, pad, pad)
+                background = Ui.shape(this@MainActivity, this@MainActivity.getColor(R.color.ck_input_bg), 12)
+            }
+            box.addView(
+                edit,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            return edit
+        }
+
+        val lessons = addField("一天几节课（1-12）", config.lessonsPerDay.toString())
+        val lessonMinutes = addField("每节时长（分钟）", config.lessonMinutes.toString())
+        val dayStart = addField("第一节开始时间（HH:mm）", config.dayStart, numeric = false)
+        val shortBreak = addField("普通课间（分钟）", config.shortBreakMinutes.toString())
+        val bigAfter = addField("大课间在第几节课后（0=不设）", config.bigBreakAfter.toString())
+        val bigMinutes = addField("大课间时长（分钟）", config.bigBreakMinutes.toString())
+        val noonAfter = addField("午休在第几节课后（0=不设）", config.noonAfter.toString())
+        val noonMinutes = addField("午休时长（分钟）", config.noonMinutes.toString())
+        val dual = android.widget.CheckBox(this).apply {
+            text = "双列时间（开始/结束分两列）"
+            isChecked = config.dualTimeColumn
+            setTextColor(this@MainActivity.getColor(R.color.ck_title))
+        }
+        box.addView(dual)
+
+        val scroll = ScrollView(this).apply { addView(box) }
+        AlertDialog.Builder(this)
+            .setTitle("作息设置")
+            .setView(scroll)
+            .setPositiveButton("保存并生成课表") { _, _ ->
+                val next = TimetableConfig(
+                    lessonsPerDay = lessons.text.toString().toIntOrNull() ?: config.lessonsPerDay,
+                    lessonMinutes = lessonMinutes.text.toString().toIntOrNull() ?: config.lessonMinutes,
+                    shortBreakMinutes = shortBreak.text.toString().toIntOrNull() ?: config.shortBreakMinutes,
+                    dayStart = dayStart.text.toString().trim().ifEmpty { config.dayStart },
+                    bigBreakAfter = bigAfter.text.toString().toIntOrNull() ?: config.bigBreakAfter,
+                    bigBreakMinutes = bigMinutes.text.toString().toIntOrNull() ?: config.bigBreakMinutes,
+                    noonAfter = noonAfter.text.toString().toIntOrNull() ?: config.noonAfter,
+                    noonMinutes = noonMinutes.text.toString().toIntOrNull() ?: config.noonMinutes,
+                    dualTimeColumn = dual.isChecked,
+                )
+                timetableStore.updateConfig(next)
+                refreshSchedule()
+                message("作息已更新：${next.lessonsPerDay} 节课")
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun exportTimetable() {
+        try {
+            val dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: filesDir
+            val file = File(dir, "ClassKeep-课表.json")
+            file.writeText(TimetableStore.toJson(timetableStore.load()), Charsets.UTF_8)
+            message("课表已导出：${file.absolutePath}")
+        } catch (e: Exception) {
+            message("导出失败：${e.message ?: ""}")
+        }
+    }
+
+    private fun exportLocalData() {
+        try {
+            val obj = JSONObject()
+                .put("exportedAt", DateFormat.getDateTimeInstance().format(Date()))
+                .put("teacherIp", cache.teacherIp)
+                .put("className", cache.className)
+                .put("revision", cache.revision)
+                .put("scores", JSONObject(cache.scoresRaw.ifBlank { "{}" }))
+                .put("seats", JSONObject(cache.seatsRaw.ifBlank { "{}" }))
+            val events = JSONArray()
+            cache.events.forEach { event ->
+                events.put(
+                    JSONObject()
+                        .put("timestamp", event.timestamp)
+                        .put("student", event.student)
+                        .put("ip", event.ip)
+                        .put("host", event.host)
+                        .put("detail", event.detail),
+                )
+            }
+            obj.put("events", events)
+            val dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: filesDir
+            val file = File(dir, "ClassKeep-本地数据.json")
+            file.writeText(obj.toString(2), Charsets.UTF_8)
+            message("本地数据已导出：${file.absolutePath}")
+        } catch (e: Exception) {
+            message("导出失败：${e.message ?: ""}")
+        }
+    }
+
+    /** 这堂课讲了什么 / 干了什么 / 同学表现怎么样。 */
+    private fun showLessonReview() {
+        val host = currentIp()
+        if (host.isEmpty() || currentKey().isEmpty()) {
+            message("请先在「配置」页填写 IP 与密钥")
+            return
+        }
+        bridge.port = currentPort()
+        applyKey(currentKey())
+        background {
+            try {
+                bridge.connect(host)
+                val scores = bridge.scores(host)
+                val events: List<ActivityEvent> =
+                    try { bridge.events(host) } catch (_: Exception) { emptyList() }
+                ui { renderLessonReview(scores, events) }
+            } catch (e: Exception) {
+                ui {
+                    try {
+                        renderLessonReview(parseScoreSnapshot(cache.scoresRaw), cache.events)
+                    } catch (_: Exception) {
+                        message("查询失败，请先同步：${e.message ?: ""}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun renderLessonReview(scores: ScoreSnapshot, events: List<ActivityEvent>) {
+        val lessons = scores.lessons
+        if (lessons.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("课堂回顾")
+                .setMessage("还没有节次记录，请先在教师端「开始新课堂」并同步。")
+                .setPositiveButton("关闭", null)
+                .show()
+            return
+        }
+        val labels = lessons.map { lesson ->
+            val date = lesson["date"].orEmpty()
+            val topic = lesson["topic"].orEmpty().ifEmpty { "未填写主题" }
+            "$date  $topic"
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("选择一堂课")
+            .setItems(labels) { _, which ->
+                val lesson = lessons[which]
+                val id = lesson["id"].orEmpty()
+                val date = lesson["date"].orEmpty()
+                val topic = lesson["topic"].orEmpty()
+                val entries = scores.entries.filter { it["lessonId"]?.toString().orEmpty() == id }
+                val totals = LinkedHashMap<String, Int>()
+                entries.forEach { entry ->
+                    val name = entry["student"]?.toString().orEmpty()
+                        .ifEmpty { entry["seat"]?.toString().orEmpty() }
+                    val delta = (entry["delta"] as? Number)?.toInt() ?: 0
+                    totals[name] = (totals[name] ?: 0) + delta
+                }
+                val ranked = totals.entries.sortedByDescending { it.value }
+                val performance = if (ranked.isEmpty()) {
+                    "  本节暂无加减分记录"
+                } else {
+                    ranked.take(10).joinToString("\n") { item ->
+                        val sign = if (item.value > 0) "+" else ""
+                        "  ${item.key}：$sign${item.value} 分"
+                    }
+                }
+                val happened = events
+                    .filter { date.isEmpty() || it.timestamp.startsWith(date) }
+                    .takeLast(12)
+                    .reversed()
+                    .joinToString("\n") { "  ${it.time()} ${it.label()} ${it.detail}" }
+                    .ifEmpty { "  本节暂无活动记录" }
+                val text = buildString {
+                    append("讲了什么：").append(topic.ifEmpty { "未填写" }).append("\n\n")
+                    append("这堂课干了什么（活动记录）：\n").append(happened).append("\n\n")
+                    append("同学表现（本节加减分）：\n").append(performance)
+                }
+                AlertDialog.Builder(this)
+                    .setTitle("$date 课堂回顾")
+                    .setMessage(text)
+                    .setPositiveButton("关闭", null)
+                    .show()
+            }
             .show()
     }
 

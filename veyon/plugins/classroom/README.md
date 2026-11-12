@@ -1,6 +1,6 @@
-# `plugins/classroom` — 课守 ClassKeep 插件
+# `plugins/classroom` — ClassKeep 插件
 
-本目录是课守的全部桌面端实现，作为 Veyon 插件编译（`plugins/CMakeLists.txt` 的 GLOB 自动发现，无需注册）。
+本目录是 ClassKeep 的全部桌面端实现，作为 Veyon 插件编译（`plugins/CMakeLists.txt` 的 GLOB 自动发现，无需注册）。
 
 - 仓库：<https://github.com/zk26/ClassKeep> · 本目录位于 `veyon/plugins/classroom/`
 - 许可：**GPL-2.0-or-later**（`SPDX-License-Identifier: GPL-2.0-or-later`），
@@ -17,10 +17,10 @@
 | `ClassroomPlugin.h/.cpp` | 插件入口；Master / Server / Worker 三端消息分发、worker 生命周期与看门狗 |
 | `ClassroomConfiguration.h` | 配置项宏（`Classroom` 注册表段） |
 | `ClassroomConfigurationPage.h/.cpp` | Veyon Configurator 配置页 |
-| `ClassroomMasterDialog.h/.cpp` | 教师端控制台（课堂/日志/分析/AI/监控/系统设备/积分报表/座位签到 8 个页签） |
+| `ClassroomMasterDialog.h/.cpp` | 教师端控制台（**常用工具** / 课堂 / 日志 / 分析 / AI / 监控 / 系统设备 / 积分报表 / 座位签到） |
 | `ClassroomScorePanel.h/.cpp` | 积分录入、规则发布、每生词云、期末报表导出（含逐条明细） |
-| `ClassroomSeatGrid.h/.cpp` | **座位网格**：实时缩略图、`XX号:XX分` 点击条、-5~+5 选择与原因输入 |
-| `ClassroomClient.h/.cpp` | 学生端悬浮条、AI 聊天、积分明细、肃静页、**签到弹窗**、行为采集 |
+| `ClassroomSeatGrid.h/.cpp` | **座位网格 + 列表视图**：可拖拽网格显示实时缩略图与 `🛡 姓名 [积分]`；列表视图不抓屏、显示登录名/IP/在线/客户端保护/UWF/积分等全部信息 |
+| `ClassroomClient.h/.cpp` | 学生端**不置顶、不可关闭**的悬浮卡片（姓名+座位号+查询积分/AI 两个按钮）、AI 聊天、积分弹窗、肃静页、签到弹窗、行为采集与模糊规则拦截 |
 | `ClassroomAiClient.h/.cpp` | OpenAI 兼容 HTTP 客户端 |
 | `ClassroomBridge.h/.cpp` | 教师机 HTTP/JSON + UDP 发现 + 课堂密钥挑战应答认证 |
 | `ClassroomData.h/.cpp` | 名单、`ClassroomLogStore` 日志存储、兴趣分析、内存状态索引 |
@@ -36,9 +36,30 @@
 
 | 组件 | 进程 | 主要工作 |
 |---|---|---|
-| Master | `veyon-master` | 教师端控制台、名单/密钥下发、日志与积分主库、Bridge 服务 |
-| Server | `veyon-server`（SYSTEM） | FeatureMessage 转发、离线事件补传队列、worker 看门狗、UWF/网络/音频系统操作入口 |
-| Worker | `veyon-worker`（登录用户） | 悬浮条、登录认证、AI/积分/肃静窗口、行为采集、上报事件 |
+| Master | `ClassKeep-master` | 教师端控制台、名单/密钥下发、日志与积分主库、Bridge 服务 |
+| Server | `ClassKeep-server`（SYSTEM） | FeatureMessage 转发、离线事件补传队列、worker 看门狗、UWF/网络/音频系统操作入口 |
+| Worker | `ClassKeep-worker`（登录用户） | 悬浮条、登录认证、AI/积分/肃静窗口、行为采集、上报事件 |
+
+## 2.0.0 常用工具与三种「保护」
+
+教师端第一个页签 **Quick tools** 是每堂课都要用的操作，按「全部学生 / 选中学生」作用域下发：
+
+| 分组 | 按钮 |
+|---|---|
+| 广播 | 全部广播、选中广播（默认禁 USB 输入、**屏幕正常显示**）、边看边做（窗口演示，学生可操作）、停止广播 |
+| 客户端保护 | 启动 / 关闭（防止学生端自行退出程序） |
+| UWF 还原 | 启动 UWF / 关闭 UWF（**不自动重启**，便于装软件）/ 查询 UWF / 重启学生机 |
+| 网关 | 禁用 / 启用 |
+| 肃静页面 | 文案可设置、显示 / 隐藏 |
+| 禁用应用 / 禁用地址 | 逗号或换行分隔的**模糊匹配**规则、应用 / 清空 |
+| 打开软件 / 打开网页 | 路径 / 网址输入后下发 |
+| 全班加减分 | +5 / +1 / -1 / -5 / 自定义 |
+| 其他 | 全员静音、锁定/解锁、开始签到、刷新 |
+
+> **三个开关互不相同**：`SetExitProtection`（客户端保护，学生退不出 worker）、
+> `SetUninstallProtection`（卸载保护，学生卸不掉程序）、
+> `UwfSetFilter`（系统还原，重启生效，装软件前关闭）。
+> 详见 [`../../docs/CLASSKEEP-PROTOCOL.md`](../../docs/CLASSKEEP-PROTOCOL.md) 第 2 节。
 
 ## 修改约束
 

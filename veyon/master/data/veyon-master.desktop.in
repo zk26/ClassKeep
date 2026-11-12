@@ -1,10 +1,10 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=@CMAKE_INSTALL_PREFIX@/bin/veyon-master
+Exec=@CMAKE_INSTALL_PREFIX@/bin/ClassKeep-master
 Icon=veyon-master
 Terminal=false
-Name=Veyon Master
+Name=ClassKeep Master
 Comment=Monitor and control remote computers
 Comment[de]=Entfernte Computer beobachten und steuern
 Categories=Qt;Education;Network;RemoteAccess;

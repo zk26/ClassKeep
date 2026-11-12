@@ -4,7 +4,7 @@
  "http://www.freedesktop.org/software/polkit/policyconfig-1.dtd">
 <policyconfig>
 
-  <action id="io.veyon.pkexec.veyon-configurator">
+  <action id="io.veyon.pkexec.ClassKeep-configurator">
     <description>Veyon Configurator</description>
     <message>Authentication is required to run the Veyon Configurator</message>
     <message xml:lang="de">Für die Ausführung des Veyon Configurators ist eine Authentifizierung erforderlich</message>
@@ -14,7 +14,7 @@
       <allow_inactive>auth_admin_keep</allow_inactive>
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">@CMAKE_INSTALL_PREFIX@/bin/veyon-configurator</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">@CMAKE_INSTALL_PREFIX@/bin/ClassKeep-configurator</annotate>
     <annotate key="org.freedesktop.policykit.exec.allow_gui">true</annotate>
   </action>
 

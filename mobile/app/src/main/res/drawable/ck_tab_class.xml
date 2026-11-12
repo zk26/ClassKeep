@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 课堂：演示板 + 支架。纯矢量，随选中态着色，不依赖任何第三方图标库。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF5A6B7B"
+        android:strokeWidth="1.7"
+        android:pathData="M2.5,4h19v12.5h-19z" />
+    <path android:fillColor="#FF5A6B7B" android:pathData="M11,16.5h2v4h-2z" />
+    <path android:fillColor="#FF5A6B7B" android:pathData="M7,20.5h10v1.5h-10z" />
+    <path android:fillColor="#FF5A6B7B" android:pathData="M5.5,7h7v1.4h-7z" />
+</vector>

@@ -17,8 +17,8 @@ rm -rf "$PAYLOAD"
 mkdir -p "$PAYLOAD/plugins" "$PAYLOAD/platforms" "$PAYLOAD/styles" \
          "$PAYLOAD/tls" "$PAYLOAD/imageformats" "$PAYLOAD/crypto"
 
-echo "== built executables =="
-find "$BUILD" -type f -name 'veyon-*.exe' ! -path '*CMakeFiles*' \
+echo "== built executables (ClassKeep-* since 2.0.0) =="
+find "$BUILD" -type f -name 'ClassKeep-*.exe' ! -path '*CMakeFiles*' \
   -exec cp '{}' "$PAYLOAD/" \;
 
 echo "== core DLL =="
@@ -88,8 +88,8 @@ cp "$ROOT/veyon/scripts/windows-install-readme.txt" "$PAYLOAD/README.TXT"
 cp "$ROOT/veyon/scripts/ClassKeep.ico" "$PAYLOAD/ClassKeep.ico"
 
 echo "== verify (startup-critical files included) =="
-for f in veyon-core.dll veyon-master.exe veyon-configurator.exe veyon-cli.exe \
-         veyon-wcli.exe veyon-service.exe veyon-server.exe veyon-worker.exe \
+for f in veyon-core.dll ClassKeep-master.exe ClassKeep-configurator.exe ClassKeep-cli.exe \
+         ClassKeep-wcli.exe ClassKeep-service.exe ClassKeep-server.exe ClassKeep-worker.exe \
          plugins/classroom.dll plugins/windows-platform.dll \
          crypto/libqca-ossl.dll libqca-qt6.dll \
          platforms/qwindows.dll ClassKeep.ico translations/veyon_zh_CN.qm; do

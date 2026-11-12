@@ -5,15 +5,23 @@
  * This file is part of the Veyon classroom modification.
  */
 
+#include <QtGlobal>
+
 #include <QAbstractSocket>
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QDesktopServices>
 #include <QHostAddress>
 #include <QHostInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 #include <QNetworkInterface>
+#include <QProcess>
 #include <QSettings>
+#include <QStringList>
 #include <QTimer>
+#include <QUrl>
 
 #include "ClassroomClient.h"
 #include "ClassroomConfigurationPage.h"
@@ -45,7 +53,7 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 							   Feature::Flag::Action | Feature::Flag::Master,
 							   consoleFeatureUid(), Feature::Uid(),
 							   Classroom::productName(), {},
-							   tr( "课守 ClassKeep - classes, sign-in by IP, logs, scoring and control" ),
+							   tr( "ClassKeep - classes, sign-in by IP, logs, scoring and control" ),
 							   QStringLiteral(":/core/icon22.png") ) ),
 	m_clientFeature( Feature( QStringLiteral("ClassroomClient"),
 							  Feature::Flag::Session | Feature::Flag::Service | Feature::Flag::Worker,
@@ -300,6 +308,7 @@ bool ClassroomPlugin::handleFeatureMessageFromWorker( VeyonServerInterface& serv
 	case Command::CallTeacher:
 	case Command::CheckInReply:
 	case Command::UwfStatusReport:
+	case Command::ProtectionStateReport:
 		if( hasActiveContext() )
 		{
 			for( const auto& context : m_contexts )
@@ -475,6 +484,21 @@ void ClassroomPlugin::ensureClientUi( VeyonWorkerInterface& worker )
 				 reportEvent( browser ? EventType::web() : EventType::window(),
 							  title.isEmpty() ? app : title, app );
 			 } );
+	connect( m_monitor, &ClassroomMonitor::blockedActivity, this,
+			 [this]( const QString& app, const QString& title, const QString& rule, bool browser ) {
+				 reportEvent( browser ? EventType::webBlock() : EventType::appBlock(),
+							  QStringLiteral("fuzzy rule '%1' matched: %2").arg( rule, title ), app );
+#ifdef Q_OS_WIN
+				 // User-mode enforcement only: no driver, no injection. A matched
+				 // app/browser is simply terminated and reported to the teacher.
+				 if( app.isEmpty() == false )
+				 {
+					 const auto image = app.contains( QLatin1Char('.') ) ? app : app + QStringLiteral(".exe");
+					 QProcess::startDetached( QStringLiteral("taskkill"),
+											 QStringList{ QStringLiteral("/F"), QStringLiteral("/IM"), image } );
+				 }
+#endif
+			 } );
 }
 
 
@@ -534,8 +558,8 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		m_sessionKey = message.argument( Argument::SessionKey ).toString();
 		m_sessionId = message.argument( Argument::SessionId ).toString();
 		m_clientWidget->setSessionKey( m_sessionKey );
-		m_clientWidget->show();
-		VeyonCore::platform().coreFunctions().raiseWindow( m_clientWidget, true );
+		m_clientWidget->reactivate();
+		VeyonCore::platform().coreFunctions().raiseWindow( m_clientWidget, false );
 		reportEvent( EventType::connection(), QStringLiteral("classroom client connected"), {} );
 		break;
 
@@ -598,7 +622,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	}
 
 	case Command::StopClient:
-		m_clientWidget->hide();
+		m_clientWidget->allowHide();
 		if( m_monitor ) { m_monitor->stop(); }
 		break;
 
@@ -661,6 +685,62 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	case Command::UwfRestart:
 		ClassroomSystem::restartSystem();
 		break;
+
+	// ---------------------------------------------------------- 2.0.0 quick tools
+	case Command::SetExitProtection:
+	{
+		// "Protection" is CLIENT protection (the student cannot quit the worker).
+		// It is deliberately independent from UWF / uninstall protection.
+		const auto enabled = message.argument( Argument::Enabled ).toBool();
+		auto object = m_workerSettings;
+		object.insert( SettingKey::exitProtection(), enabled );
+		applyWorkerSettings( object );
+		reportEvent( EventType::protection(),
+					 enabled ? QStringLiteral("client protection enabled by teacher")
+							 : QStringLiteral("client protection disabled by teacher"), {} );
+		auto reply = Classroom::message( Command::ProtectionStateReport );
+		reply.addArgument( Argument::Enabled, enabled );
+		if( m_worker ) { m_worker->sendFeatureMessageReply( reply ); }
+		break;
+	}
+
+	case Command::OpenSoftware:
+	{
+		const auto path = message.argument( Argument::SoftwarePath ).toString().trimmed();
+		if( path.isEmpty() ) { break; }
+		const auto args = message.argument( Argument::SoftwareArgs ).toString();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+		const auto arguments = QProcess::splitCommand( args );
+#else
+		const auto arguments = args.split( QLatin1Char(' '), QString::SkipEmptyParts );
+#endif
+		QProcess::startDetached( path, arguments );
+		reportEvent( EventType::software(), path, {} );
+		break;
+	}
+
+	case Command::OpenWebsite:
+	{
+		const auto url = message.argument( Argument::Message ).toString().trimmed();
+		if( url.isEmpty() ) { break; }
+		QDesktopServices::openUrl( QUrl( url ) );
+		reportEvent( EventType::website(), url, {} );
+		break;
+	}
+
+	case Command::SetAppBlockRules:
+	case Command::SetWebBlockRules:
+	{
+		const auto isApp = message.command<Command>() == Command::SetAppBlockRules;
+		auto object = m_workerSettings;
+		object.insert( isApp ? SettingKey::blockedApps() : SettingKey::blockedWebsites(),
+					   QJsonDocument::fromJson(
+						   message.argument( Argument::RulesJson ).toString().toUtf8() ).array() );
+		applyWorkerSettings( object );
+		reportEvent( isApp ? EventType::appBlock() : EventType::webBlock(),
+					 QStringLiteral("fuzzy block rules updated by teacher"), {} );
+		break;
+	}
 
 	default:
 		return false;

@@ -51,7 +51,7 @@ public:
 
 	QString description() const override
 	{
-		return tr( "Configure and control Veyon service" );
+		return tr( "Configure and control ClassKeep service" );
 	}
 
 	QString vendor() const override
