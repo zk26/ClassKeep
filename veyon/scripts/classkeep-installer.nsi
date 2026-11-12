@@ -329,8 +329,41 @@ Section Uninstall
       nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 0'
       nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" service unregister'
   ck_un_done_wcli:
-  Call StopClassKeepProcesses
-  Call RemoveLockedBinaries
+
+  ; NSIS does NOT allow an uninstall section to Call a plain function (it
+  ; requires an "un." prefixed function). Inline the same stop/cleanup logic
+  ; here so uninstalling 1.5.1 also releases the locked worker executables.
+  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop ClassKeepService'
+  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop VeyonService'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-worker.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-server.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-service.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-master.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-configurator.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-cli.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-wcli.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-worker.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-server.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-service.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-master.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-configurator.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-cli.exe'
+  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-wcli.exe'
+  Sleep 1200
+  Delete "$INSTDIR\ClassKeep-worker.exe"
+  Delete "$INSTDIR\ClassKeep-server.exe"
+  Delete "$INSTDIR\ClassKeep-service.exe"
+  Delete "$INSTDIR\ClassKeep-configurator.exe"
+  Delete "$INSTDIR\ClassKeep-cli.exe"
+  Delete "$INSTDIR\ClassKeep-wcli.exe"
+  Delete "$INSTDIR\ClassKeep-master.exe"
+  Delete "$INSTDIR\veyon-worker.exe"
+  Delete "$INSTDIR\veyon-server.exe"
+  Delete "$INSTDIR\veyon-service.exe"
+  Delete "$INSTDIR\veyon-configurator.exe"
+  Delete "$INSTDIR\veyon-cli.exe"
+  Delete "$INSTDIR\veyon-wcli.exe"
+  Delete "$INSTDIR\veyon-master.exe"
   Sleep 1000
 
   Delete "$INSTDIR\*.exe"
