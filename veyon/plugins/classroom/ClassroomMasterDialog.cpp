@@ -13,6 +13,7 @@
 #include <QComboBox>
 #include <QDateEdit>
 #include <QDateTime>
+#include <QDebug>
 #include <QDesktopServices>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -59,6 +60,7 @@
 #include "ClassroomScore.h"
 #include "ClassroomScorePanel.h"
 #include "ClassroomSeatGrid.h"
+#include "ClassroomSecrets.h"
 #include "ClassroomSystem.h"
 #include "ComputerControlInterface.h"
 #include "FeatureManager.h"
@@ -121,6 +123,12 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 	layout->addWidget( m_tabs, 1 );
 	layout->addLayout( footer );
 
+	// Run in the teacher's interactive account: DPAPI blobs are bound to this
+	// user, so the one-time enc: -> dpapi: migration must happen here.
+	if( m_settings.migrateSecrets() == false )
+	{
+		qWarning( "ClassKeep: could not migrate legacy settings.json secrets" );
+	}
 	currentSessionId();
 	refreshRosterTable();
 	m_scorePanel->setClassName( currentClassName() );
@@ -167,6 +175,12 @@ QString ClassroomMasterDialog::dataDirectory() const
 QJsonObject ClassroomMasterDialog::settingsJson() const
 {
 	return m_settings.object();
+}
+
+
+QJsonObject ClassroomMasterDialog::settingsForStudents() const
+{
+	return ClassroomSettings::forStudents( settingsJson() );
 }
 
 
@@ -569,8 +583,8 @@ void ClassroomMasterDialog::registerComputers( const QVector<ClassroomStudent>& 
 	if( configuration.isStoreWritable() == false )
 	{
 		QMessageBox::information( this, windowTitle(),
-								  tr( "Veyon Master cannot write the global computer directory. "
-									  "Run it as administrator or use Veyon Configurator. "
+								  tr( "ClassKeep Master cannot write the global computer directory. "
+									  "Run it as administrator or use the ClassKeep Configurator. "
 									  "IP addresses can still be reached directly." ) );
 		return;
 	}
@@ -678,20 +692,23 @@ void ClassroomMasterDialog::startNewSession()
 	pushKey();
 	appendTeacherEvent( EventType::connection(), tr( "new lesson started for class %1" ).arg( currentClassName() ) );
 	QMessageBox::information( this, windowTitle(),
-							  tr( "A new lesson has been started. Settings, roster and key were pushed to all computers." ) );
+							  tr( "A new lesson has been started. A new mobile bridge key was generated; "
+								  "settings and roster were pushed to all computers." ) );
 }
 
 
 void ClassroomMasterDialog::generateKey()
 {
 	auto object = m_settings.object();
-	object.insert( QStringLiteral("sessionKey"), QUuid::createUuid().toString( QUuid::WithoutBraces ).left( 16 ).toUpper() );
+	// 128 bit from the system CSP, hex encoded. This key authorises the mobile
+	// bridge only; it is NEVER sent to a student machine.
+	object.insert( QStringLiteral("sessionKey"), ClassroomSecrets::generateBridgeKey() );
 	m_settings.setObject( object );
 	m_settings.save();
 	if( m_bridge ) { m_bridge->setSettings( settingsJson() ); }
 	refreshStatus();
 	pushKey();
-	appendTeacherEvent( EventType::lock(), tr( "new connection key generated" ) );
+	appendTeacherEvent( EventType::lock(), tr( "new mobile bridge key generated" ) );
 }
 
 
@@ -699,7 +716,7 @@ void ClassroomMasterDialog::pushSettings()
 {
 	auto message = Classroom::message( Command::SetSettings );
 	message.addArgument( Argument::SettingsJson,
-						 QString::fromUtf8( QJsonDocument( settingsJson() ).toJson( QJsonDocument::Compact ) ) );
+						 QString::fromUtf8( QJsonDocument( settingsForStudents() ).toJson( QJsonDocument::Compact ) ) );
 	sendToAll( message );
 }
 
@@ -714,8 +731,10 @@ void ClassroomMasterDialog::pushRoster()
 
 void ClassroomMasterDialog::pushKey()
 {
+	// Kept as a heartbeat, but the wire now carries a boolean only. A student
+	// machine must never see the key that authorises the mobile bridge.
 	auto message = Classroom::message( Command::SetSessionKey );
-	message.addArgument( Argument::SessionKey, sessionKey() );
+	message.addArgument( Argument::KeyConfigured, sessionKey().isEmpty() == false );
 	message.addArgument( Argument::SessionId, currentSessionId() );
 	sendToAll( message );
 }
@@ -1270,7 +1289,7 @@ void ClassroomMasterDialog::setupMonitorTab()
 	m_captureProcess = new QCheckBox( tr( "Record active process names" ), page );
 	m_exitProtection = new QCheckBox( tr( "Prevent students from exiting the client" ), page );
 	m_exitRequiresAdmin = new QCheckBox( tr( "Exiting requires the administrator account" ), page );
-	m_allowSelfLogin = new QCheckBox( tr( "Students may sign in themselves (seat + name + key)" ), page );
+	m_allowSelfLogin = new QCheckBox( tr( "Students may sign in themselves (seat + name)" ), page );
 	m_exitAdminUsername = new QLineEdit( page );
 	m_captureInterval = new QSpinBox( page );
 	m_captureInterval->setRange( 1, 300 );
@@ -1293,7 +1312,7 @@ void ClassroomMasterDialog::setupMonitorTab()
 	auto* buttons = new QHBoxLayout;
 	auto* saveButton = new QPushButton( tr( "Save on this computer" ), page );
 	auto* pushButton = new QPushButton( tr( "Save and push to students" ), page );
-	auto* keyButton = new QPushButton( tr( "Generate and push key" ), page );
+	auto* keyButton = new QPushButton( tr( "Generate new mobile bridge key" ), page );
 	auto* rosterButton = new QPushButton( tr( "Push roster" ), page );
 	auto* openButton = new QPushButton( tr( "Open data directory" ), page );
 	buttons->addWidget( saveButton );
@@ -1405,7 +1424,12 @@ void ClassroomMasterDialog::syncNow()
 	m_bridge->setClassName( currentClassName() );
 	if( m_bridge->isRunning() == false )
 	{
-		m_bridge->start( m_bridgePort ? m_bridgePort->value() : 11880 );
+		const auto address = QHostAddress( m_teacherIp ? m_teacherIp->text().trimmed() : QString{} );
+		if( m_bridge->start( m_bridgePort ? m_bridgePort->value() : 11880, address ) == false )
+		{
+			QMessageBox::warning( this, windowTitle(),
+								  tr( "The mobile bridge could not be started. Check the teacher IP and the port." ) );
+		}
 	}
 	m_bridge->syncNow();
 	if( m_systemStatus ) { m_systemStatus->setText( m_bridge->status() ); }
@@ -1793,19 +1817,12 @@ void ClassroomMasterDialog::setupToolsTab()
 	note->setStyleSheet( QStringLiteral("color:#546e7a; font-size:11px;") );
 	layout->addWidget( note );
 
-	const auto group = [this, page, layout]( const QString& label,
-											const QVector<QPair<QString, std::function<void()>>>& actions ) {
-		auto* row = new QHBoxLayout;
-		row->addWidget( new QLabel( label, page ) );
-		for( const auto& action : actions )
-		{
-			auto* button = new QPushButton( action.first, page );
-			button->setMaximumWidth( 150 );
-			row->addWidget( button );
-			connect( button, &QPushButton::clicked, this, action.second );
-		}
-		row->addStretch( 1 );
-		layout->addLayout( row );
+	// 2.3.0: the buttons themselves live in the Veyon Master tool-bar menu, not
+	// duplicated here. This page keeps only the parameters those actions read.
+	// Collect the exact same lambdas so both surfaces share one implementation.
+	const auto group = [this]( const QString& label,
+							  const QVector<QPair<QString, std::function<void()>>>& actions ) {
+		m_quickToolGroups.append( qMakePair( label, actions ) );
 	};
 
 	const auto input = [page, layout]( const QString& label, QLineEdit*& field, const QString& placeholder ) {
@@ -1821,7 +1838,8 @@ void ClassroomMasterDialog::setupToolsTab()
 	const auto send = [this]( Command command, bool enabled, const QString& text = QString{} ) {
 		auto message = Classroom::message( command );
 		message.addArgument( Argument::Enabled, enabled );
-		message.addArgument( Argument::Ip, m_teacherIp ? m_teacherIp->text().trimmed() : QString{} );
+		message.addArgument( Argument::Ip,
+							 m_teacherIp ? Classroom::sanitizeUnicastIp( m_teacherIp->text() ) : QString{} );
 		if( text.isEmpty() == false ) { message.addArgument( Argument::Message, text ); }
 		sendToTargets( message );
 	};
@@ -1951,13 +1969,21 @@ void ClassroomMasterDialog::setupToolsTab()
 			if( accepted && delta != 0 ) { scoreWholeClass( delta ); }
 		} } } );
 
+	// Check-in has its own button on the Veyon tool bar, so it is deliberately
+	// not repeated inside this menu.
 	group( tr( "Other:" ), {
 		{ tr( "Mute all" ), [send]() { send( Command::SetMute, true ); } },
 		{ tr( "Unmute all" ), [send]() { send( Command::SetMute, false ); } },
 		{ tr( "Lock all" ), [this]() { lockAll( true ); } },
 		{ tr( "Unlock all" ), [this]() { lockAll( false ); } },
-		{ tr( "Start check-in" ), [this]() { startCheckIn(); } },
 		{ tr( "Refresh" ), [this]() { refreshStatus(); refreshMachines(); } } } );
+
+	auto* toolbarHint = new QLabel(
+		tr( "All actions are available from the ClassKeep tool bar: open the \"Quick tools\" menu, "
+			"or press the \"Check-in\" button. This page only holds their parameters." ), page );
+	toolbarHint->setWordWrap( true );
+	toolbarHint->setStyleSheet( QStringLiteral("color:#546e7a; font-size:11px;") );
+	layout->addWidget( toolbarHint );
 
 	layout->addStretch( 1 );
 	m_tabs->insertTab( 0, page, tr( "Quick tools" ) );
@@ -2205,7 +2231,7 @@ void ClassroomMasterDialog::setupSystemTab()
 	const auto send = [this]( Command command, bool enabled = true, const QString& text = QString{} ) {
 		auto message = Classroom::message( command );
 		message.addArgument( Argument::Enabled, enabled );
-		message.addArgument( Argument::Ip, m_teacherIp->text().trimmed() );
+		message.addArgument( Argument::Ip, Classroom::sanitizeUnicastIp( m_teacherIp->text() ) );
 		if( text.isEmpty() == false ) { message.addArgument( Argument::Message, text ); }
 		sendToAll( message );
 	};
@@ -2284,6 +2310,12 @@ void ClassroomMasterDialog::setupSystemTab()
 				return;
 			}
 			const auto command = ClassroomSystem::softwareInstallCommand( path );
+			if( command.isEmpty() )
+			{
+				QMessageBox::warning( this, windowTitle(),
+									  tr( "Only .exe and .msi installers can be deployed, and the path must not contain quotes." ) );
+				return;
+			}
 			feature( QStringLiteral("da9ca56a-b2ad-4fff-8f8a-929b2927b442"), true,
 					 QVariantMap{ { QStringLiteral("Applications"), QStringList{ command } } } );
 			m_systemStatus->setText( tr( "Install command sent: %1" ).arg( command ) );
@@ -2299,7 +2331,10 @@ void ClassroomMasterDialog::setupSystemTab()
 	m_bridge = new ClassroomBridge( dataDirectory(), m_roster, m_store, settingsJson(), m_master, this );
 	if( m_bridgeEnabled->isChecked() )
 	{
-		m_bridge->start( m_bridgePort->value() );
+		if( m_bridge->start( m_bridgePort->value(), QHostAddress( m_teacherIp->text().trimmed() ) ) == false )
+		{
+			qWarning( "ClassKeep: mobile bridge did not start" );
+		}
 		m_systemStatus->setText( m_bridge->status() );
 	}
 	m_tabs->addTab( page, tr( "System & devices" ) );

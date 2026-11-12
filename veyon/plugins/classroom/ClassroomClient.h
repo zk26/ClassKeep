@@ -38,7 +38,9 @@ public:
 
 	void setSettings( const QJsonObject& settings );
 	void setRoster( const QJsonObject& roster );
-	void setSessionKey( const QString& key );
+	//! The worker never receives the bridge key, only this boolean.
+	void setKeyConfigured( bool configured );
+	void deliverAiReply( bool success, const QString& reply );
 	void setIdentity( const QString& className, const QString& seat, const QString& student );
 	void clearIdentity();
 	void setLocked( bool locked );
@@ -65,6 +67,8 @@ Q_SIGNALS:
 	void scoreRequested();
 	void callTeacherRequested();
 	void checkInSubmitted( const QString& name );
+	//! Forwarded by the plugin to the teacher machine, which owns the API key.
+	void aiPromptRequested( const QString& prompt, const QVariantList& history );
 
 protected:
 	void closeEvent( QCloseEvent* event ) override;
@@ -86,7 +90,6 @@ private:
 	QLabel* m_lockLabel = nullptr;
 	QLineEdit* m_seatEdit = nullptr;
 	QLineEdit* m_nameEdit = nullptr;
-	QLineEdit* m_keyEdit = nullptr;
 	QPushButton* m_loginButton = nullptr;
 	QPushButton* m_aiButton = nullptr;
 	QPushButton* m_scoreButton = nullptr;
@@ -98,7 +101,7 @@ private:
 	ClassroomSilencePage* m_silencePage = nullptr;
 	ClassroomCheckInDialog* m_checkIn = nullptr;
 
-	QString m_sessionKey;
+	bool m_keyConfigured = false;
 	QString m_className;
 	QString m_seat;
 	QString m_student;

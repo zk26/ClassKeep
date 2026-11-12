@@ -13,6 +13,7 @@
 #include <QJsonDocument>
 #include <QPair>
 #include <QRegularExpression>
+#include <QSet>
 #include <QStringList>
 #include <QUuid>
 
@@ -364,10 +365,42 @@ bool ClassroomScoreBook::applySnapshot( const QJsonObject& snapshot )
 }
 
 
+bool ClassroomScoreBook::appendSnapshot( const QJsonObject& snapshot )
+{
+	const auto className = snapshot.value( QStringLiteral("className") ).toString();
+	if( className.isEmpty() ) { return false; }
+	if( m_className.isEmpty() ) { m_className = className; }
+	else if( className != m_className ) { return false; }
+
+	QSet<QString> knownIds;
+	knownIds.reserve( m_entries.size() );
+	for( const auto& entry : m_entries ) { knownIds.insert( entry.id ); }
+
+	bool changed = false;
+	int added = 0;
+	for( const auto& value : snapshot.value( QStringLiteral("entries") ).toArray() )
+	{
+		if( added >= 500 ) { break; }
+		auto entry = ClassroomScoreEntry::fromJson( value.toObject() );
+		if( entry.id.isEmpty() || knownIds.contains( entry.id ) ) { continue; }
+		if( entry.delta < -5 || entry.delta > 5 || entry.seat.isEmpty() || entry.seat.size() > 16 ) { continue; }
+		if( entry.label.size() > 200 || entry.richText.size() > 4000 ) { continue; }
+		if( entry.className.isEmpty() ) { entry.className = m_className; }
+		m_entries.append( entry );
+		knownIds.insert( entry.id );
+		++added;
+		changed = true;
+	}
+	return changed ? save() : true;
+}
+
+
 QString ClassroomScoreBook::inlineImages( const QString& html, const QString& dataDirectory )
 {
 	const QRegularExpression pattern( QStringLiteral("<img[^>]+src=[\"']([^\"']+)[\"']"),
 									  QRegularExpression::CaseInsensitiveOption );
+	const QDir root( dataDirectory );
+	const auto rootPrefix = QDir::cleanPath( root.absolutePath() ) + QLatin1Char('/');
 	QString result;
 	int cursor = 0;
 	auto it = pattern.globalMatch( html );
@@ -381,19 +414,33 @@ QString ClassroomScoreBook::inlineImages( const QString& html, const QString& da
 		QString uri;
 		if( source.startsWith( QStringLiteral("data:"), Qt::CaseInsensitive ) == false )
 		{
-			QString fileName = source;
-			if( fileName.startsWith( QStringLiteral("file:///") ) ) { fileName.remove( 0, 8 ); }
-			if( QFileInfo( fileName ).isRelative() )
+			// Rich text can arrive from the phone. Never inline an absolute
+			// Windows path, a file:// URL, a drive letter/UNC path or anything
+			// containing ".."; only small relative files inside the ClassKeep
+			// data directory are allowed.
+			const auto relative = source.trimmed();
+			const bool safe = relative.isEmpty() == false &&
+							  QFileInfo( relative ).isRelative() &&
+							  relative.contains( QStringLiteral("..") ) == false &&
+							  relative.contains( QLatin1Char(':') ) == false &&
+							  relative.startsWith( QLatin1Char('/') ) == false &&
+							  relative.startsWith( QLatin1Char('\\') ) == false;
+			if( safe )
 			{
-				fileName = QDir( dataDirectory ).filePath( fileName );
-			}
-			QFile image( fileName );
-			if( image.open( QFile::ReadOnly ) )
-			{
-				const auto bytes = image.readAll();
-				const auto mime = fileName.endsWith( QStringLiteral(".png"), Qt::CaseInsensitive ) ?
-									  QStringLiteral("image/png") : QStringLiteral("image/jpeg");
-				uri = QStringLiteral("data:%1;base64,%2").arg( mime, QString::fromLatin1( bytes.toBase64() ) );
+				const auto fileName = QDir::cleanPath( root.absoluteFilePath( relative ) );
+				const QFileInfo imageInfo( fileName );
+				if( fileName.startsWith( rootPrefix, Qt::CaseInsensitive ) &&
+					imageInfo.isFile() && imageInfo.size() <= 2 * 1024 * 1024 )
+				{
+					QFile image( fileName );
+					if( image.open( QFile::ReadOnly ) )
+					{
+						const auto bytes = image.readAll();
+						const auto mime = fileName.endsWith( QStringLiteral(".png"), Qt::CaseInsensitive ) ?
+											  QStringLiteral("image/png") : QStringLiteral("image/jpeg");
+						uri = QStringLiteral("data:%1;base64,%2").arg( mime, QString::fromLatin1( bytes.toBase64() ) );
+					}
+				}
 			}
 		}
 

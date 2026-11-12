@@ -25,6 +25,14 @@ public:
 
 	static QJsonObject fromConfiguration( const ClassroomConfiguration& configuration );
 
+	//! Settings that may be sent to a student machine. NEVER contains the bridge
+	//! key, the AI API key, or any other teacher-side credential; instead it
+	//! carries a boolean telling the worker whether a lesson has been started.
+	static QJsonObject forStudents( const QJsonObject& object );
+
+	//! Rewrite a pre-2.3 settings.json (enc:) to the user-bound DPAPI format.
+	bool migrateSecrets();
+
 	QString filePath() const { return m_filePath; }
 	const QJsonObject& object() const { return m_object; }
 	void setObject( const QJsonObject& object ) { m_object = object; }

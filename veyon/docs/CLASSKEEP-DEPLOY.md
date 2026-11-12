@@ -55,7 +55,10 @@ bash veyon/scripts/collect-windows-runtime.sh
 
 安装器沿用上游 `nsis/veyon.nsi.in` 的安装流程；`classroom.dll` 等插件安装在
 `plugins/` 子目录，运行时 DLL 由 `ntldd` 递归收集，**不要**自己手工拷贝 DLL 白名单。
-Veyon Service 以 `LocalSystem` 运行，因此 `uwfmgr.exe`、`netsh.exe`、`shutdown.exe` 无需额外提权或 UAC。
+服务进程 `ClassKeep-service.exe` 以 `LocalSystem` 运行，负责在会话里拉起 `ClassKeep-server.exe`
+与 `ClassKeep-worker.exe`；**worker 本身运行在登录用户的交互会话，不是 SYSTEM**。
+`uwfmgr.exe`、`netsh.exe`、`shutdown.exe` 由 worker 调用，登录账户需具备管理员权限；
+写 `HKLM` 的卸载保护会读回确认，失败会在教师端活动日志里显示，不会静默报成功。
 
 ### 手机端
 

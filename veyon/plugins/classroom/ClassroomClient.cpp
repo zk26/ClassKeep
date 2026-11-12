@@ -120,14 +120,12 @@ ClassroomClientWidget::ClassroomClientWidget( QWidget* parent ) :
 	m_nameEdit = new QLineEdit( this );
 	m_nameEdit->setPlaceholderText( tr( "Name" ) );
 	m_nameEdit->setMaxLength( 32 );
-	m_keyEdit = new QLineEdit( this );
-	m_keyEdit->setPlaceholderText( tr( "Connection key" ) );
-	m_keyEdit->setEchoMode( QLineEdit::Password );
 
+	// No key field on the card: the bridge key stays on the teacher machine
+	// and the teacher's phone. Students sign in with seat + name only.
 	auto* inputLayout = new QHBoxLayout;
 	inputLayout->addWidget( m_seatEdit );
 	inputLayout->addWidget( m_nameEdit );
-	inputLayout->addWidget( m_keyEdit );
 
 	m_loginButton = new QPushButton( tr( "Sign in" ), this );
 	m_aiButton = new QPushButton( tr( "AI assistant" ), this );
@@ -174,7 +172,9 @@ ClassroomClientWidget::ClassroomClientWidget( QWidget* parent ) :
 
 	connect( m_loginButton, &QPushButton::clicked, this, &ClassroomClientWidget::handleLogin );
 	connect( m_aiButton, &QPushButton::clicked, this, &ClassroomClientWidget::showAiChat );
-	connect( m_keyEdit, &QLineEdit::returnPressed, this, &ClassroomClientWidget::handleLogin );
+	connect( m_nameEdit, &QLineEdit::returnPressed, this, &ClassroomClientWidget::handleLogin );
+	connect( m_aiClient, &ClassroomAiClient::promptRequested,
+			 this, &ClassroomClientWidget::aiPromptRequested );
 	connect( m_scoreButton, &QPushButton::clicked, this, [this]() { Q_EMIT scoreRequested(); } );
 	connect( m_callButton, &QPushButton::clicked, this, [this]() { Q_EMIT callTeacherRequested(); } );
 }
@@ -185,7 +185,6 @@ void ClassroomClientWidget::updateVisibility()
 	const auto signedIn = m_loggedIn;
 	m_seatEdit->setVisible( signedIn == false );
 	m_nameEdit->setVisible( signedIn == false );
-	m_keyEdit->setVisible( signedIn == false );
 	m_loginButton->setVisible( signedIn == false && m_allowSelfLogin );
 	m_callButton->setVisible( signedIn == false );
 	m_scoreButton->setVisible( true );
@@ -212,14 +211,13 @@ void ClassroomClientWidget::setSettings( const QJsonObject& settings )
 	m_exitRequiresAdmin = settings.value( Classroom::SettingKey::exitRequiresAdmin() ).toBool( true );
 	m_exitAdminUsername = settings.value( Classroom::SettingKey::exitAdminUsername() ).toString();
 
-	ClassroomAiClient::Settings fallback;
-	fallback.endpoint = settings.value( Classroom::SettingKey::aiEndpoint() ).toString();
-	fallback.apiKey = settings.value( Classroom::SettingKey::aiApiKey() ).toString();
-	fallback.model = settings.value( Classroom::SettingKey::aiModel() ).toString();
-	fallback.systemPrompt = settings.value( Classroom::SettingKey::aiSystemPrompt() ).toString();
-	fallback.timeout = settings.value( Classroom::SettingKey::aiTimeout() ).toInt( 60 );
-	fallback.enabled = m_aiEnabled;
-	m_aiClient->setSettings( ClassroomAiClient::Settings::fromJson( settings, fallback ) );
+	// The API key, endpoint, model and system prompt stay on the teacher
+	// machine. The student worker only submits a prompt through the bridge of
+	// Veyon feature messages (see ClassroomPlugin::handleFeatureMessage).
+	ClassroomAiClient::Settings aiSettings;
+	aiSettings.enabled = m_aiEnabled;
+	m_aiClient->setProxyMode( true );
+	m_aiClient->setSettings( aiSettings );
 
 	m_aiButton->setEnabled( m_aiEnabled );
 	m_loginButton->setEnabled( m_allowSelfLogin );
@@ -240,10 +238,16 @@ void ClassroomClientWidget::setRoster( const QJsonObject& roster )
 }
 
 
-void ClassroomClientWidget::setSessionKey( const QString& key )
+void ClassroomClientWidget::setKeyConfigured( bool configured )
 {
-	m_sessionKey = key;
+	m_keyConfigured = configured;
 	updateStatus();
+}
+
+
+void ClassroomClientWidget::deliverAiReply( bool success, const QString& reply )
+{
+	if( m_aiClient ) { m_aiClient->deliverReply( success, reply ); }
 }
 
 
@@ -256,7 +260,6 @@ void ClassroomClientWidget::setIdentity( const QString& className, const QString
 
 	m_seatEdit->setText( seat );
 	m_nameEdit->setText( student );
-	m_keyEdit->clear();
 	m_loginButton->setText( tr( "Sign in" ) );
 	updateVisibility();
 	updateStatus();
@@ -271,7 +274,6 @@ void ClassroomClientWidget::clearIdentity()
 	m_loggedIn = false;
 	m_seatEdit->clear();
 	m_nameEdit->clear();
-	m_keyEdit->clear();
 	m_loginButton->setText( tr( "Sign in" ) );
 	updateVisibility();
 	updateStatus();
@@ -288,9 +290,9 @@ void ClassroomClientWidget::setLocked( bool locked )
 
 void ClassroomClientWidget::updateStatus()
 {
-	m_statusLabel->setText( tr( "Class: %1  |  Key: %2" ).
+	m_statusLabel->setText( tr( "Class: %1  |  Lesson: %2" ).
 							arg( m_className.isEmpty() ? tr( "not selected" ) : m_className,
-								 m_sessionKey.isEmpty() ? tr( "none" ) : tr( "active" ) ) );
+								 m_keyConfigured ? tr( "started" ) : tr( "not started" ) ) );
 	m_lockLabel->setText( m_locked ? tr( "locked" ) : tr( "unlocked" ) );
 
 	// Prominent line: shield (client protection) + signed-in name + seat number.
@@ -340,23 +342,18 @@ void ClassroomClientWidget::handleLogin()
 {
 	const auto seat = m_seatEdit->text().trimmed();
 	const auto name = m_nameEdit->text().trimmed();
-	const auto key = m_keyEdit->text().trimmed();
 
 	if( seat.isEmpty() || name.isEmpty() )
 	{
 		QMessageBox::warning( this, windowTitle(), tr( "Please enter both the seat number and your name." ) );
 		return;
 	}
-	if( m_sessionKey.isEmpty() )
+	// The bridge key never reaches this process. Self sign-in is gated by the
+	// teacher having started a lesson plus the roster check below.
+	if( m_keyConfigured == false )
 	{
-		Q_EMIT eventOccurred( Classroom::EventType::keyFailed(), tr( "no connection key issued by the teacher" ), {} );
-		QMessageBox::warning( this, windowTitle(), tr( "The teacher has not issued a connection key for this lesson yet." ) );
-		return;
-	}
-	if( key != m_sessionKey )
-	{
-		Q_EMIT eventOccurred( Classroom::EventType::keyFailed(), tr( "wrong connection key for seat %1" ).arg( seat ), {} );
-		QMessageBox::warning( this, windowTitle(), tr( "The connection key is not correct. Ask your teacher for the current key." ) );
+		Q_EMIT eventOccurred( Classroom::EventType::keyFailed(), tr( "no lesson started by the teacher" ), {} );
+		QMessageBox::warning( this, windowTitle(), tr( "The teacher has not started a lesson yet." ) );
 		return;
 	}
 	if( m_allowSelfLogin == false )
@@ -435,14 +432,11 @@ void ClassroomClientWidget::requestQuit()
 	auto* form = new QFormLayout( &dialog );
 	auto* username = new QLineEdit( &dialog );
 	auto* password = new QLineEdit( &dialog );
-	auto* key = new QLineEdit( &dialog );
 	username->setText( VeyonCore::platform().userFunctions().
 					   queryCurrentUserProperty( PlatformUserFunctions::UserProperty::LoginName ) );
 	password->setEchoMode( QLineEdit::Password );
-	key->setEchoMode( QLineEdit::Password );
 	form->addRow( tr( "Administrator account:" ), username );
 	form->addRow( tr( "Administrator password:" ), password );
-	form->addRow( tr( "Connection key:" ), key );
 	auto* buttons = new QDialogButtonBox( QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog );
 	form->addRow( buttons );
 	connect( buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept );
@@ -450,21 +444,19 @@ void ClassroomClientWidget::requestQuit()
 
 	if( dialog.exec() != QDialog::Accepted ) { return; }
 
+	// From 2.3.0 Windows administrator credentials are the ONLY exit
+	// credential. The bridge key is never present in this process, so the old
+	// "connection key" fallback is gone; exitRequiresAdmin is kept in the
+	// configuration for backwards compatibility but no longer weakens this.
+	Q_UNUSED( m_exitRequiresAdmin )
 	bool authorized = false;
-	if( m_exitRequiresAdmin )
+	const auto expectedUser = m_exitAdminUsername.trimmed();
+	const auto userMatches = expectedUser.isEmpty() ||
+							 username->text().trimmed().compare( expectedUser, Qt::CaseInsensitive ) == 0;
+	if( userMatches && password->text().isEmpty() == false )
 	{
-		const auto expectedUser = m_exitAdminUsername.trimmed();
-		const auto userMatches = expectedUser.isEmpty() ||
-								 username->text().trimmed().compare( expectedUser, Qt::CaseInsensitive ) == 0;
-		if( userMatches && password->text().isEmpty() == false )
-		{
-			const CryptoCore::PlaintextPassword plainPassword = password->text().toUtf8();
-			authorized = VeyonCore::platform().userFunctions().authenticate( username->text().trimmed(), plainPassword );
-		}
-	}
-	else
-	{
-		authorized = m_sessionKey.isEmpty() == false && key->text().trimmed() == m_sessionKey;
+		const CryptoCore::PlaintextPassword plainPassword = password->text().toUtf8();
+		authorized = VeyonCore::platform().userFunctions().authenticate( username->text().trimmed(), plainPassword );
 	}
 
 	if( authorized )
@@ -476,7 +468,7 @@ void ClassroomClientWidget::requestQuit()
 	{
 		Q_EMIT eventOccurred( Classroom::EventType::quitAttempt(), tr( "rejected client exit" ), {} );
 		QMessageBox::warning( this, windowTitle(),
-							  tr( "Administrator credentials or connection key are not valid. This attempt has been logged." ) );
+							  tr( "Administrator credentials are not valid. This attempt has been logged." ) );
 	}
 }
 
@@ -870,7 +862,9 @@ void ClassroomMonitor::setSettings( const QJsonObject& settings )
 		for( const auto& value : settings.value( key ).toArray() )
 		{
 			const auto rule = value.toString().trimmed();
-			if( rule.isEmpty() == false ) { rules.append( rule ); }
+			// Fuzzy substring matching plus taskkill /F /IM: a one-character
+			// rule such as "e" would terminate dozens of unrelated processes.
+			if( rule.size() >= 4 ) { rules.append( rule ); }
 		}
 		return rules;
 	};

@@ -50,7 +50,7 @@ public:
 	QVersionNumber version() const override { return QVersionNumber( 1, 0 ); }
 	QString name() const override { return QStringLiteral("ClassKeep"); }
 	QString description() const override { return tr( "ClassKeep - classes, logs, scoring, analysis and control" ); }
-	QString vendor() const override { return QStringLiteral("ClassKeep"); }
+	QString vendor() const override { return QStringLiteral("zk26"); }
 	QString copyright() const override { return QStringLiteral("ClassKeep"); }
 
 	const FeatureList& featureList() const override;
@@ -97,6 +97,8 @@ private:
 	const Feature m_clientFeature;
 	const Feature m_signInFeature;
 	const Feature m_signOutFeature;
+	const Feature m_quickToolsFeature;
+	const Feature m_checkInFeature;
 	const FeatureList m_features;
 
 	std::unique_ptr<ClassroomRoster> m_roster;
@@ -125,5 +127,6 @@ private:
 	QString m_seat;
 	QString m_student;
 	QString m_sessionId;
-	QString m_sessionKey;
+	//! Never holds the bridge key: only whether the teacher has started a lesson.
+	bool m_keyConfigured = false;
 };

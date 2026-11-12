@@ -76,6 +76,19 @@ void ClassroomAiClient::abort()
 
 void ClassroomAiClient::chat( const QVariantList& history, const QString& prompt )
 {
+	if( m_proxyMode )
+	{
+		// The teacher machine owns the API key. Forward only the prompt and
+		// the short chat history over Veyon's existing feature channel.
+		if( m_settings.enabled == false || prompt.trimmed().isEmpty() )
+		{
+			Q_EMIT finished( false, tr( "AI is not enabled or the message is empty." ) );
+			return;
+		}
+		Q_EMIT promptRequested( prompt.left( 4000 ), history );
+		return;
+	}
+
 	if( m_settings.enabled == false || m_settings.endpoint.isEmpty() || prompt.trimmed().isEmpty() )
 	{
 		Q_EMIT finished( false, tr( "AI is not configured or the message is empty." ) );

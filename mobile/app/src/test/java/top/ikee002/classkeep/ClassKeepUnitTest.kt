@@ -10,18 +10,24 @@ class ClassKeepUnitTest {
 
     @Test
     fun tokenMatchesTeacherMachineReference() {
-        // Standard SHA-256("veyon-classroom:ABC123:nonce-0001"); must match
-        // ClassroomSecrets::sessionToken on the C++ side.
+        // Same vector as ClassroomSelfTest:
+        // HMAC-SHA256("ABC123", "GET\n/api/classroom/state\nnonce-0001\nSHA256(\"\")")
         assertEquals(
-            "e198264293e2ee9d35aade33089e0f33e560cd60143d01292483f9f952330e04",
-            ClassKeepCrypto.token("ABC123", "nonce-0001"),
+            "bd41d1e94c8c04a9ae857dce47c9f1d6907b65cfcd5c1bcbd8d08711a7c14e50",
+            ClassKeepCrypto.token("ABC123", "GET", "/api/classroom/state", "nonce-0001", null),
         )
     }
 
     @Test
-    fun tokenChangesWithLessonKey() {
-        assertTrue(ClassKeepCrypto.token("old", "n") != ClassKeepCrypto.token("new", "n"))
-        assertTrue(ClassKeepCrypto.token("key", "n1") != ClassKeepCrypto.token("key", "n2"))
+    fun tokenIsBoundToMethodPathNonceAndBody() {
+        val base = { method: String, path: String, nonce: String, body: String? ->
+            ClassKeepCrypto.token("key", method, path, nonce, body)
+        }
+        assertTrue(base("GET", "/a", "n", null) != base("POST", "/a", "n", null))
+        assertTrue(base("GET", "/a", "n", null) != base("GET", "/b", "n", null))
+        assertTrue(base("GET", "/a", "n", null) != base("GET", "/a", "n2", null))
+        assertTrue(base("POST", "/a", "n", "{}") != base("POST", "/a", "n", "[]"))
+        assertTrue(base("POST", "/a", "n", "{}") != base("POST", "/a", "n", null))
     }
 
     @Test

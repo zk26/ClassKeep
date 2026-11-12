@@ -474,14 +474,19 @@ void MainWindow::addFeaturesToToolBar()
 		QStringLiteral("textmessage"), QStringLiteral("screenshot"),
 		QStringLiteral("classroom"), QStringLiteral("classkeep"),
 		QStringLiteral("ClassroomConsole"), QStringLiteral("ClassroomSignIn"),
-		QStringLiteral("ClassroomSignOut")
+		QStringLiteral("ClassroomSignOut"), QStringLiteral("ClassroomQuickTools"),
+		QStringLiteral("ClassroomCheckIn")
 	};
 
 	// ClassKeep 2.2.0: Veyon's native UserLogin/UserLogoff actions open a
 	// Windows username+password dialog. ClassKeep signs students in by NAME and
 	// SEAT instead, so those two upstream buttons must not be shown at all.
+	// 2.3.0: desktopservices' StartApp / OpenWebsite duplicated the ClassKeep
+	// console's "Open software" / "Open website" actions. They now live in the
+	// "Quick tools" menu only, so hide the upstream copies (no lost function).
 	static const QStringList supersededNames{
-		QStringLiteral("UserLogin"), QStringLiteral("UserLogoff")
+		QStringLiteral("UserLogin"), QStringLiteral("UserLogoff"),
+		QStringLiteral("StartApp"), QStringLiteral("OpenWebsite")
 	};
 
 	QVector<Feature> primary;

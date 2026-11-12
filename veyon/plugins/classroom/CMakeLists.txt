@@ -37,6 +37,11 @@ build_veyon_plugin(classroom
 	ClassroomWordCloud.h
 	)
 
+if(WIN32)
+	# CryptProtectData / CryptUnprotectData used by ClassroomSecrets.
+	target_link_libraries(classroom PRIVATE crypt32)
+endif()
+
 test_veyon_plugin(classroom ClassroomSelfTest)
 if(WITH_TESTS)
 	target_include_directories(ClassroomSelfTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

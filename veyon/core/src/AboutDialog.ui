@@ -248,7 +248,7 @@ Copyright © 2004-2026 Tobias Junghans / Veyon Solutions</string>
          <property name="text">
           <string>Current language not translated yet (or native English).
 
-If you're interested in translating Veyon into your local or another language or want to improve an existing translation, please contact a Veyon developer!</string>
+If you're interested in translating ClassKeep into your local or another language or want to improve an existing translation, please contact a ClassKeep developer!</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

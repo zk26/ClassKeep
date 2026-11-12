@@ -78,7 +78,11 @@ public:
 
 	QString studentHtml( const QString& seat, const QString& student ) const;
 	QJsonObject syncSnapshot() const;
+	//! Teacher-side full replace. Never call this with a phone-supplied body.
 	bool applySnapshot( const QJsonObject& snapshot );
+	//! Phone-side append: only new, well-formed entries are accepted; rules,
+	//! lessons and existing entries are never modified or removed.
+	bool appendSnapshot( const QJsonObject& snapshot );
 
 	static QString inlineImages( const QString& html, const QString& dataDirectory );
 	static QString xmlEscape( const QString& text );

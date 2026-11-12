@@ -15,8 +15,10 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/classkeep-windows.yml'
-      - 'veyon/plugins/classroom/**'
-      - 'veyon/CMakeLists.txt'
+      # Windows-only code paths (DPAPI, registry, WTS sessions, Logger) are not
+      # compiled by the Linux job, so any tree change needs this build as well.
+      - 'veyon/**'
+      - 'mobile/**'
 
 permissions:
   contents: read

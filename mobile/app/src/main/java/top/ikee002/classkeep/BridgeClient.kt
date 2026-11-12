@@ -11,8 +11,9 @@ class UnauthorizedException : IOException("课堂密钥被教师机拒绝")
  * Talks to the teacher machine's ClassKeep bridge.
  *
  * Reuses the per-lesson connection key. The key itself is never transmitted:
- * every request proves knowledge of it with SHA-256("veyon-classroom:<key>:<nonce>"),
- * where nonce is a rotating challenge obtained from the public /state route.
+ * every request proves knowledge of it with an HMAC-SHA256 over the method,
+ * path, nonce and body hash. /state issues a single-use challenge, so one
+ * nonce can never authorize two requests (see ClassKeepCrypto).
  * Uses only the JDK/Android built-ins - no Retrofit, OkHttp or crypto library.
  */
 class BridgeClient {
@@ -30,6 +31,17 @@ class BridgeClient {
         URL("http://$host:$port/api/classroom/$route")
 
     private fun request(host: String, route: String, method: String, body: String?, auth: Boolean): String {
+        // Challenges are single-use on the teacher machine, so every
+        // authenticated call obtains a fresh /state nonce first.
+        val challenge = if (auth) {
+            if (lessonKey.isEmpty()) throw UnauthorizedException()
+            val issued = connect(host).nonce
+            if (issued.isEmpty()) throw UnauthorizedException()
+            nonce = issued
+            issued
+        } else {
+            ""
+        }
         val connection = url(host, route).openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 5_000
@@ -37,9 +49,9 @@ class BridgeClient {
             connection.requestMethod = method
             connection.setRequestProperty("Accept", "application/json, */*")
             if (auth) {
-                if (lessonKey.isEmpty() || nonce.isEmpty()) throw UnauthorizedException()
-                connection.setRequestProperty("X-Classroom-Nonce", nonce)
-                connection.setRequestProperty("X-Classroom-Token", ClassKeepCrypto.token(lessonKey, nonce))
+                connection.setRequestProperty("X-Classroom-Nonce", challenge)
+                connection.setRequestProperty("X-Classroom-Token",
+                    ClassKeepCrypto.token(lessonKey, method, "/api/classroom/$route", challenge, body))
             }
             if (body != null) {
                 connection.doOutput = true
@@ -71,7 +83,6 @@ class BridgeClient {
 
     /** One-tap scoring from the phone (delta in -5..+5, reason optional). */
     fun score(host: String, seat: String, delta: Int, reason: String): Boolean {
-        connect(host)
         val body = JSONObject()
             .put("seat", seat)
             .put("delta", delta)
@@ -92,7 +103,7 @@ class BridgeClient {
     fun report(host: String): String =
         request(host, "report", "GET", null, auth = true)
 
-    /** Every control command refreshes the challenge first, so a rotation never causes a 401. */
+    /** request() refreshes the single-use challenge before sending. */
     fun command(
         host: String,
         name: String,
@@ -100,7 +111,6 @@ class BridgeClient {
         text: String = "",
         teacherIp: String = "",
     ): Boolean {
-        connect(host)
         val body = JSONObject()
             .put("name", name)
             .put("enabled", enabled)
@@ -112,27 +122,23 @@ class BridgeClient {
     }
 
     fun pushScores(host: String, snapshotRaw: String): Boolean {
-        connect(host)
         val body = JSONObject().put("scores", JSONObject(snapshotRaw)).toString()
         return JSONObject(request(host, "sync", "POST", body, auth = true)).optBoolean("ok")
     }
 
     /** Teacher-machine copy of the timetable. Empty object when never uploaded. */
     fun timetable(host: String): JSONObject {
-        connect(host)
         return JSONObject(request(host, "timetable", "GET", null, auth = true))
             .optJSONObject("timetable") ?: JSONObject()
     }
 
     fun pushTimetable(host: String, timetableJson: String): Boolean {
-        connect(host)
         val body = JSONObject().put("timetable", JSONObject(timetableJson)).toString()
         return JSONObject(request(host, "timetable", "POST", body, auth = true)).optBoolean("ok")
     }
 
     /** Per-class roster used by the 「班级」 page. */
     fun classes(host: String): String {
-        connect(host)
         return request(host, "classes", "GET", null, auth = true)
     }
 

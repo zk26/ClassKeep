@@ -342,6 +342,9 @@ void DocumentationFigureCreator::createOpenWebsiteDialogFigure()
 void DocumentationFigureCreator::createWebsiteMenuFigure()
 {
 	const auto openWebsiteButton = m_master.mainWindow()->findChild<ToolButton *>( QStringLiteral("OpenWebsite") );
+	// ClassKeep hides the upstream StartApp/OpenWebsite buttons (duplicates in
+	// the ClassKeep "Quick tools" menu), so this figure generator may not find it.
+	if( openWebsiteButton == nullptr ) { return; }
 
 	QMenu menu;
 	menu.addAction( QStringLiteral("Intranet") );
@@ -373,6 +376,7 @@ void DocumentationFigureCreator::createStartAppDialogFigure()
 void DocumentationFigureCreator::createAppMenuFigure()
 {
 	const auto runProgramButton = m_master.mainWindow()->findChild<ToolButton *>( QStringLiteral("StartApp") );
+	if( runProgramButton == nullptr ) { return; }
 
 	QMenu menu;
 	menu.addAction( tr("Open file manager") );

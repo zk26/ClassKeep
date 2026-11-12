@@ -124,7 +124,7 @@
 | A5 | 学生机**密钥绑定后不能退出**（超管登录环境） | ◐ | `ClassroomClient.cpp` → `setLocked()` / `requestQuit()`；`ClassroomPlugin.cpp` worker 看门狗（5 秒） | 悬浮窗右键「退出客户端」需超管凭据或密钥 |
 | A6 | 退出需超级管理员账号 | ◐ | `PlatformUserFunctions::authenticate()` + 失败记日志 | 同上 |
 | A7 | 学生自助登录（座位号 + 姓名 + 本堂密钥） | ✅ | `ClassroomClient.cpp` → `handleLogin()` | 学生端悬浮条 |
-| A8 | 每堂课换密钥 | ✅ | `startNewSession()` 无条件 `generateKey()`（16 位十六进制 / 64bit 熵） | 「开始新课堂」 |
+| A8 | 每堂课换密钥 | ✅ | `startNewSession()` 无条件 `generateKey()`（`QRandomGenerator::system()` 16 字节 / 128 bit 熵，32 位十六进制）；密钥只留在教师机与教师手机 | 「开始新课堂」 |
 | A9 | 密钥加密落盘、兼容旧明文 | ✅ | `ClassroomSecrets.h/.cpp`（Veyon `CryptoCore` RSA） | 自动 |
 | A10 | 教师发现不对可**强制退出 / 换学生 / 批量操作** | ✅ | `ForceLogout` / `SwitchUser` / 批量登录与锁定 | 「课堂与登录」页 |
 | A11 | 换课清身份、补传离线事件、多教师端上下文 | ✅ | `startNewSession()` 先 `ForceLogout`；server 补传队列（上限 5000）；`QVector<MessageContext>` | 自动 |
@@ -216,7 +216,7 @@
 | F5 | **手动同步按钮** | ✅ | `MainActivity.kt` → 立即同步；另有手动 IP / 端口 / 密钥输入 | App |
 | F6 | 手机端也存数据（离线副本） | ✅ | `CacheStore.kt` → SharedPreferences，保存密钥、端口、统计、最近活动 | 自动 |
 | F7 | 数据主库在教师机、按 `revision` 增量同步 | ✅ | `ClassroomBridge.cpp` → `revision()` / `/api/classroom/sync` | 自动 + 手动 |
-| F8 | **复用课堂密钥做 Bridge 认证**（不是裸奔） | ✅ | C++ `ClassroomSecrets::sessionToken()` ↔ Kotlin `ClassKeepCrypto.token()`，`SHA-256("veyon-classroom:<key>:<nonce>")`；双端同一基准断言 | App 输入「本堂课密钥」 |
+| F8 | **教师机专用密钥做 Bridge 认证**（不是裸奔） | ✅ | C++ `ClassroomSecrets::requestToken()` ↔ Kotlin `ClassKeepCrypto.token()`，`HMAC-SHA256(method+path+nonce+SHA256(body))`；nonce 单次使用；双端同一基准断言；密钥不下发学生机、落盘走 DPAPI | App 输入「本堂课密钥」 |
 | F9 | 广播**不携带密钥**，只带 60 秒轮换的挑战值 | ✅ | `ClassroomProtocol.h` → `CLASSKEEP:` 前缀；`announcementPayload()` | 自动 |
 | F10 | 换课旧设备立即失效、10 次失败锁 60 秒、常量时间比较 | ✅ | `setSettings()` 轮换 nonce、`noteAuthFailure()`、`authorized()` | 自动 |
 | F11 | App 控制指令（静音/断网/肃静/USB/远控/投屏/UWF 等 13 项） | ✅ | `/api/classroom/command` → `handleCommand()` → FeatureMessage / 原生 Feature | App 控制网格 |

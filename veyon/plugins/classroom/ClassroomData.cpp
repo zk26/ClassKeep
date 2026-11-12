@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -94,6 +95,54 @@ QJsonObject ClassroomSettings::fromConfiguration( const ClassroomConfiguration& 
 }
 
 
+QJsonObject ClassroomSettings::forStudents( const QJsonObject& object )
+{
+	using namespace Classroom;
+
+	auto result = object;
+	for( const auto& key : classroomSecretKeys() ) { result.remove( key ); }
+	// Student machines no longer call the model provider. All AI traffic is
+	// proxied by the teacher machine, so endpoint/model/prompt stay there too.
+	result.remove( SettingKey::aiEndpoint() );
+	result.remove( SettingKey::aiModel() );
+	result.remove( SettingKey::aiSystemPrompt() );
+	result.remove( SettingKey::aiTimeout() );
+	result.insert( QStringLiteral("keyConfigured"),
+				   object.value( QStringLiteral("sessionKey") ).toString().isEmpty() == false );
+	return result;
+}
+
+
+bool ClassroomSettings::migrateSecrets()
+{
+	QFile file( m_filePath );
+	if( file.open( QFile::ReadOnly ) == false ) { return true; }
+	const auto onDisk = QJsonDocument::fromJson( file.readAll() ).object();
+	file.close();
+
+	bool hasLegacy = false;
+	for( const auto& key : classroomSecretKeys() )
+	{
+		if( ClassroomSecrets::isLegacyProtected( onDisk.value( key ).toString() ) ) { hasLegacy = true; }
+	}
+	if( hasLegacy == false ) { return true; }
+
+	// load() has already revealed the old values into m_object. Never rewrite
+	// the file if a value failed to decrypt, so a key is not silently erased.
+	for( const auto& key : classroomSecretKeys() )
+	{
+		if( onDisk.contains( key ) &&
+			onDisk.value( key ).toString().isEmpty() == false &&
+			m_object.value( key ).toString().isEmpty() )
+		{
+			qWarning( "ClassKeep: refusing to migrate %s: secret could not be revealed", qPrintable( key ) );
+			return false;
+		}
+	}
+	return save();
+}
+
+
 ClassroomSettings::ClassroomSettings( const QString& dataDirectory, const ClassroomConfiguration& configuration ) :
 	m_filePath( QDir( dataDirectory ).filePath( QStringLiteral("settings.json") ) ),
 	m_object( fromConfiguration( configuration ) )
@@ -135,9 +184,21 @@ bool ClassroomSettings::save() const
 	{
 		if( onDisk.contains( key ) )
 		{
-			onDisk.insert( key, ClassroomSecrets::protect( onDisk.value( key ).toString() ) );
+			const auto plain = onDisk.value( key ).toString();
+			const auto protectedValue = ClassroomSecrets::protect( plain );
+			if( plain.isEmpty() == false && protectedValue.isEmpty() )
+			{
+				qWarning( "ClassKeep: could not protect %s, refusing to store it in the clear", qPrintable( key ) );
+				return false;
+			}
+			onDisk.insert( key, protectedValue );
 		}
 	}
+#ifndef Q_OS_WIN
+	// DPAPI is Windows-only; on development/CI hosts at least keep the file
+	// readable by its owner alone.
+	file.setPermissions( QFile::ReadOwner | QFile::WriteOwner );
+#endif
 	const auto data = QJsonDocument( onDisk ).toJson( QJsonDocument::Indented );
 	return file.write( data ) == data.size();
 }

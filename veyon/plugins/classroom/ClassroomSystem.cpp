@@ -6,11 +6,13 @@
 
 #include <QtGlobal>
 
+#include <QDebug>
 #include <QFileInfo>
 #include <QLibrary>
 #include <QProcess>
 #include <QStringList>
 
+#include "ClassroomProtocol.h"
 #include "ClassroomSystem.h"
 
 #ifdef Q_OS_WIN
@@ -178,13 +180,21 @@ bool ClassroomSystem::setInternetBlock( bool blocked, const QString& teacherIp )
 		{
 			return false;
 		}
-		if( teacherIp.isEmpty() == false )
+		// remoteip= is parsed by netsh and accepts CIDR ranges. Only a validated
+		// single host may be added, otherwise "0.0.0.0/0" would whitelist the
+		// whole Internet on top of the outbound block.
+		const auto safeIp = Classroom::sanitizeUnicastIp( teacherIp );
+		if( teacherIp.trimmed().isEmpty() == false && safeIp.isEmpty() )
+		{
+			qWarning( "ClassKeep: rejected invalid teacherIp for InternetGuard allow rule" );
+		}
+		if( safeIp.isEmpty() == false )
 		{
 			runProgram( QStringLiteral("netsh.exe"),
 						{ QStringLiteral("advfirewall"), QStringLiteral("firewall"), QStringLiteral("add"),
 						  QStringLiteral("rule"), QStringLiteral("name=ClassroomInternetGuardAllow"),
 						  QStringLiteral("dir=out"), QStringLiteral("action=allow"),
-						  QStringLiteral("remoteip=%1").arg( teacherIp ) } );
+						  QStringLiteral("remoteip=%1").arg( safeIp ) } );
 		}
 		return true;
 	}
@@ -207,16 +217,23 @@ bool ClassroomSystem::setInternetBlock( bool blocked, const QString& teacherIp )
 
 QString ClassroomSystem::softwareInstallCommand( const QString& packagePath )
 {
-	const auto lower = packagePath.toLower();
+	const auto path = packagePath.trimmed();
+	// The path is interpolated into a quoted command line. Quotes and line
+	// breaks would be able to change how msiexec/cmd parses that line.
+	if( path.isEmpty() || path.contains( QLatin1Char('"') ) ||
+		path.contains( QLatin1Char('\n') ) || path.contains( QLatin1Char('\r') ) )
+	{
+		return {};
+	}
+	const auto lower = path.toLower();
+	// Scripts are deliberately not supported: they turn a path into arbitrary
+	// command execution. Only signed Windows installers / executables are.
 	if( lower.endsWith( QStringLiteral(".msi") ) )
 	{
-		return QStringLiteral("msiexec.exe /i \"%1\" /quiet /norestart").arg( packagePath );
+		return QStringLiteral("msiexec.exe /i \"%1\" /quiet /norestart").arg( path );
 	}
-	if( lower.endsWith( QStringLiteral(".bat") ) || lower.endsWith( QStringLiteral(".cmd") ) )
-	{
-		return QStringLiteral("cmd.exe /c \"%1\"").arg( packagePath );
-	}
+	if( lower.endsWith( QStringLiteral(".exe") ) == false ) { return {}; }
 	// Inno Setup / NSIS / InstallShield all accept /VERYSILENT or /S; the teacher
 	// can override the arguments in the deployment dialog.
-	return QStringLiteral("\"%1\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /S").arg( packagePath );
+	return QStringLiteral("\"%1\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /S").arg( path );
 }

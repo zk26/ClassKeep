@@ -44,6 +44,7 @@ Unicode true
 !endif
 
 !define APP_NAME "ClassKeep"
+!define PUBLISHER "zk26"
 !define WEB_SITE "https://github.com/zk26/ClassKeep"
 !define INSTALL_TYPE "SetShellVarContext all"
 !define REG_ROOT "HKLM"
@@ -51,7 +52,7 @@ Unicode true
 
 VIProductVersion "${VERSION}.0"
 VIAddVersionKey "ProductName" "ClassKeep"
-VIAddVersionKey "CompanyName" "ClassKeep"
+VIAddVersionKey "CompanyName" "${PUBLISHER}"
 VIAddVersionKey "FileDescription" "ClassKeep ${ROLE_EN} Setup"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "FileVersion" "${VERSION}"
@@ -89,27 +90,25 @@ ShowInstDetails show
 ; ---------------------------------------------------------------------------
 Function StopClassKeepProcesses
   ; "service not installed" / "process not found" are EXPECTED on a fresh
-  ; install, and wcli emits GBK Chinese that Unicode NSIS renders as mojibake.
-  ; Silence the sub-process log for this cleanup only, then restore it so the
-  ; real install progress (extracted files, registry writes) stays visible.
+  ; install. SetDetailsPrint alone does NOT suppress them: ExecToLog writes the
+  ; child's stdout/stderr straight into the details pane (that is what produced
+  ; the wall of "[SC] OpenService 失败 1060" / "没有找到进程" messages).
+  ; ExecToStack captures the output instead; both stack values are popped into
+  ; throw-away registers so the later service checks still see their own values.
+  ; One taskkill call with multiple /IM filters is enough for every binary.
   SetDetailsPrint none
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop ClassKeepService'
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop VeyonService'
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" delete VeyonService'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-worker.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-server.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-service.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-master.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-configurator.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-cli.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-wcli.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-worker.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-server.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-service.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-master.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-configurator.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-cli.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-wcli.exe'
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ClassKeepService'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop VeyonService'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" delete VeyonService'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-worker.exe /IM ClassKeep-server.exe /IM ClassKeep-service.exe /IM ClassKeep-master.exe /IM ClassKeep-configurator.exe /IM ClassKeep-cli.exe /IM ClassKeep-wcli.exe /IM veyon-worker.exe /IM veyon-server.exe /IM veyon-service.exe /IM veyon-master.exe /IM veyon-configurator.exe /IM veyon-cli.exe /IM veyon-wcli.exe'
+  Pop $R8
+  Pop $R9
   Sleep 1200
   SetDetailsPrint both
 FunctionEnd
@@ -176,11 +175,15 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   ; installer, so keep it out of the details log too.
   SetDetailsPrint none
   IfFileExists "$INSTDIR\ClassKeep-wcli.exe" 0 ck_legacy_wcli
-    nsExec::ExecToLog '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
+    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
+    Pop $R8
+    Pop $R9
     Goto ck_unregister_done
   ck_legacy_wcli:
     IfFileExists "$INSTDIR\veyon-wcli.exe" 0 ck_unregister_done
-      nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" service unregister'
+      nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" service unregister'
+      Pop $R8
+      Pop $R9
   ck_unregister_done:
   SetDetailsPrint both
 
@@ -246,6 +249,9 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   Pop $1
   DetailPrint "启动服务 (service start): exit=$R1"
   FileWrite $9 "service start exit=$R1 output=$1$\r$\n"
+  ; Give the SCM time to actually report the state. Querying immediately after
+  ; "service start" can catch START_PENDING and report a false success.
+  Sleep 3000
 
   ; Ask the Service Control Manager directly. findstr exits 0 only when the
   ; service STATE line contains RUNNING, so $2 is our ground truth.
@@ -261,20 +267,46 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   ${OrIf} $2 != "0"
     DetailPrint "wcli 未能启动服务，改用系统服务控制兜底…"
     FileWrite $9 "fallback: sc create + sc start$\r$\n"
-    nsExec::ExecToLog '"$SYSDIR\sc.exe" create ClassKeepService binPath= "$INSTDIR\ClassKeep-service.exe" start= auto DisplayName= "ClassKeep Service"'
-    nsExec::ExecToLog '"$SYSDIR\sc.exe" start ClassKeepService'
+    nsExec::ExecToStack '"$SYSDIR\sc.exe" create ClassKeepService binPath= "$INSTDIR\ClassKeep-service.exe" start= auto DisplayName= "ClassKeep Service"'
+    Pop $R8
+    Pop $R9
+    FileWrite $9 "fallback create exit=$R8 output=$R9$\r$\n"
+    nsExec::ExecToStack '"$SYSDIR\sc.exe" start ClassKeepService'
+    Pop $R8
+    Pop $R9
+    FileWrite $9 "fallback start exit=$R8 output=$R9$\r$\n"
     nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ClassKeepService | findstr RUNNING"'
     Pop $2
     Pop $3
     FileWrite $9 "after fallback RUNNING exit=$2 output=$3$\r$\n"
   ${EndIf}
 
+  ; A service can start and then exit a second later (missing DLL, wrong
+  ; install path, blocked by security software). Wait and verify again so the
+  ; installer never claims "service running" for a service that is already gone.
+  Sleep 3000
+  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ClassKeepService | findstr RUNNING"'
+  Pop $2
+  Pop $3
+  FileWrite $9 "final RUNNING check exit=$2 output=$3$\r$\n"
+
+  ; The service must also spawn ClassKeep-server.exe in the console session:
+  ; no server process means no tray icon and no 127.0.0.1 VNC connection, even
+  ; though the Configurator may show the service itself as running.
+  nsExec::ExecToStack '"$SYSDIR\tasklist.exe" /FI "IMAGENAME eq ClassKeep-server.exe" /NH'
+  Pop $R8
+  Pop $R9
+  FileWrite $9 "server processes exit=$R8 output=$R9$\r$\n"
+
   ${If} $2 != "0"
     FileWrite $9 "RESULT: service NOT running$\r$\n"
-    MessageBox MB_OK|MB_ICONEXCLAMATION "服务未能启动，安装未完成。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员排查。$\r$\n常见原因：未以管理员运行、被安全软件拦截、或缺少运行库。"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "服务未能持续运行，安装未完成。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员排查。$\r$\n常见原因：未以管理员运行、被安全软件拦截、或缺少运行库。"
   ${Else}
     FileWrite $9 "RESULT: service RUNNING$\r$\n"
     DetailPrint "服务已正常运行 (ClassKeepService)"
+    ; The raw tasklist output is in install.log - logiclib has no "contains"
+    ; operator, so leave the interpretation to that log instead of guessing.
+    DetailPrint "server 进程清单已写入 install.log，连不上时请查看该段"
   ${EndIf}
   FileClose $9
 
@@ -311,7 +343,7 @@ Section -Post
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\ClassKeep.ico"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayVersion" "${VERSION}"
-  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "Publisher" "ClassKeep"
+  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "Publisher" "${PUBLISHER}"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "URLInfoAbout" "${WEB_SITE}"
 SectionEnd
 
@@ -329,36 +361,43 @@ Section Uninstall
 
   SetDetailsPrint none
   IfFileExists "$INSTDIR\ClassKeep-wcli.exe" 0 ck_un_legacy_wcli
-    nsExec::ExecToLog '"$INSTDIR\ClassKeep-wcli.exe" config set Service/SoftwareSASEnabled 0'
-    nsExec::ExecToLog '"$INSTDIR\ClassKeep-wcli.exe" config set Network/FirewallExceptionEnabled 0'
-    nsExec::ExecToLog '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
+    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" config set Service/SoftwareSASEnabled 0'
+    Pop $R8
+    Pop $R9
+    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" config set Network/FirewallExceptionEnabled 0'
+    Pop $R8
+    Pop $R9
+    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
+    Pop $R8
+    Pop $R9
     Goto ck_un_done_wcli
   ck_un_legacy_wcli:
     IfFileExists "$INSTDIR\veyon-wcli.exe" 0 ck_un_done_wcli
-      nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" config set Service/SoftwareSASEnabled 0'
-      nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 0'
-      nsExec::ExecToLog '"$INSTDIR\veyon-wcli.exe" service unregister'
+      nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" config set Service/SoftwareSASEnabled 0'
+      Pop $R8
+      Pop $R9
+      nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" config set Network/FirewallExceptionEnabled 0'
+      Pop $R8
+      Pop $R9
+      nsExec::ExecToStack '"$INSTDIR\veyon-wcli.exe" service unregister'
+      Pop $R8
+      Pop $R9
   ck_un_done_wcli:
 
   ; NSIS does NOT allow an uninstall section to Call a plain function (it
   ; requires an "un." prefixed function). Inline the same stop/cleanup logic
   ; here so uninstalling 1.5.1 also releases the locked worker executables.
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop ClassKeepService'
-  nsExec::ExecToLog '"$SYSDIR\sc.exe" stop VeyonService'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-worker.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-server.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-service.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-master.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-configurator.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-cli.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-wcli.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-worker.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-server.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-service.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-master.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-configurator.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-cli.exe'
-  nsExec::ExecToLog '"$SYSDIR\taskkill.exe" /F /T /IM veyon-wcli.exe'
+  ; ExecToStack keeps the expected "not installed / not found" noise out of the
+  ; details pane, on uninstall as well as on install.
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ClassKeepService'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop VeyonService'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-worker.exe /IM ClassKeep-server.exe /IM ClassKeep-service.exe /IM ClassKeep-master.exe /IM ClassKeep-configurator.exe /IM ClassKeep-cli.exe /IM ClassKeep-wcli.exe /IM veyon-worker.exe /IM veyon-server.exe /IM veyon-service.exe /IM veyon-master.exe /IM veyon-configurator.exe /IM veyon-cli.exe /IM veyon-wcli.exe'
+  Pop $R8
+  Pop $R9
   Sleep 1200
   Delete "$INSTDIR\ClassKeep-worker.exe"
   Delete "$INSTDIR\ClassKeep-server.exe"

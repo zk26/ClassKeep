@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <QAbstractSocket>
+#include <QHostAddress>
 #include <QString>
 #include <QUuid>
 
@@ -36,6 +38,33 @@ inline QString discoveryMagic()
 	return QStringLiteral("CLASSKEEP_DISCOVER");
 }
 
+//! Validate anything that ends up in "remoteip=" (netsh) or in a listen()
+//! call. CIDR ranges, wildcards, loopback, multicast and broadcast are
+//! rejected. Returns a null QHostAddress for invalid input.
+inline QHostAddress unicastAddress( const QString& value )
+{
+	QHostAddress address;
+	const auto text = value.trimmed();
+	if( text.isEmpty() || address.setAddress( text ) == false ||
+		address.protocol() != QAbstractSocket::IPv4Protocol )
+	{
+		return {};
+	}
+	const auto ipv4 = address.toIPv4Address();
+	if( ipv4 == 0 || ipv4 == 0xffffffffu || address.isLoopback() || address.isMulticast() ||
+		address == QHostAddress( QHostAddress::Any ) )
+	{
+		return {};
+	}
+	return address;
+}
+
+inline QString sanitizeUnicastIp( const QString& value )
+{
+	const auto address = unicastAddress( value );
+	return address.isNull() ? QString{} : address.toString();
+}
+
 inline Feature::Uid pluginUid()
 {
 	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000000") };
@@ -62,6 +91,19 @@ inline Feature::Uid signInFeatureUid()
 inline Feature::Uid signOutFeatureUid()
 {
 	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000004") };
+}
+
+//! 2.3.0: quick tools live on the Veyon Master tool bar (drop-down menu) and
+//! attendance check-in gets its own button. These are Action|Master features:
+//! they only open UI, so they never start another session worker.
+inline Feature::Uid quickToolsFeatureUid()
+{
+	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000005") };
+}
+
+inline Feature::Uid checkInFeatureUid()
+{
+	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000006") };
 }
 
 enum class Command
@@ -139,7 +181,12 @@ enum class Command
 	// protocol). One ApplySession message replaces the old SetSettings +
 	// SetRoster + SetSessionKey burst, which used to re-arm the session worker
 	// restart logic three times every time the teacher opened the console.
-	ApplySession
+	ApplySession,
+
+	// 2.3.0: students no longer hold the AI API key. They submit a prompt and
+	// the teacher machine calls the model provider on their behalf.
+	AiPrompt,
+	AiReply
 };
 
 enum class Argument
@@ -203,7 +250,16 @@ enum class Argument
 	BlockMinutes,
 
 	// attendance check-in
-	CheckInName
+	CheckInName,
+
+	// 2.3.0: student machines receive only this boolean, never the key itself.
+	// SetSessionKey / StartClient / ApplySession use it in place of SessionKey.
+	KeyConfigured,
+
+	// teacher-machine AI proxy (prompt JSON, reply)
+	AiPayload,
+	AiSuccess,
+	AiAnswer
 };
 
 inline FeatureMessage message( Command command )
@@ -271,6 +327,8 @@ inline QString internetGuard()      { return QStringLiteral("internetGuard"); }
 inline QString usbInputBlock()      { return QStringLiteral("usbInputBlock"); }
 inline QString bridgePort()         { return QStringLiteral("bridgePort"); }
 inline QString bridgeEnabled()      { return QStringLiteral("bridgeEnabled"); }
+//! Boolean only: tells a student worker that the teacher has started a lesson.
+inline QString keyConfigured()      { return QStringLiteral("keyConfigured"); }
 inline QString syncEnabled()        { return QStringLiteral("syncEnabled"); }
 inline QString silencePageText()    { return QStringLiteral("silencePageText"); }
 inline QString wordCloudStopWords() { return QStringLiteral("wordCloudStopWords"); }

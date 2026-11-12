@@ -77,7 +77,7 @@ app/src/main/java/top/ikee002/classkeep/
   TimetableStore.kt    零依赖课表数据层（双作息、跨节课程、班级归属，兼容 ClassBoard 全校作息 JSON）
   BridgeClient.kt      HttpURLConnection 全部路由 + 挑战应答认证
   Discovery.kt         DatagramSocket 主动探测 + 周期广播 + MulticastLock
-  ClassKeepCrypto.kt   SHA-256 挑战应答（与教师机逐字节一致）
+  ClassKeepCrypto.kt   HMAC-SHA256 请求签名（与教师机逐字节一致）
   ClassKeepModels.kt   数据类与 org.json 解析
   Announcement.kt      UDP 广播报文常量与解析
   CacheStore.kt        SharedPreferences 离线缓存
@@ -106,3 +106,16 @@ python tools/generate_icons.py     # 需要 Pillow
 `INTERNET`、`ACCESS_NETWORK_STATE`、`ACCESS_WIFI_STATE`、`CHANGE_WIFI_MULTICAST_STATE`，
 以及局域网明文 HTTP（`android:usesCleartextTraffic="true"`）。
 Bridge 端口（默认 11880）**仅限受控教学网段**，切勿映射到公网。
+
+### 密钥与凭据
+
+- 课堂密钥由教师在教师机生成（128 bit 系统随机数），**只保存在教师机与教师手机**；
+  设置下发到学生机前会删除 `sessionKey`、`aiApiKey` 等全部秘密字段，学生机只收到一个
+  `keyConfigured` 布尔值。学生端退出保护只认管理员凭据。
+- App 把密钥存在 `SharedPreferences("classkeep", MODE_PRIVATE)`。
+  `android:allowBackup="false"`，且 `backup_rules.xml` / `data_extraction_rules.xml`
+  显式排除 `classkeep.xml`，避免随云备份或设备迁移泄露。
+- 密钥本身永不上网：每个请求用 `HMAC-SHA256(method + path + nonce + SHA256(body))`
+  证明持有密钥；`/state` 返回的 nonce **一次性**，抓到的请求无法重放。
+- Bridge 是**明文 HTTP**：token 与全部 JSON 在网段内可读，因此必须限定在隔离的教学网，
+  不要在可被学生抓包的网络上使用同一密钥控制真实课堂。

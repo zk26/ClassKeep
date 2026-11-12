@@ -80,7 +80,10 @@ private:
 	static constexpr auto UnmanagedSessionProcessRetryInterval = 5000;
 	static constexpr auto MaximumPendingSessionWorkerMessages = 256;
 	static constexpr auto WorkerAuthenticationTimeout = 30000;
-	static constexpr qint64 WorkerStartCooldown = 30000;
+	//! Must be longer than FeatureWorkerManagerConnection::StartupTimeout: the
+	//! worker now exits by itself after 45 s, so give it time to go away before
+	//! the message-retry timer is allowed to launch a replacement.
+	static constexpr qint64 WorkerStartCooldown = 60000;
 
 	VeyonServerInterface& m_server;
 	QTcpServer m_tcpServer;

@@ -62,7 +62,7 @@
 | 2 | `StopClient` | M→S→W | 停止 worker（同时暂停看门狗） | — |
 | 3 | `SetSettings` | M→S→W | 下发全部设置 JSON | `SettingsJson` |
 | 4 | `SetRoster` | M→S→W | 下发班级名单 JSON | `RosterJson` |
-| 5 | `SetSessionKey` | M→S→W | 下发本堂课密钥与会话号 | `SessionKey`、`SessionId` |
+| 5 | `SetSessionKey` | M→S→W | 会话心跳（**2.3.0 起只传布尔，不再下发密钥**；枚举号保持不变） | `KeyConfigured`、`SessionId` |
 | 6 | `SetIdentity` | M→S→W | 教师按 IP 直接登录学生 | `ClassName`、`Seat`、`Student`、`SessionId` |
 | 7 | `ClearIdentity` | M→S→W | 清除学生身份 | — |
 | 8 | `ForceLogout` | M→S→W | 强制退出并解除客户端锁定 | `Reason` |
@@ -133,10 +133,12 @@ endSection, colorIndex, room, teacher, note, className}]`，外加本分支的
 `config`（节数 / 大课间 / 午休 / 双作息偏移）与 `revision`。
 教师机端「课表与课堂」页签读写同一文件，两端始终一致。
 
-> `SetUninstallProtection` 收到后，学生端 worker（以 `LocalSystem` 运行）写
-> `HKLM\SOFTWARE\ClassKeep\Student\UninstallProtection` = 1/0；独立的
-> `uninstall.exe` 启动时读同一 DWORD，为 1 则弹提示并 `Abort`。
-> 不需要卸载器联网，教师端离线时保护仍然有效。
+> `SetUninstallProtection` 收到后，**运行在登录用户交互会话中的**学生端 worker
+> （不是 `LocalSystem`）尝试写 `HKLM\SOFTWARE\ClassKeep\Student\UninstallProtection` = 1/0。
+> 写入后读回 DWORD 并核对 `QSettings::status()`，失败会写一条活动日志并以
+> `ProtectionStateReport{failed}` 回报教师端——不会再静默显示「已开启」。
+> 因此该保护只在登录账户具备管理员权限时生效。独立的 `uninstall.exe` 启动时读同一 DWORD，
+> 为 1 则弹提示并 `Abort`；卸载器不联网，教师端离线时保护仍然有效。
 
 > ### 三种「保护」互不相同，请勿混淆
 >
@@ -247,39 +249,42 @@ Veyon 注册表段名固定为 `Classroom`（**不要改**，否则旧配置丢�
 
 ## 6. Bridge HTTP 协议（教师机 → 手机端）
 
-地址：`http://<教师机IP>:<bridgePort>/api/classroom/...`，默认端口 `11880`。
-响应统一带 `Access-Control-Allow-Origin: *` 与 `Connection: close`；错误为 JSON `{"error": ...}`。
+地址：`http://<教师机局域网IP>:<bridgePort>/api/classroom/...`，默认端口 `11880`。Bridge **只绑定一个已校验的局域网单播 IPv4 地址**，不监听 `0.0.0.0`。
+响应统一带 `Cache-Control: no-store` 与 `Connection: close`；不再返回 `Access-Control-Allow-Origin: *`。错误为 JSON `{"error": ...}` 并带真实 HTTP 状态码（401 / 404 / 413）。
 
-| 方法 | 路径 | 认证 | 响应 |
+| 方法 | 完整路径 | 认证 | 响应 |
 |---|---|---|---|
-| `GET` | `/state` | **公开** | `TeacherState`（见下），仅元数据与当前挑战值 |
-| `GET` | `/roster` | 需要 | 班级名单 JSON |
-| `GET` | `/scores` | 需要 | 当前班级积分快照 |
-| `GET` | `/seats` | 需要 | `{"className":..., "seats":[{"seat","student","ip","score"}]}`，**顺序与教师端座位网格拖拽后的顺序一致** |
-| `POST` | `/score` | 需要 | 请求 `{"seat":"12","delta":3,"reason":"发言积极"}`，响应 `{"ok":bool}`，写入同一积分册 |
-| `GET` | `/events` | 需要 | `{"events":[...]}`，近 30 天最多 2000 条 |
-| `GET` | `/wordcloud?seat=<seat>` | 需要 | `image/svg+xml`，SVG 文本 |
-| `GET` | `/report` | 需要 | `application/vnd.ms-excel`，Excel 2003 SpreadsheetML |
-| `POST` | `/command` | 需要 | `{"ok": bool}` |
-| `POST` | `/sync` | 需要 | `{"ok": bool, "revision": int}` |
-| `OPTIONS` | 任意 | 免 | 空 200（CORS 预检） |
+| `GET` | `/api/classroom/state` | **公开** | `TeacherState`（见下），仅元数据与一次性挑战值 |
+| `GET` | `/api/classroom/roster` | 需要 | 班级名单 JSON |
+| `GET` | `/api/classroom/scores` | 需要 | 当前班级积分快照 |
+| `GET` | `/api/classroom/seats` | 需要 | `{"className":..., "seats":[{"seat","student","ip","score"}]}`，**顺序与教师端座位网格拖拽后的顺序一致** |
+| `POST` | `/api/classroom/score` | 需要 | 请求 `{"seat":"12","delta":3,"reason":"发言积极"}`（`delta` 仅 `-5..5`），响应 `{"ok":bool}` |
+| `GET` | `/api/classroom/events` | 需要 | `{"events":[...]}`，近 30 天最多 2000 条（线程池扫描，不阻塞界面） |
+| `GET` | `/api/classroom/wordcloud?seat=<seat>` | 需要 | `image/svg+xml`，SVG 文本（线程池扫描，不阻塞界面） |
+| `GET` | `/api/classroom/report` | 需要 | `application/vnd.ms-excel`，Excel 2003 SpreadsheetML |
+| `GET` / `POST` | `/api/classroom/timetable` | 需要 | 课表 JSON / `{"ok":bool}` |
+| `GET` | `/api/classroom/classes` | 需要 | 班级列表 |
+| `POST` | `/api/classroom/command` | 需要 | `{"ok": bool}` |
+| `POST` | `/api/classroom/sync` | 需要 | `{"ok": bool, "revision": int}`，**只按 id 追加新积分条目，不覆盖规则/课堂/既有条目** |
+| `OPTIONS` | 任意 | 免 | 空 204 |
 
-`/state` 响应字段：
+`/api/classroom/state` 响应字段：
 
 ```json
 {
   "teacherId": "12位随机ID",
   "revision": 1730000000000,
   "port": 11880,
+  "bindAddress": "192.168.1.2",
   "className": "高一3班",
   "syncEnabled": true,
-  "nonce": "16位挑战值",
+  "nonce": "32位一次性挑战值",
   "keyConfigured": true,
   "classNames": ["高一3班", "..."]
 }
 ```
 
-**`/state` 永不返回密钥或 token。**
+**`/api/classroom/state` 永不返回密钥或 token；其中的 `nonce` 只能用于一次请求。**
 
 `POST /command` 请求体：
 
@@ -292,36 +297,43 @@ Veyon 注册表段名固定为 `Classroom`（**不要改**，否则旧配置丢�
 
 ---
 
-## 7. 认证协议（课堂密钥复用）
+## 7. 认证协议（教师机专用 Bridge 密钥）
 
-凭据就是本堂课学生端输入的 `sessionKey`，**不新增 token、不做登录流程**。
+凭据是 `sessionKey`，**只存在于教师机与教师手机**。设置下发用 `ClassroomSettings::forStudents()` 删掉 `sessionKey`、`aiApiKey` 等所有秘密字段；学生端只收到 `keyConfigured` 布尔值，退出保护只认管理员凭据。AI 请求由学生端提交 prompt，教师机代理调用模型。
 
-```
-token = lowercase_hex( SHA-256( UTF8("veyon-classroom:" + sessionKey + ":" + nonce) ) )
-```
+教师端点「开始新课堂」或「生成新密钥」时用 `QRandomGenerator::system()` 生成 **16 字节 / 128 bit** 熵，十六进制编码为 32 个大写字符。`settings.json` 里的密钥用当前 Windows 用户的 DPAPI 保护（`dpapi:` 前缀），旧的 `enc:` 值在教师端启动时迁移一次。
 
-每个需要认证的请求带两个头：
+`GET /api/classroom/state` 是唯一公开路由，返回一个**单次使用**的挑战 `nonce`（300 秒内有效，用后即从服务端移除）。每个需要认证的请求带：
 
 ```
 X-Classroom-Nonce: <nonce>
 X-Classroom-Token: <token>
 ```
 
-服务端 `ClassroomSecrets::sessionToken()` / Android `ClassKeepCrypto.token()` 实现完全一致。
-基准向量（双端单元测试共用）：
+```
+bodyHash = lowercase_hex( SHA-256( body ) )      // 无正文时 body 为空字节串
+message  = method + "\n" + path + "\n" + nonce + "\n" + bodyHash
+path     = 请求行里的完整路径（含查询串，例如 /api/classroom/wordcloud?seat=1）
+token    = lowercase_hex( HMAC-SHA256( key = UTF8(sessionKey), msg = UTF8(message) ) )
+```
+
+服务端 `ClassroomSecrets::requestToken()` / Android `ClassKeepCrypto.token()` 实现一致。基准向量（双端单元测试共用）：
 
 ```
-sessionKey = "ABC123", nonce = "nonce-0001"
-token = e198264293e2ee9d35aade33089e0f33e560cd60143d01292483f9f952330e04
+sessionKey = "ABC123", method = "GET", path = "/api/classroom/state"
+nonce = "nonce-0001", body = ""
+token = bd41d1e94c8c04a9ae857dce47c9f1d6907b65cfcd5c1bcbd8d08711a7c14e50
 ```
 
 规则：
 
-- **密钥永不上网**：既不在 HTTP 头/正文，也不在 UDP 广播里，只参与本地摘要。
-- `nonce` 每 60 秒轮换，服务端同时接受当前值与上一个值；客户端每次 `POST` 前先 `GET /state` 刷新。
+- **密钥永不上网**：不在 HTTP 头/正文，不在 UDP 广播里，也不下发学生机。
+- token 绑定方法、路径、正文与 nonce；抓到的请求**无法原样重放**，也无法改路径/正文后复用。
+- 客户端每个认证请求先取一次 `/state`；同一个 nonce 只允许成功一次。
 - 服务端常量时间比较；密钥为空时 **fail-closed**（所有数据/控制接口 401）。
-- 60 秒内累计 10 次认证失败 → 锁定 60 秒。
-- 教师端点「开始新课堂」会无条件生成新密钥（16 位十六进制，64 bit 熵）并立即轮换 nonce，**上一堂课的设备立即失效**。
+- 认证失败按**来源 IP** 计数：10 次锁定该 IP 60 秒，一台学生机不能锁住全班手机。
+- Bridge 只绑定一个已校验的局域网单播 IPv4 地址（不监听 `0.0.0.0`）；请求头上限 16 KiB、正文上限 1 MiB，超限返回 413；未知路由返回 404。
+- `/sync` 只按条目 id **追加**，不会整本覆盖积分册；`/score` 的 `delta` 只允许 `-5..5`；`teacherIp` 只接受单播 IPv4。
 
 ---
 

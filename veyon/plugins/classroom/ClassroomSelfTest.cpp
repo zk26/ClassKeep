@@ -12,6 +12,7 @@
 #include <QTemporaryDir>
 #include <QTextStream>
 
+#include "ClassroomBridge.h"
 #include "ClassroomData.h"
 #include "ClassroomProtocol.h"
 #include "ClassroomScore.h"
@@ -48,15 +49,56 @@ int main( int argc, char** argv )
 		   QStringLiteral("a&lt;b&gt;&amp;&quot;"), "xml escaping" );
 	check( ClassroomSecrets::reveal( QStringLiteral("plain-key") ) == QStringLiteral("plain-key"),
 		   "legacy plain secrets stay readable" );
-	check( ClassroomSecrets::sessionToken( QStringLiteral("ABC123"), QStringLiteral("nonce-0001") ) ==
-		   QStringLiteral("e198264293e2ee9d35aade33089e0f33e560cd60143d01292483f9f952330e04"),
-		   "lesson-key challenge token matches SHA-256 reference" );
+	// Shared HMAC reference vector with mobile/ClassKeepCryptoTest.
+	const auto referenceToken = ClassroomSecrets::requestToken(
+		QStringLiteral("ABC123"), QStringLiteral("GET"), QStringLiteral("/api/classroom/state"),
+		QStringLiteral("nonce-0001"), QByteArray() );
+	check( referenceToken == QByteArrayLiteral("bd41d1e94c8c04a9ae857dce47c9f1d6907b65cfcd5c1bcbd8d08711a7c14e50"),
+		   "request-bound HMAC matches the Kotlin reference" );
+	check( referenceToken.contains( QByteArrayLiteral("ABC123") ) == false,
+		   "auth token never contains the plain lesson key" );
+	check( ClassroomSecrets::requestToken( QStringLiteral("ABC123"), QStringLiteral("POST"),
+										  QStringLiteral("/api/classroom/state"),
+										  QStringLiteral("nonce-0001"), QByteArray() ) != referenceToken &&
+		   ClassroomSecrets::requestToken( QStringLiteral("ABC123"), QStringLiteral("GET"),
+										  QStringLiteral("/api/classroom/events"),
+										  QStringLiteral("nonce-0001"), QByteArray() ) != referenceToken &&
+		   ClassroomSecrets::requestToken( QStringLiteral("ABC123"), QStringLiteral("GET"),
+										  QStringLiteral("/api/classroom/state"),
+										  QStringLiteral("nonce-0002"), QByteArray() ) != referenceToken &&
+		   ClassroomSecrets::requestToken( QStringLiteral("ABC123"), QStringLiteral("POST"),
+										  QStringLiteral("/api/classroom/score"),
+										  QStringLiteral("nonce-0001"), QByteArrayLiteral("{}") ) !=
+			   ClassroomSecrets::requestToken( QStringLiteral("ABC123"), QStringLiteral("POST"),
+											  QStringLiteral("/api/classroom/score"),
+											  QStringLiteral("nonce-0001"), QByteArrayLiteral("[]") ),
+		   "HMAC is bound to method, path, nonce and body" );
 	check( Classroom::announcementPrefix() == QStringLiteral("CLASSKEEP:") &&
 		   Classroom::discoveryMagic() == QStringLiteral("CLASSKEEP_DISCOVER"),
 		   "mobile discovery constants match the Kotlin app" );
-	check( ClassroomSecrets::sessionToken( QStringLiteral("ABC123"), QStringLiteral("nonce-0001") )
-			   .contains( QStringLiteral("ABC123") ) == false,
-		   "auth token never contains the plain lesson key" );
+
+	// Bridge request parsing: half packets, oversized bodies and bad inputs.
+	const QByteArray header = QByteArrayLiteral("POST /api/classroom/score HTTP/1.1\r\nContent-Length: 7\r\n\r\n");
+	const QByteArray body = QByteArrayLiteral("{\"a\":1}");
+	const auto half = ClassroomBridge::parseRequest( header + body.left( 3 ) );
+	check( half.complete == false && half.tooLarge == false, "partial TCP body waits for more data" );
+	const auto whole = ClassroomBridge::parseRequest( header + body );
+	check( whole.complete && whole.method == QStringLiteral("POST") && whole.body == body,
+		   "complete request keeps the exact body" );
+	check( ClassroomBridge::parseRequest(
+			   QByteArrayLiteral("POST /x HTTP/1.1\r\nContent-Length: 1048577\r\n\r\n") ).tooLarge,
+		   "body above 1 MiB is rejected before authentication" );
+	check( ClassroomBridge::parseRequest(
+			   QByteArrayLiteral("POST /x HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n") ).tooLarge,
+		   "chunked encoding is rejected" );
+	check( ClassroomBridge::sanitizeTeacherIp( QStringLiteral("0.0.0.0/0") ).isEmpty() &&
+		   ClassroomBridge::sanitizeTeacherIp( QStringLiteral("0.0.0.0") ).isEmpty() &&
+		   ClassroomBridge::sanitizeTeacherIp( QStringLiteral("127.0.0.1") ).isEmpty() &&
+		   ClassroomBridge::sanitizeTeacherIp( QStringLiteral("192.168.1.2") ) == QStringLiteral("192.168.1.2"),
+		   "teacherIp whitelist rejects ranges and loopback" );
+	check( ClassroomBridge::validDelta( -5 ) && ClassroomBridge::validDelta( 5 ) &&
+		   ClassroomBridge::validDelta( 6 ) == false && ClassroomBridge::validDelta( 0 ) == false,
+		   "score delta is limited to -5..5" );
 
 	const QString imageHtml = QStringLiteral("<img src=\"logo.png\" /> logo.png in text");
 	check( ClassroomScoreBook::inlineImages( imageHtml, directory.path() ) ==

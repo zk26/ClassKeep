@@ -29,7 +29,7 @@ Qt6 运行时 DLL、Qt 插件与 QCA 加密插件，以及 GPL 许可证。
 
 【教师机】
   1. 安装时保持「教师控制台」勾选。
-  2. 运行 ClassKeep-configurator.exe 完成 Veyon 基础配置（认证密钥、网络端口等）。
+  2. 运行 ClassKeep-configurator.exe 完成 ClassKeep 基础配置（认证密钥、网络端口等）。
   3. 运行 ClassKeep-master.exe 打开教师端，工具栏点「课守 ClassKeep」进入控制台。
   4. 导入班级名单，点「开始新课堂」生成本堂课密钥，按 IP 登录学生机。
 

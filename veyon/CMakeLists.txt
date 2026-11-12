@@ -16,7 +16,10 @@ option(WITH_THREAD_SANITIZER "Build with thread sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(WITH_FUZZERS "Build LLVM fuzzer tests (implies WITH_TESTS=ON)" OFF)
 option(WITH_BUNDLED_LIBVNC "Build with bundled LibVNCServer/Client" OFF)
-option(WITH_WEBAPI "Build WebAPI plugin" ON)
+# ClassKeep: the mobile bridge is the ONLY HTTP surface we ship. Leave the
+# upstream WebAPI plugin off by default so a deployment that forgets
+# -DWITH_WEBAPI=OFF does not silently open a second, unauthenticated server.
+option(WITH_WEBAPI "Build WebAPI plugin" OFF)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules ${CMAKE_MODULE_PATH})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

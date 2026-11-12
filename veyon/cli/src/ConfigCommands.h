@@ -52,12 +52,12 @@ public:
 
 	QString description() const override
 	{
-		return tr( "Configure Veyon at command line" );
+		return tr( "Configure ClassKeep at command line" );
 	}
 
 	QString vendor() const override
 	{
-		return QStringLiteral( "Veyon Community" );
+		return QStringLiteral( "ClassKeep" );
 	}
 
 	QString copyright() const override
@@ -72,7 +72,7 @@ public:
 
 	QString commandLineModuleHelp() const override
 	{
-		return tr( "Commands for managing the configuration of Veyon" );
+		return tr( "Commands for managing the configuration of ClassKeep" );
 	}
 
 	QStringList commands() const override;

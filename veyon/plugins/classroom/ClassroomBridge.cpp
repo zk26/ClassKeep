@@ -4,8 +4,10 @@
  * This file is part of the Veyon classroom modification.
  */
 
+#include <QAbstractSocket>
 #include <QDate>
 #include <QDateTime>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -13,7 +15,11 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QNetworkInterface>
+#include <QFutureWatcher>
+#include <QPointer>
 #include <QTcpServer>
+#include <QtConcurrent>
 #include <QTcpSocket>
 #include <QUdpSocket>
 #include <QTimer>
@@ -66,12 +72,58 @@ ClassroomBridge::ClassroomBridge( const QString& dataDirectory, ClassroomRoster&
 }
 
 
-bool ClassroomBridge::start( int port )
+QHostAddress ClassroomBridge::localUnicastAddress()
+{
+	// Prefer a private RFC1918 IPv4 address; never return a wildcard,
+	// loopback, multicast or broadcast address.
+	const auto addresses = QNetworkInterface::allAddresses();
+	for( const auto& address : addresses )
+	{
+		if( Classroom::unicastAddress( address.toString() ).isNull() ) { continue; }
+		const auto ipv4 = address.toIPv4Address();
+		const auto first = static_cast<quint8>( ipv4 >> 24 );
+		const auto second = static_cast<quint8>( ipv4 >> 16 );
+		if( first == 10 || ( first == 192 && second == 168 ) ||
+			( first == 172 && second >= 16 && second <= 31 ) )
+		{
+			return address;
+		}
+	}
+	for( const auto& address : addresses )
+	{
+		if( Classroom::unicastAddress( address.toString() ).isNull() == false ) { return address; }
+	}
+	return {};
+}
+
+
+bool ClassroomBridge::start( int port, const QHostAddress& bindAddress )
 {
 	if( m_server->isListening() ) { return true; }
-	if( m_server->listen( QHostAddress::Any, static_cast<quint16>( port ) ) == false ) { return false; }
+	auto address = bindAddress;
+	if( address.isNull() ) { address = localUnicastAddress(); }
+	if( ClassroomBridge::sanitizeTeacherIp( address.toString() ).isEmpty() )
+	{
+		qWarning( "ClassKeep: refusing to start the bridge on %s (not a LAN unicast address)",
+				  qPrintable( address.toString() ) );
+		return false;
+	}
+	if( m_server->listen( address, static_cast<quint16>( port ) ) == false )
+	{
+		qWarning( "ClassKeep: bridge could not listen on %s:%d: %s", qPrintable( address.toString() ),
+				  port, qPrintable( m_server->errorString() ) );
+		return false;
+	}
+	m_bindAddress = address;
 	m_port = port;
-	m_udp->bind( static_cast<quint16>( port ), QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint );
+	// Discovery is a public, metadata-only UDP beacon. Binding it to one NIC
+	// prevents broadcast replies on multi-homed machines, so only the TCP/HTTP
+	// surface is restricted to the validated LAN address.
+	if( m_udp->bind( QHostAddress::Any, static_cast<quint16>( port ),
+					 QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint ) == false )
+	{
+		qWarning( "ClassKeep: discovery socket could not bind: %s", qPrintable( m_udp->errorString() ) );
+	}
 	m_broadcastTimer->start();
 	broadcast();
 	return true;
@@ -95,9 +147,9 @@ bool ClassroomBridge::isRunning() const
 QString ClassroomBridge::status() const
 {
 	if( isRunning() == false ) { return tr( "Bridge stopped" ); }
-	return tr( "Bridge on port %1 (revision %2, lesson key %3)" )
-			.arg( m_port ).arg( revision() )
-			.arg( m_sessionKey.isEmpty() ? tr( "missing - start a new lesson" ) : tr( "active" ) );
+	return tr( "Bridge on %1:%2 (revision %3, lesson key %4)" )
+			.arg( m_bindAddress.toString(), QString::number( m_port ), QString::number( revision() ),
+				  m_sessionKey.isEmpty() ? tr( "missing - start a new lesson" ) : tr( "active" ) );
 }
 
 
@@ -122,31 +174,63 @@ void ClassroomBridge::setSettings( const QJsonObject& settings )
 
 void ClassroomBridge::rotateNonce()
 {
-	m_previousNonce = m_nonce;
-	m_nonce = QUuid::createUuid().toString( QUuid::WithoutBraces ).left( 16 );
+	// This value is only an announcement/beacon challenge; authentication uses
+	// the one-time values handed out by /state.
+	m_nonce = ClassroomSecrets::generateNonce();
 	m_nonceIssued = QDateTime::currentDateTime();
 }
 
 
-QString ClassroomBridge::tokenFor( const QString& nonce ) const
+QString ClassroomBridge::issueNonce()
 {
-	return ClassroomSecrets::sessionToken( m_sessionKey, nonce );
+	purgeStaleNonces();
+	const auto nonce = ClassroomSecrets::generateNonce();
+	m_issuedNonces.insert( nonce, QDateTime::currentDateTime() );
+	return nonce;
 }
 
 
-static void noteAuthFailure( int* count, QDateTime* lockUntil )
+void ClassroomBridge::purgeStaleNonces()
 {
-	if( ++*count < 10 ) { return; }
-	*count = 0;
-	*lockUntil = QDateTime::currentDateTime().addSecs( 60 );
+	const auto now = QDateTime::currentDateTime();
+	for( auto it = m_issuedNonces.begin(); it != m_issuedNonces.end(); )
+	{
+		if( it.value().addSecs( NonceLifetimeSeconds ) < now ) { it = m_issuedNonces.erase( it ); }
+		else { ++it; }
+	}
+	// Bound memory even if a peer floods /state without ever authenticating.
+	while( m_issuedNonces.size() > 4096 )
+	{
+		auto oldest = m_issuedNonces.constBegin();
+		for( auto it = m_issuedNonces.constBegin(); it != m_issuedNonces.constEnd(); ++it )
+		{
+			if( it.value() < oldest.value() ) { oldest = it; }
+		}
+		m_issuedNonces.remove( oldest.key() );
+	}
 }
 
 
-bool ClassroomBridge::authorized( const QStringList& headerLines ) const
+void ClassroomBridge::noteAuthFailure( const QString& peer )
+{
+	auto& failure = m_authFailures[peer];
+	if( ++failure.count < AuthFailureLimit ) { return; }
+	failure.count = 0;
+	failure.lockUntil = QDateTime::currentDateTime().addSecs( AuthLockSeconds );
+	qWarning( "ClassKeep: bridge authentication locked for %s after %d failures",
+			  qPrintable( peer ), AuthFailureLimit );
+}
+
+
+bool ClassroomBridge::authorized( const QHostAddress& peer, const QStringList& headerLines,
+								  const QString& method, const QString& pathAndQuery, const QByteArray& body )
 {
 	// Fail closed: the teacher must have started a lesson and generated a key.
-	if( m_sessionKey.isEmpty() || m_nonce.isEmpty() ) { return false; }
-	if( m_authLockUntil.isValid() && QDateTime::currentDateTime() < m_authLockUntil ) { return false; }
+	const auto peerKey = peer.toString();
+	const auto now = QDateTime::currentDateTime();
+	if( m_sessionKey.isEmpty() ) { return false; }
+	const auto failure = m_authFailures.value( peerKey );
+	if( failure.lockUntil.isValid() && now < failure.lockUntil ) { return false; }
 
 	QString nonce;
 	QString token;
@@ -159,33 +243,34 @@ bool ClassroomBridge::authorized( const QStringList& headerLines ) const
 		if( name == QLatin1String("x-classroom-nonce") ) { nonce = value; }
 		else if( name == QLatin1String("x-classroom-token") ) { token = value; }
 	}
-	if( nonce.isEmpty() || token.isEmpty() ||
-		( nonce != m_nonce && nonce != m_previousNonce ) )
+
+	// Consume the nonce BEFORE any other check: a replay of a valid request
+	// (or of the very same nonce with a different body) must never succeed.
+	purgeStaleNonces();
+	const auto issued = m_issuedNonces.take( nonce );
+	if( nonce.isEmpty() || token.isEmpty() || issued.isValid() == false ||
+		issued.addSecs( NonceLifetimeSeconds ) < now )
 	{
-		noteAuthFailure( &m_failedAuths, &m_authLockUntil );
+		noteAuthFailure( peerKey );
 		return false;
 	}
 
-	const auto expected = tokenFor( nonce );
-	if( expected.size() != token.size() )
+	const auto expected = ClassroomSecrets::requestToken( m_sessionKey, method, pathAndQuery, nonce, body );
+	if( ClassroomSecrets::constantTimeEquals( expected, token.toUtf8() ) == false )
 	{
-		noteAuthFailure( &m_failedAuths, &m_authLockUntil );
+		noteAuthFailure( peerKey );
 		return false;
 	}
-	unsigned char difference = 0;
-	for( int index = 0; index < expected.size(); ++index )
-	{
-		const auto left = static_cast<unsigned char>( expected.at( index ).unicode() );
-		const auto right = static_cast<unsigned char>( token.at( index ).unicode() );
-		difference = static_cast<unsigned char>( difference ^ ( left ^ right ) );
-	}
-	if( difference != 0 )
-	{
-		noteAuthFailure( &m_failedAuths, &m_authLockUntil );
-		return false;
-	}
-	m_failedAuths = 0;
+	m_authFailures.remove( peerKey );
 	return true;
+}
+
+
+QString ClassroomBridge::sanitizeTeacherIp( const QString& value )
+{
+	// netsh accepts CIDR ranges such as 0.0.0.0/0 as remoteip=. The shared
+	// validator rejects anything that is not a plain unicast IPv4 address.
+	return Classroom::sanitizeUnicastIp( value );
 }
 
 
@@ -197,14 +282,16 @@ qint64 ClassroomBridge::revision() const
 }
 
 
-QJsonObject ClassroomBridge::stateObject() const
+QJsonObject ClassroomBridge::stateObject()
 {
 	return { { QStringLiteral("teacherId"), m_teacherId },
 			 { QStringLiteral("revision"), revision() },
 			 { QStringLiteral("port"), m_port },
+			 { QStringLiteral("bindAddress"), m_bindAddress.toString() },
 			 { QStringLiteral("className"), m_className },
 			 { QStringLiteral("syncEnabled"), m_settings.value( Classroom::SettingKey::syncEnabled() ).toBool( true ) },
-			 { QStringLiteral("nonce"), m_nonce },
+			 // A fresh one-time challenge for exactly one authenticated request.
+			 { QStringLiteral("nonce"), issueNonce() },
 			 { QStringLiteral("keyConfigured"), m_sessionKey.isEmpty() == false },
 			 { QStringLiteral("classNames"), QJsonArray::fromStringList( m_roster.classNames() ) } };
 }
@@ -259,43 +346,104 @@ void ClassroomBridge::acceptConnection()
 	while( m_server->hasPendingConnections() )
 	{
 		auto* socket = m_server->nextPendingConnection();
+		m_buffers.insert( socket, QByteArray() );
 		connect( socket, &QTcpSocket::readyRead, this, &ClassroomBridge::readRequest );
-		connect( socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater );
+		connect( socket, &QTcpSocket::disconnected, this, [this, socket]() {
+			m_buffers.remove( socket );
+			socket->deleteLater();
+		} );
 	}
+}
+
+
+ClassroomBridge::Request ClassroomBridge::parseRequest( const QByteArray& buffer )
+{
+	Request request;
+	const auto separator = buffer.indexOf( QByteArrayLiteral("\r\n\r\n") );
+	if( separator < 0 )
+	{
+		request.tooLarge = buffer.size() > MaxHeaderBytes;
+		return request;
+	}
+	if( separator > MaxHeaderBytes ) { request.tooLarge = true; return request; }
+
+	const auto lines = QString::fromUtf8( buffer.left( separator ) ).split( QLatin1Char('\n') );
+	if( lines.isEmpty() ) { request.tooLarge = true; return request; }
+	const auto parts = lines.first().trimmed().split( QLatin1Char(' ') );
+	if( parts.size() < 2 ) { request.tooLarge = true; return request; }
+	request.method = parts.at( 0 );
+	request.pathAndQuery = parts.at( 1 );
+	request.headerLines = lines;
+
+	qint64 contentLength = 0;
+	bool chunked = false;
+	for( int index = 1; index < lines.size(); ++index )
+	{
+		const auto line = lines.at( index );
+		const auto colon = line.indexOf( QLatin1Char(':') );
+		if( colon < 0 ) { continue; }
+		const auto name = line.left( colon ).trimmed().toLower();
+		const auto value = line.mid( colon + 1 ).trimmed();
+		if( name == QLatin1String("content-length") )
+		{
+			bool ok = false;
+			contentLength = value.toLongLong( &ok );
+			if( ok == false || contentLength < 0 ) { request.tooLarge = true; return request; }
+		}
+		else if( name == QLatin1String("transfer-encoding") &&
+				 value.contains( QStringLiteral("chunked"), Qt::CaseInsensitive ) )
+		{
+			chunked = true;
+		}
+	}
+	// No chunked encoding support, and no body that could exhaust the GUI
+	// thread's memory before authentication has even been attempted.
+	if( chunked || contentLength > MaxBodyBytes ) { request.tooLarge = true; return request; }
+
+	const auto bodyStart = separator + 4;
+	if( buffer.size() - bodyStart < contentLength ) { return request; }
+	request.body = buffer.mid( bodyStart, static_cast<int>( contentLength ) );
+	request.complete = true;
+	return request;
+}
+
+
+void ClassroomBridge::writeResponse( QTcpSocket* socket, int statusCode, const QByteArray& reason,
+									 const QByteArray& body, const QByteArray& contentType )
+{
+	QByteArray header;
+	header += QByteArrayLiteral("HTTP/1.1 ") + QByteArray::number( statusCode ) + QByteArrayLiteral(" ") +
+			  reason + QByteArrayLiteral("\r\n");
+	if( contentType.isEmpty() == false )
+	{
+		header += QByteArrayLiteral("Content-Type: ") + contentType + QByteArrayLiteral("\r\n");
+	}
+	header += QByteArrayLiteral("Content-Length: ") + QByteArray::number( body.size() ) + QByteArrayLiteral("\r\n");
+	header += QByteArrayLiteral("Cache-Control: no-store\r\n");
+	header += QByteArrayLiteral("Connection: close\r\n\r\n");
+	socket->write( header );
+	socket->write( body );
+	socket->disconnectFromHost();
 }
 
 
 void ClassroomBridge::respond( QTcpSocket* socket, const QByteArray& body, const QByteArray& contentType )
 {
-	QByteArray header;
-	header += QByteArrayLiteral("HTTP/1.1 200 OK\r\n");
-	header += QByteArrayLiteral("Access-Control-Allow-Origin: *\r\n");
-	header += QByteArrayLiteral("Access-Control-Allow-Headers: Content-Type, X-Classroom-Nonce, X-Classroom-Token\r\n");
-	header += QByteArrayLiteral("Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n");
-	header += QByteArrayLiteral("Content-Type: ") + contentType + QByteArrayLiteral("\r\n");
-	header += QByteArrayLiteral("Content-Length: ") + QByteArray::number( body.size() ) + QByteArrayLiteral("\r\n");
-	header += QByteArrayLiteral("Connection: close\r\n\r\n");
-	socket->write( header );
-	socket->write( body );
-	socket->disconnectFromHost();
+	writeResponse( socket, 200, QByteArrayLiteral("OK"), body, contentType );
 }
 
 
 void ClassroomBridge::respondDenied( QTcpSocket* socket )
 {
-	const auto body = jsonResponse( QJsonObject{
-		{ QStringLiteral("error"), QStringLiteral("unauthorized") },
-		{ QStringLiteral("hint"), QStringLiteral("Enter the current lesson key in the app") } } );
-	QByteArray header;
-	header += QByteArrayLiteral("HTTP/1.1 401 Unauthorized\r\n");
-	header += QByteArrayLiteral("Access-Control-Allow-Origin: *\r\n");
-	header += QByteArrayLiteral("Access-Control-Allow-Headers: Content-Type, X-Classroom-Nonce, X-Classroom-Token\r\n");
-	header += QByteArrayLiteral("Content-Type: application/json; charset=utf-8\r\n");
-	header += QByteArrayLiteral("Content-Length: ") + QByteArray::number( body.size() ) + QByteArrayLiteral("\r\n");
-	header += QByteArrayLiteral("Connection: close\r\n\r\n");
-	socket->write( header );
-	socket->write( body );
-	socket->disconnectFromHost();
+	respondError( socket, 401, QByteArrayLiteral("Unauthorized"), QStringLiteral("unauthorized") );
+}
+
+
+void ClassroomBridge::respondError( QTcpSocket* socket, int statusCode, const QByteArray& reason,
+								   const QString& error )
+{
+	const auto body = jsonResponse( QJsonObject{ { QStringLiteral("error"), error } } );
+	writeResponse( socket, statusCode, reason, body, QByteArrayLiteral("application/json; charset=utf-8") );
 }
 
 
@@ -303,34 +451,44 @@ void ClassroomBridge::readRequest()
 {
 	auto* socket = qobject_cast<QTcpSocket*>( sender() );
 	if( socket == nullptr ) { return; }
-	const auto raw = socket->readAll();
-	const auto separator = raw.indexOf( QByteArrayLiteral("\r\n\r\n") );
-	if( separator < 0 ) { return; }
 
-	const auto head = QString::fromUtf8( raw.left( separator ) );
-	const auto body = raw.mid( separator + 4 );
-	const auto lines = head.split( QLatin1Char('\n') );
-	if( lines.isEmpty() ) { return; }
-	const auto parts = lines.first().trimmed().split( QLatin1Char(' ') );
-	if( parts.size() < 2 ) { return; }
-
-	const auto method = parts.at( 0 );
-	const auto pathAndQuery = parts.at( 1 );
-	if( method == QStringLiteral("OPTIONS") )
+	auto& buffer = m_buffers[socket];
+	if( buffer.size() + socket->bytesAvailable() > MaxHeaderBytes + MaxBodyBytes + 4096 )
 	{
-		respond( socket, QByteArray() );
+		respondError( socket, 413, QByteArrayLiteral("Payload Too Large"), QStringLiteral("request too large") );
+		m_buffers.remove( socket );
+		return;
+	}
+	// Accumulate per connection: a header/body split across TCP segments is no
+	// longer discarded by a single readAll().
+	buffer += socket->readAll();
+	const auto request = parseRequest( buffer );
+	if( request.tooLarge )
+	{
+		respondError( socket, 413, QByteArrayLiteral("Payload Too Large"), QStringLiteral("request too large") );
+		m_buffers.remove( socket );
+		return;
+	}
+	if( request.complete == false ) { return; }
+	m_buffers.remove( socket );
+
+	if( request.method == QStringLiteral("OPTIONS") )
+	{
+		writeResponse( socket, 204, QByteArrayLiteral("No Content"), {}, {} );
 		return;
 	}
 
 	// Discovery/heartbeat is public metadata only; every data and control route
-	// requires the lesson key bound to this teacher machine.
-	const auto path = pathAndQuery.section( QLatin1Char('?'), 0, 0 );
-	if( path != QStringLiteral("/api/classroom/state") && authorized( lines ) == false )
+	// requires a request-bound HMAC over the lesson key.
+	const auto path = request.pathAndQuery.section( QLatin1Char('?'), 0, 0 );
+	if( path != QStringLiteral("/api/classroom/state") &&
+		authorized( socket->peerAddress(), request.headerLines, request.method,
+					request.pathAndQuery, request.body ) == false )
 	{
 		respondDenied( socket );
 		return;
 	}
-	handleRoute( socket, method, pathAndQuery, body );
+	handleRoute( socket, request.method, request.pathAndQuery, request.body );
 }
 
 
@@ -339,7 +497,10 @@ void ClassroomBridge::handleCommand( const QJsonObject& command, bool* handled )
 	*handled = false;
 	const auto name = command.value( QStringLiteral("name") ).toString();
 	auto enabled = command.value( QStringLiteral("enabled") ).toBool( true );
-	const auto text = command.value( QStringLiteral("text") ).toString();
+	const auto text = command.value( QStringLiteral("text") ).toString().left( 2000 );
+	// netsh receives this value as remoteip=. Only a plain unicast IPv4
+	// address may survive; 0.0.0.0/0 and friends are dropped here.
+	const auto teacherIp = sanitizeTeacherIp( command.value( QStringLiteral("teacherIp") ).toString() );
 
 	Classroom::Command messageCommand = Classroom::Command::Ping;
 	QString featureUid;
@@ -367,7 +528,11 @@ void ClassroomBridge::handleCommand( const QJsonObject& command, bool* handled )
 		featureUid = QStringLiteral("7b6231bd-eb89-45d3-af32-f70663b2f878");
 		enabled = true;
 	}
-	else { return; }
+	else
+	{
+		qWarning( "ClassKeep: bridge rejected unknown command %s", qPrintable( name ) );
+		return;
+	}
 
 	if( featureUid.isEmpty() == false )
 	{
@@ -379,8 +544,7 @@ void ClassroomBridge::handleCommand( const QJsonObject& command, bool* handled )
 	{
 		auto message = Classroom::message( messageCommand );
 		message.addArgument( Classroom::Argument::Enabled, enabled )
-			   .addArgument( Classroom::Argument::Ip,
-							 command.value( QStringLiteral("teacherIp") ).toString() )
+			   .addArgument( Classroom::Argument::Ip, teacherIp )
 			   .addArgument( Classroom::Argument::Message, text );
 		for( const auto& controlInterface : m_master.allComputerControlInterfaces() )
 		{
@@ -388,6 +552,24 @@ void ClassroomBridge::handleCommand( const QJsonObject& command, bool* handled )
 		}
 	}
 	*handled = true;
+}
+
+
+void ClassroomBridge::serveAsync( QTcpSocket* socket, const std::function<QByteArray()>& work,
+								  const QByteArray& contentType )
+{
+	// The socket is a QPointer: if the phone disconnects while the file scan
+	// runs, the (GUI-thread) result slot simply drops the answer. The work
+	// itself captures values only, so it cannot outlive this object's members.
+	QPointer<QTcpSocket> guarded( socket );
+	auto* watcher = new QFutureWatcher<QByteArray>( this );
+	connect( watcher, &QFutureWatcher<QByteArray>::finished, this,
+			 [this, watcher, guarded, contentType]() {
+				 const auto result = watcher->result();
+				 watcher->deleteLater();
+				 if( guarded.isNull() == false ) { respond( guarded.data(), result, contentType ); }
+			 } );
+	watcher->setFuture( QtConcurrent::run( work ) );
 }
 
 
@@ -455,11 +637,12 @@ void ClassroomBridge::handleRoute( QTcpSocket* socket, const QString& method,
 	if( path == QStringLiteral("/api/classroom/score") && method == QStringLiteral("POST") )
 	{
 		const auto request = QJsonDocument::fromJson( body ).object();
-		const auto seat = request.value( QStringLiteral("seat") ).toString();
+		const auto seat = request.value( QStringLiteral("seat") ).toString().trimmed().left( 16 );
 		const auto delta = request.value( QStringLiteral("delta") ).toInt();
-		const auto reason = request.value( QStringLiteral("reason") ).toString();
+		const auto reason = request.value( QStringLiteral("reason") ).toString().left( 200 );
 		bool ok = false;
-		if( seat.isEmpty() == false && delta != 0 && m_className.isEmpty() == false )
+		// One-tap scoring is an adjustment, not an arbitrary rewrite of the book.
+		if( seat.isEmpty() == false && validDelta( delta ) && m_className.isEmpty() == false )
 		{
 			m_book.load( m_className );
 			const auto lessonId = m_book.ensureLesson( QDate::currentDate(), tr( "Mobile scoring" ) );
@@ -498,30 +681,39 @@ void ClassroomBridge::handleRoute( QTcpSocket* socket, const QString& method,
 	if( path == QStringLiteral("/api/classroom/wordcloud") )
 	{
 		const auto seat = pathAndQuery.section( QStringLiteral("seat="), 1 ).section( QLatin1Char('&'), 0, 0 );
-		QStringList lines;
-		for( const auto& event : m_store.load( QDate::currentDate().addDays( -180 ), QDate::currentDate() ) )
-		{
-			if( event.seat == seat && event.className == m_className )
+		const auto className = m_className;
+		const auto dataDirectory = m_dataDirectory;
+		// Six months of JSONL is far too much work for the GUI thread. The work
+		// captures values only and rebuilds a read-only store in the pool.
+		serveAsync( socket, [dataDirectory, className, seat]() -> QByteArray {
+			ClassroomLogStore store( dataDirectory );
+			QStringList lines;
+			for( const auto& event : store.load( QDate::currentDate().addDays( -180 ), QDate::currentDate() ) )
 			{
-				lines.append( QStringLiteral("%1 %2").arg( event.detail, event.app ) );
+				if( event.seat == seat && event.className == className )
+				{
+					lines.append( QStringLiteral("%1 %2").arg( event.detail, event.app ) );
+				}
 			}
-		}
-		const auto words = ClassroomWordCloud::tokenize( lines, {}, 60 );
-		respond( socket, ClassroomWordCloud::toSvg( words ), QByteArrayLiteral("image/svg+xml; charset=utf-8") );
+			return ClassroomWordCloud::toSvg( ClassroomWordCloud::tokenize( lines, {}, 60 ) );
+		}, QByteArrayLiteral("image/svg+xml; charset=utf-8") );
 		return;
 	}
 	if( path == QStringLiteral("/api/classroom/events") )
 	{
-		QJsonArray array;
-		const auto events = m_store.load( QDate::currentDate().addDays( -30 ), QDate::currentDate() );
-		const int limit = 2000;
-		const int count = static_cast<int>( events.size() );
-		for( int index = qMax( 0, count - limit ); index < count; ++index )
-		{
-			array.append( events.at( index ).toJson() );
-		}
-		QJsonObject result{ { QStringLiteral("events"), array } };
-		respond( socket, jsonResponse( result ) );
+		const auto dataDirectory = m_dataDirectory;
+		serveAsync( socket, [dataDirectory]() -> QByteArray {
+			ClassroomLogStore store( dataDirectory );
+			const auto events = store.load( QDate::currentDate().addDays( -30 ), QDate::currentDate() );
+			QJsonArray array;
+			const int limit = 2000;
+			const int count = static_cast<int>( events.size() );
+			for( int index = qMax( 0, count - limit ); index < count; ++index )
+			{
+				array.append( events.at( index ).toJson() );
+			}
+			return jsonResponse( QJsonObject{ { QStringLiteral("events"), array } } );
+		}, QByteArrayLiteral("application/json; charset=utf-8") );
 		return;
 	}
 	// ------------------------------------------------------------------ timetable
@@ -598,7 +790,10 @@ void ClassroomBridge::handleRoute( QTcpSocket* socket, const QString& method,
 	{
 		const auto document = QJsonDocument::fromJson( body );
 		const auto snapshot = document.object().value( QStringLiteral("scores") ).toObject();
-		if( snapshot.isEmpty() == false && m_book.applySnapshot( snapshot ) )
+		// Append-only: the phone may contribute new entries, but can never
+		// replace the teacher's lessons, rules or existing score entries.
+		m_book.load( m_className );
+		if( snapshot.isEmpty() == false && m_book.appendSnapshot( snapshot ) )
 		{
 			Q_EMIT remoteDataApplied();
 			respond( socket, jsonResponse( QJsonObject{ { QStringLiteral("ok"), true },
@@ -611,5 +806,6 @@ void ClassroomBridge::handleRoute( QTcpSocket* socket, const QString& method,
 		return;
 	}
 
-	respond( socket, jsonResponse( QJsonObject{ { QStringLiteral("error"), QStringLiteral("unknown route") } } ) );
+	qWarning( "ClassKeep: bridge 404 for %s %s", qPrintable( method ), qPrintable( path ) );
+	respondError( socket, 404, QByteArrayLiteral("Not Found"), QStringLiteral("unknown route") );
 }

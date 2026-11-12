@@ -8,12 +8,16 @@
 #include <QtGlobal>
 
 #include <QAbstractSocket>
+#include <QAction>
+#include <QCursor>
 #include <QDockWidget>
 #include <QMainWindow>
 #include <QCoreApplication>
 #include <QDateTime>
+#include <QDebug>
 #include <QDesktopServices>
 #include <QDialog>
+#include <QFileInfo>
 #include <QDialogButtonBox>
 #include <QHostAddress>
 #include <QHostInfo>
@@ -30,6 +34,7 @@
 #include <QTimer>
 #include <QUrl>
 
+#include "ClassroomAiClient.h"
 #include "ClassroomClient.h"
 #include "ClassroomConfigurationPage.h"
 #include "ClassroomData.h"
@@ -82,7 +87,23 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 							   tr( "Sign out" ), {},
 							   tr( "Sign out the current student" ),
 							   QStringLiteral(":/core/edit-delete.png") ) ),
-	m_features( { m_consoleFeature, m_clientFeature, m_signInFeature, m_signOutFeature } ),
+	// 2.3.0: the quick tools and check-in actions are first-class tool-bar
+	// buttons. They only open UI in the Master process - no Worker flag, so no
+	// extra ClassKeep Worker process is created.
+	m_quickToolsFeature( Feature( QStringLiteral("ClassroomQuickTools"),
+								  Feature::Flag::Action | Feature::Flag::Master,
+								  quickToolsFeatureUid(), Feature::Uid(),
+								  tr( "Quick tools" ), {},
+								  tr( "Broadcast, UWF, gateway, silence, blocking, scoring and more" ),
+								  QStringLiteral(":/core/icon22.png") ) ),
+	m_checkInFeature( Feature( QStringLiteral("ClassroomCheckIn"),
+							   Feature::Flag::Action | Feature::Flag::Master,
+							   checkInFeatureUid(), Feature::Uid(),
+							   tr( "Check-in" ), {},
+							   tr( "Start attendance check-in on all student machines" ),
+							   QStringLiteral(":/core/user-group-new.png") ) ),
+	m_features( { m_consoleFeature, m_clientFeature, m_signInFeature, m_signOutFeature,
+				  m_quickToolsFeature, m_checkInFeature } ),
 	m_hostName( QHostInfo::localHostName() )
 {
 	m_ipAddress = localIpAddress();
@@ -227,9 +248,15 @@ bool ClassroomPlugin::controlFeature( Feature::Uid featureUid, Operation operati
 	if( operation != Operation::Stop )
 	{
 		message.addArgument( Argument::SettingsJson,
-							 QString::fromUtf8( QJsonDocument( ClassroomSettings::fromConfiguration( m_configuration ) ).
+							 QString::fromUtf8( QJsonDocument( ClassroomSettings::forStudents(
+								 ClassroomSettings::fromConfiguration( m_configuration ) ) ).
 												toJson( QJsonDocument::Compact ) ) );
-		message.addArgument( Argument::SessionKey, m_configuration.sessionKey() );
+		// The lesson key is generated into settings.json (DPAPI protected), not
+		// into the registry-backed Veyon configuration. Check both so a student
+		// card still knows a lesson is active after a fresh console restart.
+		message.addArgument( Argument::KeyConfigured,
+							 m_configuration.sessionKey().isEmpty() == false ||
+							 settings()->object().value( QStringLiteral("sessionKey") ).toString().isEmpty() == false );
 	}
 	sendFeatureMessage( message, computerControlInterfaces );
 	return true;
@@ -278,6 +305,38 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 		event.type = EventType::logout();
 		event.detail = tr( "signed out by teacher" );
 		store()->append( event );
+		return true;
+	}
+
+	// ------------------------------------------- tool bar quick tools / check-in
+	if( feature.uid() == quickToolsFeatureUid() || feature.uid() == checkInFeatureUid() )
+	{
+		// The parameter widgets (silence text, blocked apps, software path, ...)
+		// belong to the console, so make sure it has been created at least once.
+		if( m_dialog.isNull() )
+		{
+			startFeature( master, m_consoleFeature, computerControlInterfaces );
+		}
+		if( m_dialog.isNull() ) { return true; }
+
+		if( feature.uid() == checkInFeatureUid() )
+		{
+			m_dialog->startCheckInFromToolBar();
+			return true;
+		}
+
+		QMenu menu( master.mainWindow() );
+		menu.setToolTipsVisible( true );
+		for( const auto& group : m_dialog->quickToolGroups() )
+		{
+			auto* subMenu = menu.addMenu( group.first );
+			for( const auto& entry : group.second )
+			{
+				auto* action = subMenu->addAction( entry.first );
+				connect( action, &QAction::triggered, &menu, [entry]() { entry.second(); } );
+			}
+		}
+		menu.exec();
 		return true;
 	}
 
@@ -330,10 +389,11 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 	// which is what produced a dozen ClassKeep-worker.exe processes.
 	auto stateMessage = Classroom::message( Command::ApplySession );
 	stateMessage.addArgument( Argument::SettingsJson,
-							  QString::fromUtf8( QJsonDocument( settings()->object() ).toJson( QJsonDocument::Compact ) ) );
+							  QString::fromUtf8( QJsonDocument( ClassroomSettings::forStudents( settings()->object() ) ).
+												 toJson( QJsonDocument::Compact ) ) );
 	stateMessage.addArgument( Argument::RosterJson, roster()->toJson() );
-	stateMessage.addArgument( Argument::SessionKey,
-							  settings()->object().value( QStringLiteral("sessionKey") ).toString() );
+	stateMessage.addArgument( Argument::KeyConfigured,
+							  settings()->object().value( QStringLiteral("sessionKey") ).toString().isEmpty() == false );
 	stateMessage.addArgument( Argument::SessionId,
 							  QDateTime::currentDateTime().toString( QStringLiteral("yyyyMMdd-HHmmss") ) );
 	sendFeatureMessage( stateMessage, computerControlInterfaces );
@@ -346,9 +406,10 @@ void ClassroomPlugin::startClient( VeyonServerInterface& server )
 {
 	auto message = Classroom::message( Command::StartClient );
 	message.addArgument( Argument::SettingsJson,
-						 QString::fromUtf8( QJsonDocument( ClassroomSettings::fromConfiguration( m_configuration ) ).
+						 QString::fromUtf8( QJsonDocument( ClassroomSettings::forStudents(
+							 ClassroomSettings::fromConfiguration( m_configuration ) ) ).
 											toJson( QJsonDocument::Compact ) ) );
-	message.addArgument( Argument::SessionKey, m_configuration.sessionKey() );
+	message.addArgument( Argument::KeyConfigured, m_configuration.sessionKey().isEmpty() == false );
 	message.addArgument( Argument::SessionId,
 						 QDateTime::currentDateTime().toString( QStringLiteral("yyyyMMdd-HHmmss") ) );
 	server.featureWorkerManager().sendMessageToUnmanagedSessionWorker( message );
@@ -483,6 +544,7 @@ bool ClassroomPlugin::handleFeatureMessageFromWorker( VeyonServerInterface& serv
 	case Command::CheckInReply:
 	case Command::UwfStatusReport:
 	case Command::ProtectionStateReport:
+	case Command::AiPrompt:
 		if( hasActiveContext() )
 		{
 			for( const auto& context : m_contexts )
@@ -527,6 +589,46 @@ bool ClassroomPlugin::handleFeatureMessage( ComputerControlInterface::Pointer co
 		auto reply = Classroom::message( Command::ScoreReply );
 		reply.addArgument( Argument::RichText, book.studentHtml( seat, student ) );
 		if( computerControlInterface ) { computerControlInterface->sendFeatureMessage( reply ); }
+		return true;
+	}
+
+	if( command == Command::AiPrompt )
+	{
+		// The teacher machine owns the model endpoint and API key. Students only
+		// send a prompt + short history over the existing Veyon feature channel.
+		const auto payload = QJsonDocument::fromJson(
+			message.argument( Argument::AiPayload ).toString().toUtf8() ).object();
+		QVariantList history;
+		const auto items = payload.value( QStringLiteral("history") ).toArray();
+		for( int index = 0; index < qMin( 20, static_cast<int>( items.size() ) ); ++index )
+		{
+			const auto item = items.at( index ).toObject();
+			QVariantMap entry;
+			entry.insert( QStringLiteral("role"), item.value( QStringLiteral("role") ).toString() );
+			entry.insert( QStringLiteral("content"), item.value( QStringLiteral("content") ).toString().left( 4000 ) );
+			history.append( entry );
+		}
+
+		auto* client = new ClassroomAiClient( this );
+		ClassroomAiClient::Settings fallback;
+		client->setSettings( ClassroomAiClient::Settings::fromJson( settings()->object(), fallback ) );
+		connect( client, &ClassroomAiClient::finished, this,
+				 [this, client, computerControlInterface]( bool success, const QString& answer ) {
+					 client->deleteLater();
+					 auto reply = Classroom::message( Command::AiReply );
+					 reply.addArgument( Argument::AiSuccess, success )
+						  .addArgument( Argument::AiAnswer, answer.left( 8000 ) );
+					 if( computerControlInterface ) { computerControlInterface->sendFeatureMessage( reply ); }
+				 } );
+		client->chat( history, payload.value( QStringLiteral("prompt") ).toString().left( 4000 ) );
+
+		ClassroomEvent event;
+		event.timestamp = QDateTime::currentDateTime();
+		event.type = Classroom::EventType::ai();
+		event.detail = QStringLiteral("AI prompt proxied by the teacher machine");
+		event.ip = message.argument( Argument::Ip ).toString();
+		event.host = message.argument( Argument::Host ).toString();
+		store()->append( event );
 		return true;
 	}
 
@@ -632,6 +734,26 @@ void ClassroomPlugin::ensureClientUi( VeyonWorkerInterface& worker )
 			 .addArgument( Argument::Ip, m_ipAddress );
 		m_worker->sendFeatureMessageReply( query );
 	} );
+	connect( m_clientWidget, &ClassroomClientWidget::aiPromptRequested, this,
+			 [this]( const QString& prompt, const QVariantList& history ) {
+				 if( m_worker == nullptr ) { return; }
+				 QJsonArray items;
+				 for( const auto& value : history )
+				 {
+					 const auto entry = value.toMap();
+					 items.append( QJsonObject{
+						 { QStringLiteral("role"), entry.value( QStringLiteral("role") ).toString() },
+						 { QStringLiteral("content"), entry.value( QStringLiteral("content") ).toString().left( 4000 ) } } );
+				 }
+				 auto request = Classroom::message( Command::AiPrompt );
+				 request.addArgument( Argument::AiPayload,
+									  QString::fromUtf8( QJsonDocument( QJsonObject{
+										  { QStringLiteral("prompt"), prompt },
+										  { QStringLiteral("history"), items } } ).toJson( QJsonDocument::Compact ) ) )
+						.addArgument( Argument::Ip, m_ipAddress )
+						.addArgument( Argument::Host, m_hostName );
+				 m_worker->sendFeatureMessageReply( request );
+			 } );
 	connect( m_clientWidget, &ClassroomClientWidget::checkInSubmitted, this, [this]( const QString& name ) {
 		if( m_worker == nullptr ) { return; }
 		auto reply = Classroom::message( Command::CheckInReply );
@@ -667,7 +789,9 @@ void ClassroomPlugin::ensureClientUi( VeyonWorkerInterface& worker )
 #ifdef Q_OS_WIN
 				 // User-mode enforcement only: no driver, no injection. A matched
 				 // app/browser is simply terminated and reported to the teacher.
-				 if( app.isEmpty() == false )
+				 // Short rules never reach this point (ClassroomMonitor
+				 // drops them), but keep the guard here as well.
+				 if( app.size() >= 4 && rule.size() >= 4 )
 				 {
 					 const auto image = app.contains( QLatin1Char('.') ) ? app : app + QStringLiteral(".exe");
 					 QProcess::startDetached( QStringLiteral("taskkill"),
@@ -731,9 +855,9 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	{
 	case Command::StartClient:
 		applyWorkerSettings( settingsFromJson() );
-		m_sessionKey = message.argument( Argument::SessionKey ).toString();
+		m_keyConfigured = message.argument( Argument::KeyConfigured ).toBool();
 		m_sessionId = message.argument( Argument::SessionId ).toString();
-		m_clientWidget->setSessionKey( m_sessionKey );
+		m_clientWidget->setKeyConfigured( m_keyConfigured );
 		m_clientWidget->reactivate();
 		VeyonCore::platform().coreFunctions().raiseWindow( m_clientWidget, false );
 		reportEvent( EventType::connection(), QStringLiteral("classroom client connected"), {} );
@@ -746,9 +870,9 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		m_clientWidget->setRoster(
 			QJsonDocument::fromJson( message.argument( Argument::RosterJson ).toString().toUtf8() ).object() );
 		if( m_className.isEmpty() ) { m_className = m_clientWidget->className(); }
-		m_sessionKey = message.argument( Argument::SessionKey ).toString();
+		m_keyConfigured = message.argument( Argument::KeyConfigured ).toBool();
 		m_sessionId = message.argument( Argument::SessionId ).toString();
-		m_clientWidget->setSessionKey( m_sessionKey );
+		m_clientWidget->setKeyConfigured( m_keyConfigured );
 		m_clientWidget->reactivate();
 		updateTrayTooltip();
 		break;
@@ -764,9 +888,10 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		break;
 
 	case Command::SetSessionKey:
-		m_sessionKey = message.argument( Argument::SessionKey ).toString();
+		// Legacy command name, new payload: a heartbeat carrying only a boolean.
+		m_keyConfigured = message.argument( Argument::KeyConfigured ).toBool();
 		m_sessionId = message.argument( Argument::SessionId ).toString();
-		m_clientWidget->setSessionKey( m_sessionKey );
+		m_clientWidget->setKeyConfigured( m_keyConfigured );
 		break;
 
 	case Command::SetIdentity:
@@ -820,24 +945,44 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		m_clientWidget->setScoreHtml( message.argument( Argument::RichText ).toString() );
 		break;
 
+	case Command::AiReply:
+		m_clientWidget->deliverAiReply( message.argument( Argument::AiSuccess ).toBool(),
+										message.argument( Argument::AiAnswer ).toString() );
+		break;
+
 	case Command::StartCheckIn:
 		m_clientWidget->showCheckIn();
 		break;
 
 	case Command::SetUninstallProtection:
 	{
-		// The worker runs as LocalSystem from VeyonService, so HKLM is writable.
-		// The standalone uninstall.exe reads the same value and aborts when set.
+		// The floating card runs in the interactive user's session. HKLM writes
+		// therefore only succeed when that account has administrative rights;
+		// the result is read back and reported instead of silently succeeding.
 		const bool protect = message.argument( Argument::Enabled ).toBool();
+		bool confirmed = false;
 #ifdef Q_OS_WIN
 		QSettings settings( QStringLiteral("HKEY_LOCAL_MACHINE\\SOFTWARE\\ClassKeep\\Student"),
 							QSettings::Registry64Format );
 		settings.setValue( QStringLiteral("UninstallProtection"), protect ? 1 : 0 );
 		settings.sync();
+		const auto status = settings.status();
+		const auto readBack = settings.value( QStringLiteral("UninstallProtection"), -1 ).toInt();
+		confirmed = status == QSettings::NoError && readBack == ( protect ? 1 : 0 );
+		if( confirmed == false )
+		{
+			qWarning( "ClassKeep: SetUninstallProtection failed (status=%d, readback=%d, lastError=%s)",
+					  static_cast<int>( status ), readBack, qPrintable( ClassroomSystem::lastError() ) );
+		}
 #endif
 		reportEvent( EventType::protection(),
-					 protect ? QStringLiteral("uninstall protection enabled by teacher")
-							 : QStringLiteral("uninstall protection cleared by teacher"), {} );
+					 confirmed ? ( protect ? QStringLiteral("uninstall protection enabled by teacher")
+										   : QStringLiteral("uninstall protection cleared by teacher") )
+							   : QStringLiteral("uninstall protection FAILED: HKLM write not confirmed"), {} );
+		auto reply = Classroom::message( Command::ProtectionStateReport );
+		reply.addArgument( Argument::Enabled, protect )
+			 .addArgument( Argument::Result, confirmed ? QStringLiteral("ok") : QStringLiteral("failed") );
+		if( m_worker ) { m_worker->sendFeatureMessageReply( reply ); }
 		break;
 	}
 
@@ -850,15 +995,25 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		break;
 
 	case Command::SetMute:
-		ClassroomSystem::setMute( message.argument( Argument::Enabled ).toBool() );
+		if( ClassroomSystem::setMute( message.argument( Argument::Enabled ).toBool() ) == false )
+		{
+			qWarning( "ClassKeep: SetMute failed: %s", qPrintable( ClassroomSystem::lastError() ) );
+		}
 		reportEvent( EventType::mute(), QStringLiteral("audio mute changed by teacher"), {} );
 		break;
 
 	case Command::SetInternetBlock:
-		ClassroomSystem::setInternetBlock( message.argument( Argument::Enabled ).toBool(),
-										  message.argument( Argument::Ip ).toString() );
+	{
+		// A second line of defence: even a compromised teacher console or a
+		// forged feature message cannot turn remoteip= into a CIDR range.
+		const auto teacherIp = Classroom::sanitizeUnicastIp( message.argument( Argument::Ip ).toString() );
+		if( ClassroomSystem::setInternetBlock( message.argument( Argument::Enabled ).toBool(), teacherIp ) == false )
+		{
+			qWarning( "ClassKeep: SetInternetBlock failed: %s", qPrintable( ClassroomSystem::lastError() ) );
+		}
 		reportEvent( EventType::internet(), QStringLiteral("InternetGuard changed by teacher"), {} );
 		break;
+	}
 
 	case Command::UwfQuery:
 	{
@@ -868,7 +1023,10 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	}
 
 	case Command::UwfSetFilter:
-		ClassroomSystem::setUwfFilter( message.argument( Argument::Enabled ).toBool() );
+		if( ClassroomSystem::setUwfFilter( message.argument( Argument::Enabled ).toBool() ) == false )
+		{
+			qWarning( "ClassKeep: UwfSetFilter failed: %s", qPrintable( ClassroomSystem::lastError() ) );
+		}
 		reportEvent( EventType::uwf(), QStringLiteral("UWF filter change queued (reboot required)"), {} );
 		break;
 
@@ -897,14 +1055,22 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	case Command::OpenSoftware:
 	{
 		const auto path = message.argument( Argument::SoftwarePath ).toString().trimmed();
-		if( path.isEmpty() ) { break; }
+		const QFileInfo info( path );
+		// Only an existing .exe may be launched; scripts and arbitrary paths
+		// would turn this command into remote command execution.
+		if( path.isEmpty() || info.isFile() == false ||
+			info.suffix().compare( QStringLiteral("exe"), Qt::CaseInsensitive ) != 0 )
+		{
+			qWarning( "ClassKeep: OpenSoftware rejected a non-.exe or missing path" );
+			break;
+		}
 		const auto args = message.argument( Argument::SoftwareArgs ).toString();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
 		const auto arguments = QProcess::splitCommand( args );
 #else
 		const auto arguments = args.split( QLatin1Char(' '), QString::SkipEmptyParts );
 #endif
-		QProcess::startDetached( path, arguments );
+		QProcess::startDetached( info.absoluteFilePath(), arguments );
 		reportEvent( EventType::software(), path, {} );
 		break;
 	}

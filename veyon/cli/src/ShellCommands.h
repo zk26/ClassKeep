@@ -51,12 +51,12 @@ public:
 
 	QString description() const override
 	{
-		return tr( "Interactive shell and script execution for Veyon CLI" );
+		return tr( "Interactive shell and script execution for ClassKeep CLI" );
 	}
 
 	QString vendor() const override
 	{
-		return QStringLiteral( "Veyon Community" );
+		return QStringLiteral( "ClassKeep" );
 	}
 
 	QString copyright() const override

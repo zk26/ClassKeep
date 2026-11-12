@@ -48,7 +48,7 @@ function(add_windows_resources TARGET)
 		"		BLOCK \"040904E4\"\n"
 		"		BEGIN\n"
 		"			VALUE \"Comments\",         \"ClassKeep - based on Veyon (https://veyon.io)\\0\"\n"
-		"			VALUE \"CompanyName\",      \"ClassKeep\\0\"\n"
+		"			VALUE \"CompanyName\",      \"zk26\\0\"\n"
 		"			VALUE \"ProductName\",      \"ClassKeep\\0\"\n"
 		"			VALUE \"ProductVersion\",   \"${VERSION_STRING}\\0\"\n"
 		"			VALUE \"FileDescription\",  \"${arg_DESCRIPTION}\\0\"\n"

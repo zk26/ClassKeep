@@ -11,12 +11,15 @@
 #include <QDateTime>
 #include <QJsonObject>
 #include <QMap>
+#include <QPair>
 #include <QSharedPointer>
 #include <QString>
 #include <QStringList>
 #include <QVector>
 
 #include "ClassroomData.h"
+
+#include <functional>
 
 class QCheckBox;
 class QComboBox;
@@ -52,6 +55,14 @@ public:
 						   ClassroomSettings& settings,
 						   QWidget* parent = nullptr );
 	~ClassroomMasterDialog() override;
+
+	//! One entry of the "Quick tools" drop-down on the Veyon Master tool bar.
+	using QuickToolAction = QPair<QString, std::function<void()>>;
+	using QuickToolGroup = QPair<QString, QVector<QuickToolAction>>;
+	//! Grouped actions collected by setupToolsTab(); the plug-in turns them into
+	//! a QMenu so the same code is not duplicated as tool-bar buttons.
+	QVector<QuickToolGroup> quickToolGroups() const { return m_quickToolGroups; }
+	void startCheckInFromToolBar() { startCheckIn(); }
 
 	void showCall( const QString& ip, const QString& seat, const QString& student );
 	void syncNow();
@@ -94,6 +105,8 @@ private:
 	QString currentClassName() const;
 	QString currentSessionId();
 	QJsonObject settingsJson() const;
+	//! Student-bound copy of settingsJson() with every teacher-side secret removed.
+	QJsonObject settingsForStudents() const;
 	QString sessionKey() const;
 
 	void addClass();
@@ -210,7 +223,9 @@ private:
 	ClassroomSeatGrid* m_seatGrid = nullptr;
 	QTableWidget* m_checkInTable = nullptr;
 
-	// Quick tools tab (inserted as the first tab).
+	// Quick tools tab (inserted as the first tab). Buttons no longer live here:
+	// the grouped actions are rendered by the Veyon Master tool-bar menu.
+	QVector<QuickToolGroup> m_quickToolGroups;
 	QComboBox* m_toolScope = nullptr;
 	QLabel* m_toolsStatus = nullptr;
 	QLineEdit* m_toolSilence = nullptr;

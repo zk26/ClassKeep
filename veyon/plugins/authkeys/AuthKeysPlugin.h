@@ -67,7 +67,7 @@ public:
 
 	QString vendor() const override
 	{
-		return QStringLiteral( "Veyon Community" );
+		return QStringLiteral( "ClassKeep" );
 	}
 
 	QString copyright() const override

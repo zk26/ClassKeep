@@ -40,7 +40,7 @@
 
 VeyonMaster::VeyonMaster( QObject* parent ) :
 	VeyonMasterInterface( parent ),
-	m_userConfig(new UserConfig(QStringLiteral("VeyonMaster"))),
+	m_userConfig(new UserConfig(QStringLiteral("ClassKeepMaster"))),
 	m_features( featureList() ),
 	m_computerManager( new ComputerManager( *m_userConfig, this ) ),
 	m_computerControlListModel( new ComputerControlListModel( this, this ) ),

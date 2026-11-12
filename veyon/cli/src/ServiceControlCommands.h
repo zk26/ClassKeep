@@ -56,7 +56,7 @@ public:
 
 	QString vendor() const override
 	{
-		return QStringLiteral( "Veyon Community" );
+		return QStringLiteral( "ClassKeep" );
 	}
 
 	QString copyright() const override
@@ -71,7 +71,7 @@ public:
 
 	QString commandLineModuleHelp() const override
 	{
-		return tr( "Commands for configuring and controlling Veyon Service" );
+		return tr( "Commands for configuring and controlling the ClassKeep Service" );
 	}
 
 	QStringList commands() const override

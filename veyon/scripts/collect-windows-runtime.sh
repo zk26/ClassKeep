@@ -24,7 +24,7 @@ find "$BUILD" -type f -name 'ClassKeep-*.exe' ! -path '*CMakeFiles*' \
 echo "== core DLL =="
 find "$BUILD/core" -maxdepth 1 -type f -name '*.dll' -exec cp '{}' "$PAYLOAD/" \;
 
-echo "== Veyon plugins =="
+echo "== ClassKeep plugins =="
 find "$BUILD/plugins" -type f -name '*.dll' ! -path '*CMakeFiles*' \
   -exec cp '{}' "$PAYLOAD/plugins/" \;
 
@@ -98,7 +98,7 @@ for f in veyon-core.dll ClassKeep-master.exe ClassKeep-configurator.exe ClassKee
     exit 1
   fi
 done
-echo "windows-platform.dll: PRESENT (VeyonCore can start)"
+echo "windows-platform.dll: PRESENT (ClassKeep core can start)"
 echo "libqca-ossl.dll:      PRESENT (CryptoCore RSA available)"
 
 echo "translation catalogs: $(find "$PAYLOAD/translations" -type f -name '*.qm' | wc -l)"
