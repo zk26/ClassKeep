@@ -142,12 +142,12 @@ jobs:
           cat windows-platform.log
           # Surface the real compiler errors as annotations: the job log itself
           # is not retrievable without authentication.
-          grep -E "error:|Error " windows-platform.log | head -6 | while IFS= read -r line; do
-            echo "::error::${line}"
-          done
-          tail -n 8 windows-platform.log | while IFS= read -r line; do
-            echo "::error::wp|${line}"
-          done
+          errs=$(grep -E "error:" windows-platform.log | head -9)
+          if [ -n "$errs" ]; then
+            printf '%s\n' "$errs" | while IFS= read -r line; do echo "::error::${line}"; done
+          else
+            tail -n 9 windows-platform.log | while IFS= read -r line; do echo "::error::wp|${line}"; done
+          fi
           exit 1
 
       - name: Build other upstream plugins (best effort)

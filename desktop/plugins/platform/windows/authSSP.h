@@ -25,6 +25,11 @@
 #pragma once
 
 #include <windows.h>
+// The UltraVNC header we replaced pulled these in transitively; WindowsUserFunctions
+// relies on them for NetGetDCName()/NetApiBufferFree()/NERR_Success and for
+// GetUserNameExW()/NameDisplay.
+#include <lm.h>
+#include <secext.h>
 
 // ikeback: ikeback signs students in by class/name/seat and never authenticates
 // with Windows credentials, so the UltraVNC SSPI helper is no longer built.
