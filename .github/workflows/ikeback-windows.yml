@@ -103,6 +103,11 @@ jobs:
           grep -rn 'define VNCLOG' desktop/3rdparty/ultravnc/winvnc/ | head -8 | while IFS= read -r line; do
             echo "::notice::VNCLOG ${line}"
           done || true
+          # The pinned UltraVNC SettingsManager writes a cloud-related pref the class
+          # never declares (leftover from a feature we do not ship); drop those lines.
+          grep -rn 'm_pref_cloudEnabled' desktop/3rdparty/ultravnc/winvnc/winvnc/ | head -6 | while IFS= read -r line; do echo "::notice::cloud ${line}"; done || true
+          find desktop/3rdparty/ultravnc/winvnc -name 'SettingsManager.cpp' \
+            -exec perl -pi -e 's/^.*m_pref_cloudEnabled.*$//' {} + || true
           # The Windows headers only declare the legacy GWL_* accessors for
           # WINVER < 0x0500; this project targets 0x0602, so rewrite them in the
           # third-party sources (a compile definition is not enough because the
