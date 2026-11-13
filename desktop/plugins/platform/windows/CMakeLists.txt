@@ -94,7 +94,8 @@ set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BU
 #
 # Its SettingsManager.h is ANSI-only: under the project-wide UNICODE/_UNICODE
 # defines TCHAR becomes wchar_t and the legacy char* accessors no longer
-# compile. COMPILE_DEFINITIONS is the only per-source channel CMake forwards
-# to the compiler, so cancel the two defines for this unit only.
-set_property(SOURCE "${ultravnc_DIR}/winvnc/winvnc/vnckeymap.cpp"
-	APPEND PROPERTY COMPILE_DEFINITIONS "-UUNICODE" "-U_UNICODE")
+# compile. CMake offers no per-source way to cancel those two defines (its
+# COMPILE_DEFINITIONS channel would emit -D-UUNICODE), so the CI fetch step
+# prepends #undef UNICODE/_UNICODE to vnckeymap.cpp - before any include, which
+# is the only point where it still has an effect. See
+# .github/workflows/ikeback-windows.yml.
