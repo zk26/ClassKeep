@@ -1,0 +1,45 @@
+name: Purge releases older than 5.2.0
+
+# 5.2.0 is the first official ikeback release. Every release published before
+# it carries the retired product name and defective packages, so it must not
+# stay downloadable. Runs on demand or once when this file is updated.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/purge-old-releases.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  purge:
+    name: Delete obsolete releases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Delete every release older than 5.2.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cutoff=5.2.0
+          gh release list --limit 200 --json tagName --jq '.[].tagName' | while read -r tag; do
+            [ -n "$tag" ] || continue
+            version="${tag#v}"
+            version="${version%%-*}"
+            if ! printf '%s' "$version" | grep -qE '^[0-9]+(\.[0-9]+){1,3}$'; then
+              echo "skip   $tag (not a numeric version)"
+              continue
+            fi
+            oldest="$(printf '%s\n%s\n' "$cutoff" "$version" | sort -V | head -n1)"
+            if [ "$version" != "$cutoff" ] && [ "$oldest" = "$version" ]; then
+              echo "delete $tag"
+              gh release delete "$tag" --cleanup-tag --yes
+            else
+              echo "keep   $tag"
+            fi
+          done
+          echo "--- remaining ---"
+          gh release list --limit 50
