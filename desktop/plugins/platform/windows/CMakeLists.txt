@@ -87,11 +87,8 @@ target_compile_options(windows-platform PRIVATE
 )
 set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE SKIP_PRECOMPILE_HEADERS TRUE)
 
-# The pinned UltraVNC vnckeymap.cpp is ANSI-only: under the project-wide
-# UNICODE/_UNICODE defines its legacy helpers expand to wide strings and no
-# longer compile with recent GCC ("expected ')' before string constant").
-# Compile only that third-party unit without UNICODE and without -Werror;
-# ikeback's own code in this target keeps the strict settings.
-set_source_files_properties(
-	${ultravnc_DIR}/winvnc/winvnc/vnckeymap.cpp
-	PROPERTIES COMPILE_FLAGS "-UUNICODE -U_UNICODE -Wno-error")
+# NOTE: vnckeymap.cpp comes from the pinned UltraVNC tree and its VNCLOG() macro
+# relies on __FUNCTION__ being a string literal. Current GCC makes it a pointer,
+# so the macro no longer compiles. The CI fetch step patches that single macro
+# (see .github/workflows/ikeback-windows.yml) instead of forking the sources;
+# source-file compile flags do not reach these third-party units.

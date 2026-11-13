@@ -129,6 +129,16 @@ jobs:
           fetch qthttpserver https://github.com/veyon/qthttpserver.git  f80feff79a3d698ca3f23cfa240bd763d87cf0ba
           fetch libfakekey   https://github.com/veyon/libfakekey.git    7ad885912efb2131e80914e964d5e635b0d07b40
 
+      # Current GCC makes __FUNCTION__ a pointer, so UltraVNC's VNCLOG() macro no
+      # longer compiles; the mandatory windows-platform plugin needs this patch.
+      - name: Patch pinned UltraVNC logging macro
+        shell: bash
+        run: |
+          set -e
+          f=desktop/3rdparty/ultravnc/winvnc/winvnc/stdhdrs.h
+          sed -i 's/#define VNCLOG(s)[[:space:]]*(__FUNCTION__ " : " s)/#define VNCLOG(s) (s)/' "$f"
+          grep -n 'define VNCLOG' "$f"
+
       - name: Configure
         shell: msys2 {0}
         run: |
