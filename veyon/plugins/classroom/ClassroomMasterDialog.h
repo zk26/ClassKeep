@@ -57,15 +57,36 @@ public:
 	~ClassroomMasterDialog() override;
 
 	//! One entry of the "Quick tools" drop-down on the Veyon Master tool bar.
-	using QuickToolAction = QPair<QString, std::function<void()>>;
-	using QuickToolGroup = QPair<QString, QVector<QuickToolAction>>;
+	//! `id` is a stable, untranslated identifier: the plug-in uses it to expose
+	//! the same action both as a tool-bar button and as a menu entry, and the
+	//! label can be translated without breaking that link.
+	struct QuickToolAction
+	{
+		QString id;
+		QString label;
+		std::function<void()> run;
+	};
+	struct QuickToolGroup
+	{
+		QString label;
+		QString icon;
+		QVector<QuickToolAction> actions;
+	};
 	//! Grouped actions collected by setupToolsTab(); the plug-in turns them into
 	//! a QMenu so the same code is not duplicated as tool-bar buttons.
 	QVector<QuickToolGroup> quickToolGroups() const { return m_quickToolGroups; }
+	//! Runs one quick-tool action by its stable id (tool-bar button click).
+	bool runQuickTool( const QString& id );
 	void startCheckInFromToolBar() { startCheckIn(); }
 
 	void showCall( const QString& ip, const QString& seat, const QString& student );
 	void syncNow();
+	//! Probes the local ikeback server port and the mobile bridge so "the
+	//! computer cannot be reached" turns into an actionable message instead of
+	//! a red icon with no explanation.
+	void runConnectivityCheck();
+	//! Restarts the Windows service with the bundled CLI (needs elevation).
+	void restartService();
 	//! Called by the plugin when a student submits the attendance prompt.
 	void recordCheckIn( const QString& className, const QString& seat, const QString& typedName );
 
@@ -111,8 +132,16 @@ private:
 
 	void addClass();
 	void importRoster();
+	//! Bulk import straight from a pasted spreadsheet selection (Excel/WPS).
+	void importRosterPaste();
+	void saveImportTemplate();
 	void exportRoster();
 	void saveRoster();
+	//! Insert or update one student in `className` and keep the table in sync.
+	//! Returns false when the IP already belongs to a different seat.
+	bool upsertStudent( const QString& className, const QString& seat, const QString& name,
+						const QString& ip );
+	void reportImport( const ClassroomImportReport& report );
 	void registerComputers( const QVector<ClassroomStudent>& students );
 	void refreshRosterTable();
 	void refreshStatus();
@@ -214,6 +243,8 @@ private:
 	QLineEdit* m_dataDirectory = nullptr;
 
 	QLabel* m_systemStatus = nullptr;
+	QLabel* m_connectivityLabel = nullptr;
+	QComboBox* m_teacherIpPicker = nullptr;
 	QLineEdit* m_teacherIp = nullptr;
 	QLineEdit* m_packagePath = nullptr;
 	QLineEdit* m_silenceText = nullptr;

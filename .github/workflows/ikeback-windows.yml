@@ -180,8 +180,15 @@ jobs:
           mkdir -p dist
           # Unicode true requires a UTF-8 BOM for the Chinese UI strings.
           { printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
-          makensis -DVERSION=2.3.0 -DROLE=teacher installer.nsi
-          makensis -DVERSION=2.3.0 -DROLE=student installer.nsi
+          # Version comes from the pushed tag (v5.2.0). Do NOT use `git describe`:
+          # this repository still contains the inherited upstream Veyon tags.
+          VERSION="${GITHUB_REF_NAME#v}"
+          case "$VERSION" in
+            [0-9]*) : ;;
+            *) VERSION=5.2.0 ;;
+          esac
+          makensis -DVERSION="$VERSION" -DROLE=teacher installer.nsi
+          makensis -DVERSION="$VERSION" -DROLE=student installer.nsi
           ls -lh dist
 
       - uses: actions/upload-artifact@v6

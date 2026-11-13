@@ -1,9 +1,9 @@
 ; ikeback - Windows installer (based on upstream Veyon nsis/veyon.nsi.in)
 ;
 ; Compile twice from the repository root (the release workflow supplies VERSION;
-; 2.3.0 is only the fallback defined below):
-;   makensis -DVERSION=2.3.0 -DROLE=teacher installer.nsi
-;   makensis -DVERSION=2.3.0 -DROLE=student installer.nsi
+; 5.2.0 is only the fallback defined below):
+;   makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
+;   makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
 ;
 ; ROLE=teacher : component page with "Service" (read-only, registers/starts the
 ;                ikebackService service) and "Master" (optional console).
@@ -23,7 +23,7 @@ Unicode true
 !include "FileFunc.nsh"
 
 !ifndef VERSION
-  !define VERSION "2.3.0"
+  !define VERSION "5.2.0"
 !endif
 !ifndef ROLE
   !define ROLE "teacher"
@@ -251,7 +251,25 @@ Section "ikeback Service (required)" SEC_SERVICE
   Pop $1
   FileWrite $9 "config FirewallExceptionEnabled exit=$0 output=$1$\r$\n"
 
-  nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" config set Windows/SoftwareSASEnabled 1'
+  ; The program-wide exception above covers Veyon's own VNC/RPC ports. The
+  ; mobile bridge (TCP+UDP, default 11880) must be reachable by phones, which
+  ; are often classified as a different network profile than the students.
+  SetDetailsPrint none
+  nsExec::ExecToStack '"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="ikeback mobile bridge"'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\netsh.exe" advfirewall firewall add rule name="ikeback mobile bridge" dir=in action=allow protocol=TCP localport=11880 profile=any'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\netsh.exe" advfirewall firewall add rule name="ikeback mobile bridge (UDP)" dir=in action=allow protocol=UDP localport=11880 profile=any'
+  Pop $R8
+  Pop $R9
+  SetDetailsPrint both
+  FileWrite $9 "firewall: mobile bridge rules 11880 TCP/UDP$\r$\n"
+
+  ; The key lives in the Service section (the "Windows/" prefix used by older
+  ; installers wrote to a section no component ever reads).
+  nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" config set Service/SoftwareSASEnabled 1'
   Pop $0
   Pop $1
   FileWrite $9 "config SoftwareSASEnabled exit=$0 output=$1$\r$\n"
@@ -306,20 +324,40 @@ Section "ikeback Service (required)" SEC_SERVICE
 
   ; The service must also spawn ikeback-server.exe in the console session:
   ; no server process means no tray icon and no 127.0.0.1 VNC connection, even
-  ; though the Configurator may show the service itself as running.
-  nsExec::ExecToStack '"$SYSDIR\tasklist.exe" /FI "IMAGENAME eq ikeback-server.exe" /NH'
-  Pop $R8
-  Pop $R9
-  FileWrite $9 "server processes exit=$R8 output=$R9$\r$\n"
+  ; though the Configurator may show the service itself as running. This is the
+  ; single most common "this computer shows a red icon / nothing connects"
+  ; cause, so verify it here instead of shipping a silent failure.
+  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "tasklist /NH | findstr /I ikeback-server.exe"'
+  Pop $R2
+  Pop $3
+  FileWrite $9 "server process check exit=$R2 output=$3$\r$\n"
+
+  ${If} $R2 != "0"
+    DetailPrint "server 进程缺失，尝试重启服务…"
+    FileWrite $9 "RESULT: server process MISSING - restarting the service$\r$\n"
+    nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ikebackService'
+    Pop $R8
+    Pop $R9
+    Sleep 3000
+    nsExec::ExecToStack '"$SYSDIR\sc.exe" start ikebackService'
+    Pop $R8
+    Pop $R9
+    Sleep 6000
+    nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "tasklist /NH | findstr /I ikeback-server.exe"'
+    Pop $R2
+    Pop $3
+    FileWrite $9 "server process check after restart exit=$R2 output=$3$\r$\n"
+  ${EndIf}
 
   ${If} $2 != "0"
     FileWrite $9 "RESULT: service NOT running$\r$\n"
     MessageBox MB_OK|MB_ICONEXCLAMATION "服务未能持续运行，安装未完成。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员排查。$\r$\n常见原因：未以管理员运行、被安全软件拦截、或缺少运行库。"
+  ${ElseIf} $R2 != "0"
+    FileWrite $9 "RESULT: service RUNNING but server process missing$\r$\n"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "服务已注册，但 ikeback-server 进程没有起来，本机与学生机都会显示红色/无法连接。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员。$\r$\n可以尝试：以管理员身份运行 $INSTDIR\ikeback-wcli.exe service restart。"
   ${Else}
-    FileWrite $9 "RESULT: service RUNNING$\r$\n"
-    DetailPrint "服务已正常运行 (ikebackService)"
-    ; The raw tasklist output is in install.log - logiclib has no "contains"
-    ; operator, so leave the interpretation to that log instead of guessing.
+    FileWrite $9 "RESULT: service RUNNING and server process present$\r$\n"
+    DetailPrint "服务已正常运行 (ikebackService + ikeback-server)"
     DetailPrint "server 进程清单已写入 install.log，连不上时请查看该段"
   ${EndIf}
   FileClose $9
@@ -374,6 +412,12 @@ Section Uninstall
   ${EndIf}
 
   SetDetailsPrint none
+  nsExec::ExecToStack '"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="ikeback mobile bridge"'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="ikeback mobile bridge (UDP)"'
+  Pop $R8
+  Pop $R9
   IfFileExists "$INSTDIR\ikeback-wcli.exe" 0 ck_un_legacy_wcli
     nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" config set Service/SoftwareSASEnabled 0'
     Pop $R8

@@ -536,17 +536,35 @@ class MainActivity : AppCompatActivity() {
     private fun doSync() {
         val host = currentIp()
         val key = currentKey()
-        if (host.isEmpty()) { message("请先填写教师机 IP"); return }
-        if (key.isEmpty()) { message("请先输入或导入本堂课密钥"); return }
+        if (host.isEmpty()) {
+            message("请先填写教师机 IP")
+            toast("请先填写教师机 IP")
+            showTab(3)
+            return
+        }
+        if (key.isEmpty()) {
+            message("请先输入或导入本堂课密钥")
+            toast("请先输入或导入本堂课密钥")
+            showTab(3)
+            return
+        }
+        if (busy) {
+            toast("正在同步，请稍候…")
+            return
+        }
         bridge.port = currentPort()
         applyKey(key)
         busy = true
         message("正在与 $host:${bridge.port} 同步…")
+        toast("正在与教师机同步…")
         background {
             try {
                 val state = bridge.connect(host)
                 if (!state.keyConfigured) {
-                    ui { message("教师机尚未生成本堂课密钥，请先在教师端「开始新课堂」") }
+                    ui {
+                        message("教师机尚未生成本堂课密钥，请先在教师端「开始新课堂」")
+                        toast("教师机尚未生成本堂课密钥")
+                    }
                     return@background
                 }
                 val scores = bridge.scores(host)
@@ -590,11 +608,21 @@ class MainActivity : AppCompatActivity() {
                     refreshClassRecords()
                     refreshConnectionHint()
                     message("同步完成 · 版本 ${state.revision} · ${cache.className}")
+                    toast("同步完成 · ${cache.className}")
                 }
             } catch (e: UnauthorizedException) {
-                ui { setStatus(false); message("密钥被拒绝，换新课后请更新密钥") }
+                ui {
+                    setStatus(false)
+                    message("密钥被拒绝，换新课后请更新密钥")
+                    toast("密钥被拒绝，请更新本堂课密钥")
+                }
             } catch (e: Exception) {
-                ui { setStatus(false); message("未找到教师机，保留本地数据：${e.message ?: ""}") }
+                val reason = e.message ?: ""
+                ui {
+                    setStatus(false)
+                    message("未找到教师机，保留本地数据：$reason")
+                    toast("未找到教师机，请检查 IP、端口与同一网络")
+                }
             } finally {
                 busy = false
             }
@@ -607,10 +635,13 @@ class MainActivity : AppCompatActivity() {
         val host = currentIp()
         if (host.isEmpty() || currentKey().isEmpty()) {
             message("请先在「配置」页填写 IP 与密钥")
+            toast("请先在「配置」页填写 IP 与密钥")
+            showTab(3)
             return
         }
         bridge.port = currentPort()
         applyKey(currentKey())
+        toast("正在读取学生名单…")
         background {
             try {
                 val loaded = bridge.seats(host)
@@ -618,9 +649,19 @@ class MainActivity : AppCompatActivity() {
                     seats = loaded
                     seatHint.text = "共 ${loaded.size} 名学生 · 顺序与教师端座位网格一致"
                     refreshSeatCards()
+                    toast(if (loaded.isEmpty()) "教师端还没有学生名单" else "已读取 ${loaded.size} 名学生")
+                }
+            } catch (e: UnauthorizedException) {
+                ui {
+                    seatHint.text = "密钥被拒绝，请更新本堂课密钥"
+                    toast("密钥被拒绝，请更新本堂课密钥")
                 }
             } catch (e: Exception) {
-                ui { seatHint.text = "读取失败，显示本地缓存：${e.message ?: ""}" }
+                val reason = e.message ?: ""
+                ui {
+                    seatHint.text = "读取失败，显示本地缓存：$reason"
+                    toast("读取学生名单失败")
+                }
             }
         }
     }
@@ -742,20 +783,42 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendCommand(cmd: Cmd) {
         val host = currentIp()
-        if (host.isEmpty() || currentKey().isEmpty()) {
+        val key = currentKey()
+        if (host.isEmpty() || key.isEmpty()) {
+            // A silent no-op is what made the buttons feel broken: always say
+            // why nothing happened, both in the status card and as a toast.
             message("请先填写教师机 IP 与本堂课密钥")
+            toast("请先在「配置」页填写教师机 IP 与密钥")
+            showTab(3)
             return
         }
         bridge.port = currentPort()
-        applyKey(currentKey())
+        applyKey(key)
+        // Immediate feedback on tap, before the network round-trip finishes.
+        toast("正在下发「${cmd.label}」…")
+        message("正在下发「${cmd.label}」…")
         background {
             try {
                 val ok = bridge.command(host, cmd.name, cmd.enabled, "", host)
-                ui { message(if (ok) "指令「${cmd.label}」已下发" else "指令「${cmd.label}」被拒绝") }
+                val text = if (ok) "指令「${cmd.label}」已下发" else "指令「${cmd.label}」被拒绝"
+                ui { message(text); toast(text) }
+            } catch (e: UnauthorizedException) {
+                ui {
+                    message("密钥被拒绝：请在「配置」页更新本堂课密钥")
+                    toast("密钥被拒绝，请更新本堂课密钥")
+                }
             } catch (e: Exception) {
-                ui { message("指令失败：${e.message ?: ""}") }
+                val reason = e.message ?: ""
+                ui {
+                    message("指令失败：无法连接教师机（$reason）")
+                    toast("指令失败：无法连接教师机")
+                }
             }
         }
+    }
+
+    private fun toast(text: String) {
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
     }
 
     // -------------------------------------------------------------- schedule

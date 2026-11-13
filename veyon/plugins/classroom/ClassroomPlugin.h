@@ -92,6 +92,12 @@ private:
 	void applyWorkerSettings( const QJsonObject& settingsObject );
 	QString localIpAddress() const;
 
+	//! Builds one tool-bar Feature per quick-tool action in the white list, so
+	//! the actions sit next to "Screen demo"/"Remote control" instead of being
+	//! hidden behind a drop-down.
+	void buildQuickActionFeatures();
+	static Feature::Uid quickActionUid( int index );
+
 	ClassroomConfiguration m_configuration;
 	const Feature m_consoleFeature;
 	const Feature m_clientFeature;
@@ -99,7 +105,10 @@ private:
 	const Feature m_signOutFeature;
 	const Feature m_quickToolsFeature;
 	const Feature m_checkInFeature;
-	const FeatureList m_features;
+	FeatureList m_features;
+	//! Same order as the white list in buildQuickActionFeatures(); the index is
+	//! also the UID suffix.
+	QStringList m_quickActionIds;
 
 	std::unique_ptr<ClassroomRoster> m_roster;
 	std::unique_ptr<ClassroomLogStore> m_store;
@@ -113,6 +122,11 @@ private:
 	QTimer* m_watchdog = nullptr;
 	bool m_restartPending = false;
 	bool m_stopAllowed = false;
+	//! Consecutive restarts that never produced a working worker. A worker that
+	//! cannot start (missing runtime DLL, blocked by security software) used to
+	//! be relaunched every 30 s forever, which is what left dozens of
+	//! ikeback-worker.exe processes behind.
+	int m_restartFailures = 0;
 
 	VeyonWorkerInterface* m_worker = nullptr;
 	ClassroomClientWidget* m_clientWidget = nullptr;

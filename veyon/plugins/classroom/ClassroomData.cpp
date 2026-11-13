@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
 #include <QFile>
@@ -14,6 +15,9 @@
 #include <QJsonDocument>
 #include <QRegularExpression>
 #include <QSet>
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 0, 0 )
+#include <QStringDecoder>
+#endif
 
 #include "ClassroomConfiguration.h"
 #include "ClassroomData.h"
@@ -372,63 +376,311 @@ void ClassroomRoster::fromJson( const QString& json )
 }
 
 
-bool ClassroomRoster::importCsv( const QString& fileName, const QString& className, QString* error )
+// ---------------------------------------------------------------- table import
+
+namespace
 {
-	QFile file( fileName );
-	if( file.open( QFile::ReadOnly | QFile::Text ) == false )
+
+//! Excel on a Chinese Windows writes CSV in the ANSI code page, not UTF-8.
+//! Trying strict UTF-8 first and falling back to the local 8 bit codec is what
+//! makes "just save as CSV" work for a teacher.
+QString decodeRosterText( const QByteArray& raw )
+{
+	auto bytes = raw;
+	if( bytes.startsWith( "\xEF\xBB\xBF" ) ) { bytes.remove( 0, 3 ); }
+
+#if QT_VERSION >= QT_VERSION_CHECK( 6, 0, 0 )
+	QStringDecoder strict( QStringDecoder::Utf8 );
+	auto text = strict.decode( bytes );
+	if( strict.hasError() == false ) { return text; }
+	QStringDecoder local( QStringDecoder::System );
+	return local.decode( bytes );
+#else
+	const auto text = QString::fromUtf8( bytes );
+	if( text.contains( QChar( 0xFFFD ) ) == false ) { return text; }
+	return QString::fromLocal8Bit( bytes );
+#endif
+}
+
+
+//! Quote-aware single line split, because writeCsv() wraps every field in
+//! quotes: a naive split used to import `"1"` as a seat number.
+QStringList splitTableLine( const QString& line, QChar separator )
+{
+	QStringList fields;
+	QString field;
+	bool quoted = false;
+	for( int index = 0; index < line.size(); ++index )
 	{
-		if( error ) { *error = file.errorString(); }
+		const auto character = line.at( index );
+		if( quoted )
+		{
+			if( character == QLatin1Char('"') )
+			{
+				if( index + 1 < line.size() && line.at( index + 1 ) == QLatin1Char('"') )
+				{
+					field += QLatin1Char('"');
+					++index;
+				}
+				else
+				{
+					quoted = false;
+				}
+			}
+			else
+			{
+				field += character;
+			}
+		}
+		else if( character == QLatin1Char('"') )
+		{
+			quoted = true;
+		}
+		else if( character == separator )
+		{
+			fields.append( field );
+			field.clear();
+		}
+		else
+		{
+			field += character;
+		}
+	}
+	fields.append( field );
+	return fields;
+}
+
+
+QChar detectSeparator( const QString& text )
+{
+	// Only look at the first few lines: an IP address is full of dots and a
+	// lesson name may contain commas, so counting the whole file is wrong.
+	const auto lines = text.split( QRegularExpression( QStringLiteral("[\\r\\n]") ), Qt::SkipEmptyParts );
+	QMap<QChar, int> counts;
+	for( int lineIndex = 0; lineIndex < qMin( 5, int( lines.size() ) ); ++lineIndex )
+	{
+		const auto& line = lines.at( lineIndex );
+		for( const auto separator : { QLatin1Char(';'), QLatin1Char(','), QLatin1Char('\t') } )
+		{
+			counts[separator] += line.count( separator );
+		}
+	}
+
+	auto best = QLatin1Char(';');
+	int bestCount = 0;
+	for( auto it = counts.constBegin(); it != counts.constEnd(); ++it )
+	{
+		if( it.value() > bestCount )
+		{
+			best = it.key();
+			bestCount = it.value();
+		}
+	}
+	return bestCount > 0 ? best : QLatin1Char(';');
+}
+
+
+int findColumn( const QStringList& header, const QStringList& keywords )
+{
+	for( int index = 0; index < header.size(); ++index )
+	{
+		const auto value = header.at( index ).trimmed().toLower();
+		if( value.isEmpty() ) { continue; }
+		for( const auto& keyword : keywords )
+		{
+			if( value.contains( keyword ) ) { return index; }
+		}
+	}
+	return -1;
+}
+
+} // namespace
+
+
+bool ClassroomRoster::importTable( const QString& text, const QString& defaultClassName,
+								   ClassroomImportReport* report, QString* error )
+{
+	Q_UNUSED( error )
+	const auto tr = []( const char* text ) {
+		return QCoreApplication::translate( "ClassroomRoster", text );
+	};
+	ClassroomImportReport localReport;
+	auto& result = report ? *report : localReport;
+
+	auto lines = text.split( QRegularExpression( QStringLiteral("[\\r\\n]") ) );
+	const auto separator = detectSeparator( text );
+
+	int classColumn = -1;
+	int seatColumn = -1;
+	int nameColumn = -1;
+	int ipColumn = -1;
+	int firstDataLine = 0;
+
+	// Header detection: only the first non-empty line can be a header.
+	for( int index = 0; index < lines.size(); ++index )
+	{
+		if( lines.at( index ).trimmed().isEmpty() ) { continue; }
+		const auto header = splitTableLine( lines.at( index ), separator );
+		classColumn = findColumn( header, { QStringLiteral("班级"), QStringLiteral("班別"),
+										   QStringLiteral("class") } );
+		seatColumn = findColumn( header, { QStringLiteral("座位"), QStringLiteral("座号"),
+										  QStringLiteral("座號"), QStringLiteral("seat"),
+										  QStringLiteral("序号") } );
+		nameColumn = findColumn( header, { QStringLiteral("姓名"), QStringLiteral("学生"),
+										  QStringLiteral("student"), QStringLiteral("name") } );
+		ipColumn = findColumn( header, { QStringLiteral("ip") } );
+		if( seatColumn >= 0 || nameColumn >= 0 )
+		{
+			firstDataLine = index + 1;
+		}
+		break;
+	}
+
+	if( seatColumn < 0 && nameColumn < 0 )
+	{
+		// No header: infer the layout from the column count of the first line.
+		for( int index = 0; index < lines.size(); ++index )
+		{
+			if( lines.at( index ).trimmed().isEmpty() ) { continue; }
+			const auto width = splitTableLine( lines.at( index ), separator ).size();
+			if( width >= 4 )
+			{
+				classColumn = 0;
+				seatColumn = 1;
+				nameColumn = 2;
+				ipColumn = 3;
+			}
+			else if( width == 3 )
+			{
+				seatColumn = 0;
+				nameColumn = 1;
+				ipColumn = 2;
+			}
+			else
+			{
+				seatColumn = 0;
+				nameColumn = 1;
+			}
+			firstDataLine = index;
+			break;
+		}
+	}
+
+	if( seatColumn < 0 || nameColumn < 0 )
+	{
+		result.note( tr( "No seat/name column found in the imported table." ) );
 		return false;
 	}
 
-	auto* item = findClass( className );
-	if( item == nullptr )
+	for( int index = firstDataLine; index < lines.size(); ++index )
 	{
-		ClassroomClass newClass;
-		newClass.name = className;
-		m_classes.append( newClass );
-		item = &m_classes.last();
-	}
+		if( lines.at( index ).trimmed().isEmpty() ) { continue; }
+		const auto fields = splitTableLine( lines.at( index ), separator );
 
-	const auto lines = QString::fromUtf8( file.readAll() ).
-					   split( QRegularExpression( QStringLiteral("[\\r\\n]") ), Qt::SkipEmptyParts );
-	int lineNumber = 0;
-	for( const auto& rawLine : lines )
-	{
-		const auto line = rawLine.trimmed();
-		++lineNumber;
-		if( line.isEmpty() ) { continue; }
-
-		const auto fields = line.split( QRegularExpression( QStringLiteral("[,;\\t]") ), Qt::KeepEmptyParts );
-		if( fields.size() < 2 ) { continue; }
-
-		const auto first = fields.value( 0 ).trimmed();
-		if( lineNumber == 1 &&
-			( first.compare( QStringLiteral("seat"), Qt::CaseInsensitive ) == 0 || first.contains( QStringLiteral("座位") ) ) )
+		auto className = classColumn >= 0 ? fields.value( classColumn ).trimmed() : QString{};
+		if( className.isEmpty() ) { className = defaultClassName; }
+		if( className.isEmpty() )
 		{
+			result.note( tr( "Line %1: no class name" ).arg( index + 1 ) );
 			continue;
 		}
 
 		ClassroomStudent student;
-		student.seat = first;
-		student.name = fields.value( 1 ).trimmed();
-		student.ip = fields.value( 2 ).trimmed();
-		if( student.seat.isEmpty() || student.name.isEmpty() ) { continue; }
+		student.seat = fields.value( seatColumn ).trimmed();
+		student.name = fields.value( nameColumn ).trimmed();
+		student.ip = ipColumn >= 0 ? fields.value( ipColumn ).trimmed() : QString{};
+		if( student.seat.isEmpty() && student.name.isEmpty() ) { continue; }
+		if( student.name.isEmpty() )
+		{
+			result.note( tr( "Line %1: no student name" ).arg( index + 1 ) );
+			continue;
+		}
 
+		auto* item = findClass( className );
+		if( item == nullptr )
+		{
+			ClassroomClass newClass;
+			newClass.name = className;
+			m_classes.append( newClass );
+			item = &m_classes.last();
+			++result.classes;
+		}
+
+		// Same class, same seat: replace. Same class, same IP on ANOTHER seat:
+		// that machine cannot host two students, so keep the first one and tell
+		// the teacher instead of silently sending the wrong identity later.
 		bool replaced = false;
+		bool ipConflict = false;
 		for( auto& existing : item->students )
 		{
-			if( existing.seat == student.seat )
+			if( existing.seat == student.seat && student.seat.isEmpty() == false )
 			{
 				existing = student;
 				replaced = true;
 				break;
 			}
+			if( student.ip.isEmpty() == false && existing.ip == student.ip )
+			{
+				ipConflict = true;
+				break;
+			}
 		}
-		if( replaced == false ) { item->students.append( student ); }
+		if( ipConflict )
+		{
+			++result.ipConflicts;
+			result.note( tr( "Line %1: %2 already uses IP %3 in class %4" )
+							 .arg( index + 1 ).arg( student.name, student.ip, className ) );
+			continue;
+		}
+		if( replaced )
+		{
+			++result.overwritten;
+		}
+		else
+		{
+			item->students.append( student );
+			++result.students;
+		}
 	}
 
-	return true;
+	return result.students > 0 || result.overwritten > 0;
+}
+
+
+bool ClassroomRoster::importTableFile( const QString& fileName, const QString& defaultClassName,
+									   ClassroomImportReport* report, QString* error )
+{
+	QFile file( fileName );
+	if( file.open( QFile::ReadOnly ) == false )
+	{
+		if( error ) { *error = file.errorString(); }
+		return false;
+	}
+	const auto bytes = file.readAll();
+	file.close();
+	return importTable( decodeRosterText( bytes ), defaultClassName, report, error );
+}
+
+
+QByteArray ClassroomRoster::importTemplate()
+{
+	const auto text = QString::fromUtf8(
+		"班级;座位号;姓名;IP地址\n"
+		"3年级1班;1;张三;192.168.1.101\n"
+		"3年级1班;2;李四;192.168.1.102\n"
+		"3年级2班;1;王五;192.168.1.101\n" );
+	QByteArray data( "\xEF\xBB\xBF", 3 );
+	data += text.toUtf8();
+	return data;
+}
+
+
+bool ClassroomRoster::importCsv( const QString& fileName, const QString& className, QString* error )
+{
+	// Legacy single-class entry point: keep the behaviour, but go through the
+	// shared parser so quoted fields and GBK files work here too.
+	ClassroomImportReport report;
+	return importTableFile( fileName, className, &report, error );
 }
 
 

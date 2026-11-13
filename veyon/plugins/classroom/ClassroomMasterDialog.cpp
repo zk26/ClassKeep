@@ -11,6 +11,7 @@
 #include <QAbstractSocket>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDateEdit>
 #include <QDateTime>
 #include <QDebug>
@@ -20,6 +21,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -37,7 +39,9 @@
 #include <QMessageBox>
 #include <QPair>
 #include <QPlainTextEdit>
+#include <QProcess>
 #include <QPushButton>
+#include <QTcpSocket>
 #include <QScrollArea>
 #include <QSet>
 #include <QSignalBlocker>
@@ -357,11 +361,19 @@ void ClassroomMasterDialog::setupClassTab()
 	classRow->addWidget( new QLabel( tr( "Class:" ), page ) );
 	classRow->addWidget( m_classCombo, 1 );
 	auto* addClassButton = new QPushButton( tr( "New class" ), page );
-	auto* importButton = new QPushButton( tr( "Import CSV" ), page );
+	auto* importButton = new QPushButton( tr( "Import table" ), page );
+	importButton->setToolTip( tr( "Import a CSV/Excel table: class, seat number, student name and IP. "
+								   "Multiple classes can be imported at once." ) );
+	auto* pasteButton = new QPushButton( tr( "Paste from Excel" ), page );
+	pasteButton->setToolTip( tr( "Copy the rows in Excel/WPS (class, seat, name, IP) and paste them here" ) );
+	auto* templateButton = new QPushButton( tr( "Template" ), page );
+	templateButton->setToolTip( tr( "Save a ready-to-fill CSV template" ) );
 	auto* exportButton = new QPushButton( tr( "Export CSV" ), page );
 	auto* saveRosterButton = new QPushButton( tr( "Save roster" ), page );
 	classRow->addWidget( addClassButton );
 	classRow->addWidget( importButton );
+	classRow->addWidget( pasteButton );
+	classRow->addWidget( templateButton );
 	classRow->addWidget( exportButton );
 	classRow->addWidget( saveRosterButton );
 	layout->addLayout( classRow );
@@ -380,6 +392,8 @@ void ClassroomMasterDialog::setupClassTab()
 	} );
 	connect( addClassButton, &QPushButton::clicked, this, [this]() { addClass(); } );
 	connect( importButton, &QPushButton::clicked, this, [this]() { importRoster(); } );
+	connect( pasteButton, &QPushButton::clicked, this, [this]() { importRosterPaste(); } );
+	connect( templateButton, &QPushButton::clicked, this, [this]() { saveImportTemplate(); } );
 	connect( exportButton, &QPushButton::clicked, this, [this]() { exportRoster(); } );
 	connect( saveRosterButton, &QPushButton::clicked, this, [this]() { saveRoster(); } );
 
@@ -554,6 +568,8 @@ void ClassroomMasterDialog::saveRoster()
 	auto* item = m_roster.findClass( currentClassName() );
 	if( item == nullptr ) { return; }
 	QVector<ClassroomStudent> students;
+	QMap<QString, QString> seatByIp;
+	QSet<QString> seats;
 	for( int row = 0; row < m_rosterTable->rowCount(); ++row )
 	{
 		ClassroomStudent student;
@@ -561,6 +577,33 @@ void ClassroomMasterDialog::saveRoster()
 		student.name = m_rosterTable->item( row, 1 ) ? m_rosterTable->item( row, 1 )->text().trimmed() : QString{};
 		student.ip = m_rosterTable->item( row, 2 ) ? m_rosterTable->item( row, 2 )->text().trimmed() : QString{};
 		if( student.seat.isEmpty() && student.name.isEmpty() ) { continue; }
+
+		// Two seats on one machine is a data error: any identity push to that IP
+		// would overwrite the other student. Refuse instead of guessing.
+		if( student.ip.isEmpty() == false )
+		{
+			if( seatByIp.contains( student.ip ) )
+			{
+				QMessageBox::warning( this, windowTitle(),
+									  tr( "IP %1 is used by seat %2 and seat %3 in class %4. "
+										  "Each student needs a different machine." )
+										  .arg( student.ip, seatByIp.value( student.ip ), student.seat,
+												currentClassName() ) );
+				return;
+			}
+			seatByIp.insert( student.ip, student.seat );
+		}
+		if( student.seat.isEmpty() == false )
+		{
+			if( seats.contains( student.seat ) )
+			{
+				QMessageBox::warning( this, windowTitle(),
+									  tr( "Seat %1 appears twice in class %2." )
+										  .arg( student.seat, currentClassName() ) );
+				return;
+			}
+			seats.insert( student.seat );
+		}
 		students.append( student );
 	}
 	item->students = students;
@@ -646,13 +689,17 @@ void ClassroomMasterDialog::registerComputers( const QVector<ClassroomStudent>& 
 
 void ClassroomMasterDialog::importRoster()
 {
-	const auto fileName = QFileDialog::getOpenFileName( this, tr( "Import class roster" ), {},
-													   tr( "CSV files (*.csv);;All files (*)" ) );
-	if( fileName.isEmpty() || currentClassName().isEmpty() ) { return; }
+	const auto fileName = QFileDialog::getOpenFileName(
+		this, tr( "Import class table" ), {},
+		tr( "Tables (*.csv *.txt *.tsv);;CSV files (*.csv);;All files (*)" ) );
+	if( fileName.isEmpty() ) { return; }
+
 	QString error;
-	if( m_roster.importCsv( fileName, currentClassName(), &error ) == false )
+	ClassroomImportReport report;
+	if( m_roster.importTableFile( fileName, currentClassName(), &report, &error ) == false )
 	{
-		QMessageBox::warning( this, windowTitle(), error );
+		QMessageBox::warning( this, windowTitle(),
+							  error.isEmpty() ? tr( "Nothing could be imported from that file." ) : error );
 		return;
 	}
 	m_roster.save();
@@ -662,6 +709,150 @@ void ClassroomMasterDialog::importRoster()
 	{
 		registerComputers( imported->students );
 	}
+	reportImport( report );
+}
+
+
+void ClassroomMasterDialog::importRosterPaste()
+{
+	QDialog dialog( this );
+	dialog.setWindowTitle( tr( "Paste students from Excel" ) );
+	auto* layout = new QVBoxLayout( &dialog );
+	auto* hint = new QLabel( tr( "Select the rows in Excel/WPS and copy them (Ctrl+C), then paste here.\n"
+								 "Columns: class, seat number, student name, IP address. "
+								 "The class column is optional - without it the current class is used." ),
+							 &dialog );
+	hint->setWordWrap( true );
+	layout->addWidget( hint );
+
+	auto* editor = new QPlainTextEdit( &dialog );
+	editor->setPlaceholderText( tr( "3年级1班\t1\t张三\t192.168.1.101" ) );
+	editor->setMinimumSize( 520, 260 );
+	layout->addWidget( editor, 1 );
+
+	auto* buttons = new QDialogButtonBox( QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog );
+	layout->addWidget( buttons );
+	connect( buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept );
+	connect( buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject );
+	connect( editor, &QPlainTextEdit::textChanged, &dialog, [&dialog, editor, buttons]() {
+		buttons->button( QDialogButtonBox::Ok )->setEnabled( editor->toPlainText().trimmed().isEmpty() == false );
+	} );
+	buttons->button( QDialogButtonBox::Ok )->setEnabled( false );
+
+	if( dialog.exec() != QDialog::Accepted ) { return; }
+	const auto text = editor->toPlainText();
+	if( text.trimmed().isEmpty() ) { return; }
+
+	ClassroomImportReport report;
+	if( m_roster.importTable( text, currentClassName(), &report ) == false )
+	{
+		QMessageBox::warning( this, windowTitle(), tr( "Nothing could be imported from the pasted text." ) );
+		return;
+	}
+	m_roster.save();
+	refreshRosterTable();
+	pushRoster();
+	if( const auto* imported = m_roster.findClass( currentClassName() ) )
+	{
+		registerComputers( imported->students );
+	}
+	reportImport( report );
+}
+
+
+void ClassroomMasterDialog::saveImportTemplate()
+{
+	const auto fileName = QFileDialog::getSaveFileName(
+		this, tr( "Save import template" ),
+		QDir( dataDirectory() ).filePath( QStringLiteral("ikeback-students-template.csv") ),
+		tr( "CSV files (*.csv)" ) );
+	if( fileName.isEmpty() ) { return; }
+
+	QFile file( fileName );
+	if( file.open( QFile::WriteOnly | QFile::Truncate ) == false )
+	{
+		QMessageBox::warning( this, windowTitle(), tr( "Could not write %1" ).arg( fileName ) );
+		return;
+	}
+	file.write( ClassroomRoster::importTemplate() );
+	file.close();
+	QMessageBox::information( this, windowTitle(),
+							  tr( "Template saved to %1. Fill it in with Excel/WPS, then use "
+								  "\"Import table\" or \"Paste from Excel\"." ).arg( fileName ) );
+}
+
+
+void ClassroomMasterDialog::reportImport( const ClassroomImportReport& report )
+{
+	QString text = tr( "Imported %1 students into %2 classes." )
+					   .arg( report.students ).arg( qMax( 1, report.classes ) );
+	if( report.overwritten > 0 )
+	{
+		text += QLatin1Char('\n') + tr( "%1 existing seats were updated." ).arg( report.overwritten );
+	}
+	if( report.ipConflicts > 0 )
+	{
+		text += QLatin1Char('\n') + tr( "%1 rows were skipped: that IP is already used by another seat "
+										"in the same class." ).arg( report.ipConflicts );
+	}
+	if( report.problems.isEmpty() == false )
+	{
+		text += QLatin1Char('\n') + QLatin1Char('\n') + report.problems.join( QLatin1Char('\n') );
+		QMessageBox::warning( this, windowTitle(), text );
+	}
+	else
+	{
+		QMessageBox::information( this, windowTitle(), text );
+	}
+}
+
+
+bool ClassroomMasterDialog::upsertStudent( const QString& className, const QString& seat,
+										   const QString& name, const QString& ip )
+{
+	if( className.isEmpty() || name.isEmpty() ) { return false; }
+
+	auto* item = m_roster.findClass( className );
+	if( item == nullptr )
+	{
+		ClassroomClass newClass;
+		newClass.name = className;
+		m_roster.classes().append( newClass );
+		item = m_roster.findClass( className );
+	}
+	if( item == nullptr ) { return false; }
+
+	// The same machine (IP) must not host two students of the same class: the
+	// teacher would otherwise push two conflicting identities to one worker.
+	if( ip.isEmpty() == false )
+	{
+		for( const auto& existing : item->students )
+		{
+			if( existing.ip == ip && existing.seat != seat )
+			{
+				QMessageBox::warning( this, windowTitle(),
+									  tr( "IP %1 is already used by seat %2 (%3) in class %4." )
+										  .arg( ip, existing.seat, existing.name, className ) );
+				return false;
+			}
+		}
+	}
+
+	for( auto& existing : item->students )
+	{
+		if( existing.seat == seat && seat.isEmpty() == false )
+		{
+			existing.name = name;
+			existing.ip = ip;
+			return true;
+		}
+	}
+	ClassroomStudent student;
+	student.seat = seat;
+	student.name = name;
+	student.ip = ip;
+	item->students.append( student );
+	return true;
 }
 
 
@@ -809,6 +1000,13 @@ void ClassroomMasterDialog::quickLoginByIp()
 		QMessageBox::warning( this, windowTitle(), tr( "Please enter the IP address, seat number and student name." ) );
 		return;
 	}
+
+	// The typed student must end up in the roster table, otherwise the teacher
+	// signs someone in and the class list still looks empty.
+	if( upsertStudent( currentClassName(), seat, name, ip ) == false ) { return; }
+	m_roster.save();
+	refreshRosterTable();
+
 	ClassroomStudent student;
 	student.seat = seat;
 	student.name = name;
@@ -818,6 +1016,13 @@ void ClassroomMasterDialog::quickLoginByIp()
 	pushKey();
 	pushIdentity( ip, seat, name );
 	refreshStatus();
+
+	m_quickName->clear();
+	setToolStatus( tr( "%1 (seat %2) added to %3 and signed in on %4." )
+					   .arg( name, seat, currentClassName(), ip ) );
+	QMessageBox::information( this, windowTitle(),
+							  tr( "%1 (seat %2) was added to %3 and signed in on %4." )
+								  .arg( name, seat, currentClassName(), ip ) );
 }
 
 
@@ -1417,18 +1622,119 @@ void ClassroomMasterDialog::showCall( const QString& ip, const QString& seat, co
 }
 
 
+void ClassroomMasterDialog::runConnectivityCheck()
+{
+	if( m_connectivityLabel == nullptr ) { return; }
+
+	if( m_bridgeEnabled && m_bridge && m_bridge->isRunning() == false )
+	{
+		syncNow();
+	}
+
+	const auto serverPort = VeyonCore::config().veyonServerPort() + int( VeyonCore::sessionId() );
+	QTcpSocket socket;
+	socket.connectToHost( QHostAddress::LocalHost, static_cast<quint16>( serverPort ) );
+	const auto serverReachable = socket.waitForConnected( 1500 );
+	socket.abort();
+
+	QStringList lines;
+	if( serverReachable )
+	{
+		lines << tr( "This computer: ikeback Server is reachable on 127.0.0.1:%1 - the red icon should "
+					 "switch to green within a few seconds." ).arg( serverPort );
+	}
+	else
+	{
+		lines << tr( "This computer: NOTHING is listening on 127.0.0.1:%1. The ikeback service/server is not "
+					 "running, which is exactly why this computer shows the red icon and cannot be controlled. "
+					 "Press \"Restart ikeback service\"; if it still fails, read install.log in the ikeback "
+					 "install directory." ).arg( serverPort );
+	}
+
+	if( m_bridge != nullptr )
+	{
+		lines << m_bridge->status();
+		if( m_bridge->isRunning() )
+		{
+			lines << tr( "Phone: enter IP %1 and port %2 (same Wi-Fi/LAN, no client isolation)." )
+					 .arg( m_teacherIp != nullptr ? m_teacherIp->text().trimmed() : QString{},
+						   QString::number( m_bridgePort != nullptr ? m_bridgePort->value() : 11880 ) );
+		}
+		else
+		{
+			lines << tr( "Mobile bridge is not running: tick \"Start mobile bridge\" and press \"Sync now\"." );
+		}
+	}
+
+	lines << tr( "If OTHER computers cannot connect: allow ikeback in Windows Firewall for the private "
+				 "network, and make sure teacher and students are on the same subnet." );
+
+	m_connectivityLabel->setText( lines.join( QLatin1Char('\n') ) );
+}
+
+
+void ClassroomMasterDialog::restartService()
+{
+	const auto cli = QDir( QCoreApplication::applicationDirPath() )
+						 .filePath( QStringLiteral("ikeback-wcli.exe") );
+	if( QFileInfo::exists( cli ) == false )
+	{
+		QMessageBox::warning( this, windowTitle(),
+							  tr( "ikeback-wcli.exe was not found next to the Master. "
+								  "Please reinstall ikeback." ) );
+		return;
+	}
+
+	if( QProcess::startDetached( cli, { QStringLiteral("service"), QStringLiteral("restart") } ) == false )
+	{
+		QMessageBox::warning( this, windowTitle(),
+							  tr( "The service could not be restarted. Run ikeback Master as administrator, "
+								  "or restart the computer." ) );
+		return;
+	}
+
+	QMessageBox::information( this, windowTitle(),
+							  tr( "Restart requested. Wait a few seconds, then press \"Check connection\" again." ) );
+}
+
+
 void ClassroomMasterDialog::syncNow()
 {
 	if( m_bridge == nullptr ) { return; }
+
+	if( m_bridgeEnabled != nullptr && m_bridgeEnabled->isChecked() == false )
+	{
+		if( m_bridge->isRunning() ) { m_bridge->stop(); }
+		if( m_systemStatus != nullptr )
+		{
+			m_systemStatus->setText( tr( "Mobile bridge is switched off. Tick \"Start mobile bridge\" "
+										 "to let phones connect." ) );
+		}
+		return;
+	}
+
 	m_bridge->setSettings( settingsJson() );
 	m_bridge->setClassName( currentClassName() );
+
+	const auto address = QHostAddress( m_teacherIp ? m_teacherIp->text().trimmed() : QString{} );
+	const auto port = m_bridgePort ? m_bridgePort->value() : 11880;
+	// Switching the adapter or the port in the UI must actually rebind, instead
+	// of leaving the bridge on the old address where no phone can reach it.
+	if( m_bridge->isRunning() &&
+		( m_bridge->port() != port ||
+		  ( address.isNull() == false && m_bridge->bindAddress() != address ) ) )
+	{
+		m_bridge->stop();
+	}
 	if( m_bridge->isRunning() == false )
 	{
-		const auto address = QHostAddress( m_teacherIp ? m_teacherIp->text().trimmed() : QString{} );
-		if( m_bridge->start( m_bridgePort ? m_bridgePort->value() : 11880, address ) == false )
+		if( m_bridge->start( port, address ) == false )
 		{
 			QMessageBox::warning( this, windowTitle(),
-								  tr( "The mobile bridge could not be started. Check the teacher IP and the port." ) );
+								  tr( "The mobile bridge could not be started on %1:%2. Pick another "
+									  "adapter or port, and allow ikeback in the firewall." )
+									  .arg( address.isNull() ? tr( "this computer" ) : address.toString() )
+									  .arg( port ) );
 		}
 	}
 	m_bridge->syncNow();
@@ -1817,12 +2123,17 @@ void ClassroomMasterDialog::setupToolsTab()
 	note->setStyleSheet( QStringLiteral("color:#546e7a; font-size:11px;") );
 	layout->addWidget( note );
 
-	// 2.3.0: the buttons themselves live in the Veyon Master tool-bar menu, not
-	// duplicated here. This page keeps only the parameters those actions read.
-	// Collect the exact same lambdas so both surfaces share one implementation.
-	const auto group = [this]( const QString& label,
-							  const QVector<QPair<QString, std::function<void()>>>& actions ) {
-		m_quickToolGroups.append( qMakePair( label, actions ) );
+	// The buttons themselves live on the Veyon Master tool bar (2.4.0: as
+	// first-class buttons, not only inside a drop-down). This page keeps the
+	// parameters those actions read and collects the exact same lambdas, so
+	// both surfaces share one implementation.
+	const auto group = [this]( const QString& label, const QString& icon,
+							  const QVector<QuickToolAction>& actions ) {
+		QuickToolGroup entry;
+		entry.label = label;
+		entry.icon = icon;
+		entry.actions = actions;
+		m_quickToolGroups.append( entry );
 	};
 
 	const auto input = [page, layout]( const QString& label, QLineEdit*& field, const QString& placeholder ) {
@@ -1892,43 +2203,49 @@ void ClassroomMasterDialog::setupToolsTab()
 							watchAndDo ? tr( "watch-and-do started" ) : tr( "broadcast started" ) );
 	};
 
-	group( tr( "Broadcast:" ), {
-		{ tr( "Broadcast all" ), [broadcast]() { broadcast( false, false ); } },
-		{ tr( "Broadcast selected" ), [broadcast]() { broadcast( true, false ); } },
-		{ tr( "Watch & do" ), [broadcast]() { broadcast( false, true ); } },
-		{ tr( "Stop broadcast" ), [this, runFeature, feature, demoFullUid, demoWindowUid, usbUid]() {
+	group( tr( "Broadcast" ), QStringLiteral(":/core/media-playback-start.png"), {
+		{ QStringLiteral("broadcast.all"), tr( "Broadcast all" ),
+		  [broadcast]() { broadcast( false, false ); } },
+		{ QStringLiteral("broadcast.selected"), tr( "Broadcast selected" ),
+		  [broadcast]() { broadcast( true, false ); } },
+		{ QStringLiteral("broadcast.watch"), tr( "Watch & do" ),
+		  [broadcast]() { broadcast( false, true ); } },
+		{ QStringLiteral("broadcast.stop"), tr( "Stop broadcast" ),
+		  [this, runFeature, feature, demoFullUid, demoWindowUid, usbUid]() {
 			runFeature( demoFullUid, false, true );
 			runFeature( demoWindowUid, false, true );
 			feature( usbUid, false, true );
 			setToolStatus( tr( "Broadcast stopped, USB input restored." ) );
 		} } } );
 
-	group( tr( "Client protection:" ), {
-		{ tr( "Enable" ), [this]() { setClientProtection( true ); } },
-		{ tr( "Disable" ), [this]() { setClientProtection( false ); } } } );
+	group( tr( "Client protection" ), QStringLiteral(":/core/icon22.png"), {
+		{ QStringLiteral("protection.on"), tr( "Enable" ), [this]() { setClientProtection( true ); } },
+		{ QStringLiteral("protection.off"), tr( "Disable" ), [this]() { setClientProtection( false ); } } } );
 
-	group( tr( "UWF restore:" ), {
-		{ tr( "Enable UWF" ), [this]() { setUwfFilter( true ); } },
-		{ tr( "Disable UWF" ), [this]() { setUwfFilter( false ); } },
-		{ tr( "Query UWF" ), [this]() {
+	group( tr( "UWF restore" ), QStringLiteral(":/core/document-save.png"), {
+		{ QStringLiteral("uwf.on"), tr( "Enable UWF" ), [this]() { setUwfFilter( true ); } },
+		{ QStringLiteral("uwf.off"), tr( "Disable UWF" ), [this]() { setUwfFilter( false ); } },
+		{ QStringLiteral("uwf.query"), tr( "Query UWF" ), [this]() {
 			sendToAll( Classroom::message( Command::UwfQuery ) );
 			QTimer::singleShot( 2000, this, [this]() { refreshUwfStatus(); refreshSeatGrid(); } );
 			setToolStatus( tr( "UWF query sent; results appear in the seat list view and activity log." ) );
 		} },
-		{ tr( "Restart students" ), [this]() {
+		{ QStringLiteral("uwf.restart"), tr( "Restart students" ), [this]() {
 			sendToAll( Classroom::message( Command::UwfRestart ) );
 			setToolStatus( tr( "Reboot command sent to all students." ) );
 		} } } );
 
-	group( tr( "Gateway:" ), {
-		{ tr( "Disable gateway" ), [send]() { send( Command::SetInternetBlock, true ); } },
-		{ tr( "Enable gateway" ), [send]() { send( Command::SetInternetBlock, false ); } } } );
+	group( tr( "Gateway" ), QStringLiteral(":/core/go-next.png"), {
+		{ QStringLiteral("gateway.block"), tr( "Disable gateway" ),
+		  [send]() { send( Command::SetInternetBlock, true ); } },
+		{ QStringLiteral("gateway.allow"), tr( "Enable gateway" ),
+		  [send]() { send( Command::SetInternetBlock, false ); } } } );
 
 	input( tr( "Silence page text:" ), m_toolSilence,
 		   tr( "Text shown on every student screen, e.g. Please read page 42" ) );
 	m_toolSilence->setText( settingsJson().value( SettingKey::silencePageText() ).toString() );
-	group( tr( "Silence page:" ), {
-		{ tr( "Show" ), [this, send]() {
+	group( tr( "Silence page" ), QStringLiteral(":/core/document-edit.png"), {
+		{ QStringLiteral("silence.show"), tr( "Show" ), [this, send]() {
 			auto object = settingsJson();
 			object.insert( SettingKey::silencePageText(), m_toolSilence->text() );
 			m_settings.setObject( object );
@@ -1937,32 +2254,43 @@ void ClassroomMasterDialog::setupToolsTab()
 			send( Command::ShowSilencePage, true, m_toolSilence->text() );
 			setToolStatus( tr( "Silence page shown and text saved." ) );
 		} },
-		{ tr( "Hide" ), [send]() { send( Command::HideSilencePage, false ); } } } );
+		{ QStringLiteral("silence.hide"), tr( "Hide" ),
+		  [send]() { send( Command::HideSilencePage, false ); } } } );
 
 	input( tr( "Blocked apps (fuzzy):" ), m_toolAppRules,
 		   tr( "Comma or newline separated, e.g. game, steam, notepad" ) );
-	group( tr( "App block:" ), {
-		{ tr( "Apply rules" ), [this]() { applyFuzzyRules( SettingKey::blockedApps(), m_toolAppRules->text() ); } },
-		{ tr( "Clear" ), [this]() { m_toolAppRules->clear(); applyFuzzyRules( SettingKey::blockedApps(), {} ); } } } );
+	group( tr( "App block" ), QStringLiteral(":/core/edit-delete.png"), {
+		{ QStringLiteral("appblock.apply"), tr( "Apply rules" ),
+		  [this]() { applyFuzzyRules( SettingKey::blockedApps(), m_toolAppRules->text() ); } },
+		{ QStringLiteral("appblock.clear"), tr( "Clear" ), [this]() {
+			m_toolAppRules->clear();
+			applyFuzzyRules( SettingKey::blockedApps(), {} );
+		} } } );
 
 	input( tr( "Blocked sites (fuzzy):" ), m_toolWebRules,
 		   tr( "Comma or newline separated, e.g. douyin, bilibili, game" ) );
-	group( tr( "Site block:" ), {
-		{ tr( "Apply rules" ), [this]() { applyFuzzyRules( SettingKey::blockedWebsites(), m_toolWebRules->text() ); } },
-		{ tr( "Clear" ), [this]() { m_toolWebRules->clear(); applyFuzzyRules( SettingKey::blockedWebsites(), {} ); } } } );
+	group( tr( "Site block" ), QStringLiteral(":/core/edit-delete.png"), {
+		{ QStringLiteral("webblock.apply"), tr( "Apply rules" ),
+		  [this]() { applyFuzzyRules( SettingKey::blockedWebsites(), m_toolWebRules->text() ); } },
+		{ QStringLiteral("webblock.clear"), tr( "Clear" ), [this]() {
+			m_toolWebRules->clear();
+			applyFuzzyRules( SettingKey::blockedWebsites(), {} );
+		} } } );
 
 	input( tr( "Software path:" ), m_toolSoftware, tr( "Full path of the program on the student machine" ) );
 	input( tr( "Website URL:" ), m_toolWebsite, tr( "https://..." ) );
-	group( tr( "Open on students:" ), {
-		{ tr( "Open software" ), [this]() { openOnTargets( false, m_toolSoftware->text() ); } },
-		{ tr( "Open website" ), [this]() { openOnTargets( true, m_toolWebsite->text() ); } } } );
+	group( tr( "Open on students" ), QStringLiteral(":/core/document-open.png"), {
+		{ QStringLiteral("open.software"), tr( "Open software" ),
+		  [this]() { openOnTargets( false, m_toolSoftware->text() ); } },
+		{ QStringLiteral("open.website"), tr( "Open website" ),
+		  [this]() { openOnTargets( true, m_toolWebsite->text() ); } } } );
 
-	group( tr( "Whole class score:" ), {
-		{ tr( "+5" ), [this]() { scoreWholeClass( 5 ); } },
-		{ tr( "+1" ), [this]() { scoreWholeClass( 1 ); } },
-		{ tr( "-1" ), [this]() { scoreWholeClass( -1 ); } },
-		{ tr( "-5" ), [this]() { scoreWholeClass( -5 ); } },
-		{ tr( "Custom..." ), [this]() {
+	group( tr( "Whole class score" ), QStringLiteral(":/core/list-add.png"), {
+		{ QStringLiteral("score.p5"), tr( "+5" ), [this]() { scoreWholeClass( 5 ); } },
+		{ QStringLiteral("score.p1"), tr( "+1" ), [this]() { scoreWholeClass( 1 ); } },
+		{ QStringLiteral("score.m1"), tr( "-1" ), [this]() { scoreWholeClass( -1 ); } },
+		{ QStringLiteral("score.m5"), tr( "-5" ), [this]() { scoreWholeClass( -5 ); } },
+		{ QStringLiteral("score.custom"), tr( "Custom..." ), [this]() {
 			bool accepted = false;
 			const auto delta = QInputDialog::getInt( this, windowTitle(), tr( "Points for every student:" ),
 													 0, -100, 100, 1, &accepted );
@@ -1971,12 +2299,13 @@ void ClassroomMasterDialog::setupToolsTab()
 
 	// Check-in has its own button on the Veyon tool bar, so it is deliberately
 	// not repeated inside this menu.
-	group( tr( "Other:" ), {
-		{ tr( "Mute all" ), [send]() { send( Command::SetMute, true ); } },
-		{ tr( "Unmute all" ), [send]() { send( Command::SetMute, false ); } },
-		{ tr( "Lock all" ), [this]() { lockAll( true ); } },
-		{ tr( "Unlock all" ), [this]() { lockAll( false ); } },
-		{ tr( "Refresh" ), [this]() { refreshStatus(); refreshMachines(); } } } );
+	group( tr( "Other" ), QStringLiteral(":/core/icon22.png"), {
+		{ QStringLiteral("other.mute"), tr( "Mute all" ), [send]() { send( Command::SetMute, true ); } },
+		{ QStringLiteral("other.unmute"), tr( "Unmute all" ), [send]() { send( Command::SetMute, false ); } },
+		{ QStringLiteral("other.lock"), tr( "Lock all" ), [this]() { lockAll( true ); } },
+		{ QStringLiteral("other.unlock"), tr( "Unlock all" ), [this]() { lockAll( false ); } },
+		{ QStringLiteral("other.refresh"), tr( "Refresh" ),
+		  [this]() { refreshStatus(); refreshMachines(); } } } );
 
 	auto* toolbarHint = new QLabel(
 		tr( "All actions are available from the ikeback tool bar: open the \"Quick tools\" menu, "
@@ -1987,6 +2316,23 @@ void ClassroomMasterDialog::setupToolsTab()
 
 	layout->addStretch( 1 );
 	m_tabs->insertTab( 0, page, tr( "Quick tools" ) );
+}
+
+
+bool ClassroomMasterDialog::runQuickTool( const QString& id )
+{
+	for( const auto& group : m_quickToolGroups )
+	{
+		for( const auto& action : group.actions )
+		{
+			if( action.id == id )
+			{
+				if( action.run ) { action.run(); }
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 
@@ -2190,30 +2536,68 @@ void ClassroomMasterDialog::setupSystemTab()
 
 	auto* form = new QFormLayout;
 	m_teacherIp = new QLineEdit( page );
+	// The old code silently picked the first non-loopback address, which on a
+	// machine with VMware/VirtualBox/Hyper-V adapters is often NOT the LAN
+	// address the phone should use. Offer every address explicitly instead.
+	m_teacherIpPicker = new QComboBox( page );
+	QString preferredIp;
 	for( const auto& address : QNetworkInterface::allAddresses() )
 	{
-		if( address.isLoopback() == false && address.protocol() == QAbstractSocket::IPv4Protocol )
-		{
-			m_teacherIp->setText( address.toString() );
-			break;
-		}
+		if( address.isLoopback() || address.protocol() != QAbstractSocket::IPv4Protocol ) { continue; }
+		const auto ipv4 = address.toIPv4Address();
+		const auto first = static_cast<quint8>( ipv4 >> 24 );
+		const auto second = static_cast<quint8>( ipv4 >> 16 );
+		const auto isPrivate = first == 10 || ( first == 192 && second == 168 ) ||
+							   ( first == 172 && second >= 16 && second <= 31 );
+		m_teacherIpPicker->addItem( address.toString() );
+		if( isPrivate && preferredIp.isEmpty() ) { preferredIp = address.toString(); }
 	}
+	if( preferredIp.isEmpty() && m_teacherIpPicker->count() > 0 )
+	{
+		preferredIp = m_teacherIpPicker->itemText( 0 );
+	}
+	m_teacherIp->setText( preferredIp );
+	connect( m_teacherIpPicker, QOverload<int>::of( &QComboBox::activated ), this,
+			 [this]( int index ) {
+				 m_teacherIp->setText( m_teacherIpPicker->itemText( index ) );
+				 syncNow();
+			 } );
 	m_teacherIp->setPlaceholderText( tr( "Teacher IP kept reachable while Internet is blocked" ) );
+	m_teacherIp->setToolTip( tr( "The address the phone must use. Pick the network adapter that is on the "
+								 "same Wi-Fi/LAN as the phones." ) );
 	m_packagePath = new QLineEdit( page );
 	m_packagePath->setPlaceholderText( tr( "Installer path on the teacher machine" ) );
 	m_silenceText = new QLineEdit( page );
 	m_silenceText->setText( settingsJson().value( SettingKey::silencePageText() ).toString() );
 	m_bridgeEnabled = new QCheckBox( tr( "Start mobile bridge" ), page );
-	m_bridgeEnabled->setChecked( settingsJson().value( SettingKey::bridgeEnabled() ).toBool( false ) );
+	// The bridge is what makes the phone work at all, so it starts by default.
+	m_bridgeEnabled->setChecked( settingsJson().value( SettingKey::bridgeEnabled() ).toBool( true ) );
 	m_bridgePort = new QSpinBox( page );
 	m_bridgePort->setRange( 1024, 65535 );
 	m_bridgePort->setValue( settingsJson().value( SettingKey::bridgePort() ).toInt( 11880 ) );
 	form->addRow( tr( "Teacher IP:" ), m_teacherIp );
+	form->addRow( tr( "Adapter:" ), m_teacherIpPicker );
 	form->addRow( tr( "Installer:" ), m_packagePath );
 	form->addRow( tr( "Silence page:" ), m_silenceText );
 	form->addRow( m_bridgeEnabled );
 	form->addRow( tr( "Bridge port:" ), m_bridgePort );
 	layout->addLayout( form );
+
+	// ---------------------------------------------------------- connectivity
+	auto* checkRow = new QHBoxLayout;
+	m_connectivityLabel = new QLabel( page );
+	m_connectivityLabel->setWordWrap( true );
+	m_connectivityLabel->setText( tr( "Not checked yet." ) );
+	auto* checkButton = new QPushButton( tr( "Check connection" ), page );
+	auto* restartButton = new QPushButton( tr( "Restart ikeback service" ), page );
+	restartButton->setToolTip( tr( "Use this when this computer shows a red icon and students cannot be "
+								   "reached. Needs administrator rights." ) );
+	checkRow->addWidget( checkButton );
+	checkRow->addWidget( restartButton );
+	checkRow->addWidget( m_connectivityLabel, 1 );
+	layout->addLayout( checkRow );
+	connect( checkButton, &QPushButton::clicked, this, &ClassroomMasterDialog::runConnectivityCheck );
+	connect( restartButton, &QPushButton::clicked, this, &ClassroomMasterDialog::restartService );
 
 	const auto addRow = [this, page, layout]( const QString& label, const QVector<QPair<QString, std::function<void()>>>& actions ) {
 		auto* row = new QHBoxLayout;
@@ -2337,5 +2721,8 @@ void ClassroomMasterDialog::setupSystemTab()
 		}
 		m_systemStatus->setText( m_bridge->status() );
 	}
+	// Show the local server/bridge state right away: the red "this computer"
+	// icon in the Veyon window finally gets an explanation.
+	QTimer::singleShot( 400, this, &ClassroomMasterDialog::runConnectivityCheck );
 	m_tabs->addTab( page, tr( "System & devices" ) );
 }

@@ -67,6 +67,24 @@ public:
 	static ClassroomClass fromJson( const QJsonObject& object );
 };
 
+//! Outcome of a multi-class table import, so the UI can report what happened
+//! instead of silently swallowing rows it could not understand.
+struct ClassroomImportReport
+{
+	int classes = 0;
+	int students = 0;
+	//! Rows whose seat number already existed in the same class (last one wins).
+	int overwritten = 0;
+	//! Rows ignored because the same class already had that IP on another seat.
+	int ipConflicts = 0;
+	QStringList problems;
+
+	void note( const QString& message )
+	{
+		if( problems.size() < 20 ) { problems.append( message ); }
+	}
+};
+
 class ClassroomRoster
 {
 public:
@@ -91,6 +109,19 @@ public:
 
 	bool importCsv( const QString& fileName, const QString& className, QString* error = nullptr );
 	bool exportCsv( const QString& fileName, const QString& className, QString* error = nullptr ) const;
+
+	//! Bulk import from a spreadsheet. A "class" column is optional: without it
+	//! every row lands in defaultClassName. Accepts comma/semicolon/tab
+	//! separated text, quoted fields, a UTF-8 BOM and GBK-encoded files, so a
+	//! plain "save as CSV" from Excel works without any manual conversion.
+	bool importTable( const QString& text, const QString& defaultClassName,
+					  ClassroomImportReport* report, QString* error = nullptr );
+	bool importTableFile( const QString& fileName, const QString& defaultClassName,
+						  ClassroomImportReport* report, QString* error = nullptr );
+
+	//! Semicolon separated sample the teacher can open in Excel, fill in and
+	//! import again (UTF-8 with BOM so Excel keeps Chinese characters).
+	static QByteArray importTemplate();
 
 private:
 	QString m_filePath;

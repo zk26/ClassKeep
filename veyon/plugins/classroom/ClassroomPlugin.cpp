@@ -56,6 +56,9 @@
 
 using namespace Classroom;
 
+//! Give up automatic worker restarts after this many consecutive failures.
+static constexpr int MaxWorkerRestartFailures = 5;
+
 IMPLEMENT_CONFIG_PROXY(ClassroomConfiguration)
 
 
@@ -107,6 +110,88 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 	m_hostName( QHostInfo::localHostName() )
 {
 	m_ipAddress = localIpAddress();
+	buildQuickActionFeatures();
+}
+
+
+Feature::Uid ClassroomPlugin::quickActionUid( int index )
+{
+	// Kept in its own UUID range so quick-action buttons can never collide with
+	// the protocol features declared in ClassroomProtocol.h.
+	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c14-%1" )
+							 .arg( index, 12, 10, QLatin1Char('0') ) };
+}
+
+
+void ClassroomPlugin::buildQuickActionFeatures()
+{
+	// Every entry becomes a first-class button on the Veyon Master tool bar,
+	// right next to "Screen demo" and "Remote control". The tool bar is allowed
+	// to wrap onto a second row, so the pairs stay side by side.
+	struct QuickButton
+	{
+		const char* id;
+		const char* name;
+		const char* tooltip;
+		const char* icon;
+	};
+
+	static const QuickButton buttons[] = {
+		{ "broadcast.all", "Broadcast", "Show the teacher screen on every student display",
+		  ":/core/media-playback-start.png" },
+		{ "broadcast.watch", "Watch & do", "Window demo: students keep keyboard and mouse",
+		  ":/core/view-fullscreen.png" },
+		{ "broadcast.stop", "Stop broadcast", "Stop the demo and restore USB input",
+		  ":/core/media-playback-stop.png" },
+		{ "protection.on", "Protect on", "Students cannot quit the ikeback card",
+		  ":/core/icon22.png" },
+		{ "protection.off", "Protect off", "Allow students to quit the ikeback card",
+		  ":/core/icon22.png" },
+		{ "uwf.on", "UWF on", "Enable the Windows write filter / restore on reboot",
+		  ":/core/document-save.png" },
+		{ "uwf.off", "UWF off", "Disable the write filter before installing software",
+		  ":/core/document-save.png" },
+		{ "gateway.block", "Block net", "Block Internet access but keep the teacher machine reachable",
+		  ":/core/go-next.png" },
+		{ "gateway.allow", "Allow net", "Restore Internet access",
+		  ":/core/go-next.png" },
+		{ "silence.show", "Silence", "Show the silence page on every student screen",
+		  ":/core/document-edit.png" },
+		{ "silence.hide", "Unsilence", "Hide the silence page",
+		  ":/core/document-edit.png" },
+		{ "appblock.apply", "Block apps", "Apply the fuzzy application rules from the Quick tools tab",
+		  ":/core/edit-delete.png" },
+		{ "appblock.clear", "Allow apps", "Clear all application rules",
+		  ":/core/edit-delete.png" },
+		{ "webblock.apply", "Block sites", "Apply the fuzzy website rules from the Quick tools tab",
+		  ":/core/edit-delete.png" },
+		{ "webblock.clear", "Allow sites", "Clear all website rules",
+		  ":/core/edit-delete.png" },
+		{ "score.p1", "+1 class", "Add one point to every student",
+		  ":/core/list-add.png" },
+		{ "score.m1", "-1 class", "Subtract one point from every student",
+		  ":/core/list-add.png" },
+		{ "other.mute", "Mute all", "Mute the audio output of every student machine",
+		  ":/core/media-playback-pause.png" },
+		{ "other.unmute", "Unmute all", "Restore audio output",
+		  ":/core/media-playback-start.png" },
+	};
+
+	int index = 0;
+	for( const auto& button : buttons )
+	{
+		const auto uid = quickActionUid( index );
+		m_quickActionIds.append( QString::fromLatin1( button.id ) );
+		// displayName stays empty on purpose: the tool bar then shows name()
+		// ("Broadcast", "Protect on", ...) instead of one repeated product name.
+		m_features.append( Feature( QCoreApplication::translate( "ClassroomPlugin", button.name ),
+									Feature::Flag::Action | Feature::Flag::Master,
+									uid, Feature::Uid(),
+									{}, {},
+									QCoreApplication::translate( "ClassroomPlugin", button.tooltip ),
+									QString::fromLatin1( button.icon ) ) );
+		++index;
+	}
 }
 
 
@@ -308,6 +393,18 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 		return true;
 	}
 
+	// ------------------------------------------- first-class quick action buttons
+	for( int index = 0; index < m_quickActionIds.size(); ++index )
+	{
+		if( feature.uid() != quickActionUid( index ) ) { continue; }
+		// The parameter widgets (silence text, blocked apps, ...) live in the
+		// console, so make sure it exists before running the action.
+		if( m_dialog.isNull() ) { startFeature( master, m_consoleFeature, computerControlInterfaces ); }
+		if( m_dialog.isNull() ) { return true; }
+		m_dialog->runQuickTool( m_quickActionIds.at( index ) );
+		return true;
+	}
+
 	// ------------------------------------------- tool bar quick tools / check-in
 	if( feature.uid() == quickToolsFeatureUid() || feature.uid() == checkInFeatureUid() )
 	{
@@ -329,11 +426,13 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 		menu.setToolTipsVisible( true );
 		for( const auto& group : m_dialog->quickToolGroups() )
 		{
-			auto* subMenu = menu.addMenu( group.first );
-			for( const auto& entry : group.second )
+			auto* subMenu = menu.addMenu( group.icon.isEmpty() ? QIcon() : QIcon( group.icon ), group.label );
+			for( const auto& entry : group.actions )
 			{
-				auto* action = subMenu->addAction( entry.first );
-				connect( action, &QAction::triggered, &menu, [entry]() { entry.second(); } );
+				auto* action = subMenu->addAction( entry.label );
+				connect( action, &QAction::triggered, &menu, [entry]() {
+					if( entry.run ) { entry.run(); }
+				} );
 			}
 		}
 		menu.exec();
@@ -436,13 +535,25 @@ void ClassroomPlugin::startSessionFeature( VeyonServerInterface& server )
 		if( m_server->featureWorkerManager().isWorkerRunning( clientFeatureUid() ) )
 		{
 			m_restartPending = false;
+			m_restartFailures = 0;
 			return;
 		}
-		if( m_restartPending == false )
+		if( m_restartPending ) { return; }
+
+		if( m_restartFailures >= MaxWorkerRestartFailures )
 		{
-			startClient( *m_server );
-			m_restartPending = true;
+			// Stop the loop instead of spraying processes: a worker that never
+			// authenticates is a broken install, not a transient failure, and
+			// the next teacher message re-arms this watchdog.
+			if( m_watchdog ) { m_watchdog->stop(); }
+			vWarning() << "ikeback: student worker failed to start" << m_restartFailures
+					   << "times - stopping automatic restarts until the next teacher action";
+			return;
 		}
+
+		++m_restartFailures;
+		startClient( *m_server );
+		m_restartPending = true;
 	} );
 	m_watchdog->start();
 }
@@ -517,6 +628,9 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonServerInterface& server, const 
 	else
 	{
 		m_stopAllowed = false;
+		// A teacher action re-arms the watchdog even after it gave up.
+		m_restartFailures = 0;
+		m_restartPending = false;
 		if( m_watchdog && m_watchdog->isActive() == false ) { m_watchdog->start(); }
 	}
 

@@ -64,6 +64,9 @@ public:
 	void stop();
 	bool isRunning() const;
 	QString status() const;
+	//! Address the bridge is currently listening on (null when stopped).
+	const QHostAddress& bindAddress() const { return m_bindAddress; }
+	int port() const { return m_port; }
 	void syncNow();
 
 	//! Pure helpers: exercised by ClassroomSelfTest without opening a socket.

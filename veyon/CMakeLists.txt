@@ -54,8 +54,10 @@ endif()
 if(VERSION_STRING STREQUAL "")
 	# ikeback release baseline (the upstream Veyon tree this fork is based on
 	# is 4.11.4). A v* tag or GITHUB_REF_NAME overrides this in CI.
-	set(VERSION_MAJOR 2)
-	set(VERSION_MINOR 3)
+	# 5.2.0 is the first release under the ikeback name; every earlier
+	# ClassKeep build is discontinued.
+	set(VERSION_MAJOR 5)
+	set(VERSION_MINOR 2)
 	set(VERSION_PATCH 0)
 	set(VERSION_BUILD 0)
 	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
