@@ -40,15 +40,18 @@
 | Server | `ikeback-server`（SYSTEM） | FeatureMessage 转发、离线事件补传队列、worker 看门狗、UWF/网络/音频系统操作入口 |
 | Worker | `ikeback-worker`（登录用户） | 悬浮条、登录认证、AI/积分/肃静窗口、行为采集、上报事件 |
 
-## 2.0.0 常用工具与三种「保护」
+## 5.2.0 常用工具直接在一级工具栏
 
 > **不变式（必读）**：`sessionKey` / `aiApiKey` 只允许存在于教师机与教师手机。
 > 任何发给 `ikeback-server` / `ikeback-worker` 的设置都必须先经过
 > `ClassroomSettings::forStudents()`；学生端只收 `keyConfigured` 布尔值，
 > 退出保护只认管理员凭据，AI 只提交 prompt 由教师机代理调用模型。
 
-2.3.0 起，常用工具**不再在控制台里重复生成一套按钮**：Veyon 主工具栏的
-「Quick tools」下拉菜单与「Check-in」按钮直接复用同一份动作实现；控制台第一个
+5.2.0 起，常用工具是 Veyon 主工具栏上的**一级按钮**（与「屏幕演示」「远程控制」
+同级）：`ClassroomPlugin::buildQuickActionFeatures()` 为白名单里的每个动作生成一个
+`Action|Master` Feature，工具栏放不下时自动换行，成对的开 / 关按钮保持相邻。
+「Quick tools」下拉菜单与「Check-in」按钮仍保留，并复用同一份动作实现
+（`ClassroomMasterDialog::quickToolGroups()` / `runQuickTool()`）；控制台第一个
 页签只保留作用域与参数（肃静文案、模糊规则、软件路径、网址）。
 下列动作按「全部学生 / 选中学生」作用域下发：
 
