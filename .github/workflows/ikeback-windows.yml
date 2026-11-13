@@ -105,8 +105,8 @@ jobs:
           # implementations live in translators we do not build. Turning the
           # calls into void expressions keeps the surrounding statements (and
           # any if/else) syntactically intact while dropping the dependency.
-          perl -0pi -e 's/vnclog\.Print\(/(void)(/gs' "$k"
-          perl -0pi -e 's/vncCad::Cadthread\(/(void)(/gs' "$k"
+          perl -0pi -e 's/vnclog\.Print\([^;]*\);/(void)0;/gs' "$k"
+          perl -0pi -e 's/vncCad::Cadthread\([^;]*\);/(void)0;/gs' "$k"
           grep -c 'vnclog\.Print\|vncCad::Cadthread' "$k" || true
 
       - name: Configure
