@@ -137,15 +137,18 @@ jobs:
           cat windows-platform.log
           # Surface the real compiler errors as annotations: the job log itself
           # is not retrievable without authentication.
-          grep -E "error:|FAILED|undefined reference|No such file" windows-platform.log | head -12 | while IFS= read -r line; do
-            echo "::error::${line}"
-          done
-          echo "== compiler =="
-          c++ --version | head -2
-          echo "== ultravnc context =="
-          sed -n '118,130p' desktop/3rdparty/ultravnc/winvnc/winvnc/stdhdrs.h 2>/dev/null || true
-          sed -n '1125,1136p' desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp 2>/dev/null || true
-          sed -n '250,262p' desktop/3rdparty/ultravnc/winvnc/winvnc/SettingsManager.h 2>/dev/null || true
+          {
+            grep -E "error:|FAILED|undefined reference|No such file" windows-platform.log | head -8
+            echo "--- compiler ---"
+            c++ --version | head -1
+            echo "--- stdhdrs.h ---"
+            sed -n '118,130p' desktop/3rdparty/ultravnc/winvnc/winvnc/stdhdrs.h 2>/dev/null
+            echo "--- vnckeymap.cpp ---"
+            sed -n '1125,1136p' desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp 2>/dev/null
+            echo "--- SettingsManager.h ---"
+            sed -n '250,262p' desktop/3rdparty/ultravnc/winvnc/winvnc/SettingsManager.h 2>/dev/null
+          } | sed 's/%/%25/g; s/$/%0A/' > /tmp/annot.txt
+          echo "::error::$(cat /tmp/annot.txt)"
           exit 1
 
       - name: Build other upstream plugins (best effort)

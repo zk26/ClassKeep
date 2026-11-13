@@ -85,6 +85,6 @@ target_compile_definitions(windows-platform PRIVATE ULTRAVNC_IKEBACK_SUPPORT)
 # flag their legacy unused variables as hard errors. Scope the exemptions to
 # this target only; ikeback's own code keeps full warnings-as-errors.
 target_compile_options(windows-platform PRIVATE
-	"-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation;-Wno-unused-but-set-variable;-Wno-unused-variable;-Wno-deprecated-declarations;-Wno-sign-compare;-Wno-unused-result"
+	"-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation;-Wno-unused-but-set-variable;-Wno-unused-variable;-Wno-deprecated-declarations;-Wno-sign-compare;-Wno-unused-result;-Wno-error=cpp"
 )
 set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE SKIP_PRECOMPILE_HEADERS TRUE)
