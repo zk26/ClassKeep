@@ -130,7 +130,17 @@ jobs:
         shell: msys2 {0}
         run: |
           set -o pipefail
-          cmake --build build --parallel 4 --target windows-platform 2>&1 | tee windows-platform.log
+          if cmake --build build --parallel 4 --target windows-platform > windows-platform.log 2>&1; then
+            cat windows-platform.log
+            exit 0
+          fi
+          cat windows-platform.log
+          # Surface the real compiler errors as annotations: the job log itself
+          # is not retrievable without authentication.
+          grep -E "error:|FAILED|undefined reference|No such file" windows-platform.log | head -15 | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          exit 1
 
       - name: Build other upstream plugins (best effort)
         shell: msys2 {0}
