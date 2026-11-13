@@ -148,8 +148,12 @@ jobs:
           # The pinned UltraVNC SettingsManager writes a cloud-related pref the class
           # never declares (leftover from a feature we do not ship); drop those lines.
           grep -rn 'm_pref_cloudEnabled' desktop/3rdparty/ultravnc/winvnc/winvnc/ | head -6 | while IFS= read -r line; do echo "::notice::cloud ${line}"; done || true
+          # The pinned SettingsManager.cpp references a whole family of
+          # m_pref_* members that its header never declares (ultravnc's own ini
+          # persistence only). ikeback configures the server in memory, so
+          # comment those lines out instead of chasing them one at a time.
           find desktop/3rdparty/ultravnc/winvnc -name 'SettingsManager.cpp' \
-            -exec perl -pi -e 's/^.*m_pref_cloudEnabled.*$//' {} + || true
+            -exec perl -pi -e 's/^([ \t]*)(.*\bm_pref_\w+.*)$/$1\/\/ $2/' {} + || true
           # GWL_* accessors are only declared for WINVER < 0x0500; rewrite them.
           find desktop/3rdparty/ultravnc -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.c' \) \
             -exec perl -pi -e 's/\bGWL_WNDPROC\b/GWLP_WNDPROC/g; s/\bGWL_HINSTANCE\b/GWLP_HINSTANCE/g; s/\bGWL_ID\b/GWLP_ID/g; s/\bGWL_USERDATA\b/GWLP_USERDATA/g; s/DWL_MSGRESULT/DWLP_MSGRESULT/g; s/DWL_DLGPROC/DWLP_DLGPROC/g; s/DWL_USER/DWLP_USER/g' {} + || true
