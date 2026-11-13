@@ -35,7 +35,8 @@ build_ikeback_plugin(classroom
 	ClassroomTermReport.h
 	ClassroomWordCloud.cpp
 	ClassroomWordCloud.h
-	)
+	classroom.qrc
+)
 
 if(WIN32)
 	# CryptProtectData / CryptUnprotectData used by ClassroomSecrets.

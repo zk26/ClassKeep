@@ -177,6 +177,12 @@ jobs:
           fi
           exit 1
 
+      # The real target for plugins/vncserver/ultravnc-builtin is
+      # `builtin-ultravnc-server`; the previous list used the directory name,
+      # so cmake silently reported "no rule to make target" and the VNC server
+      # plugin was never built. Without it ikeback-server logs
+      # "no VNC server plugins found" and exits, which leaves every student
+      # unreachable - exactly the failure seen after installation.
       - name: Build other upstream plugins (best effort)
         shell: msys2 {0}
         run: |
@@ -185,14 +191,20 @@ jobs:
                         powercontrol remoteaccess screenlock screenshot \
                         systemusergroups textmessage usersessioncontrol \
                         external-vnc-server headless-vnc-server \
-                        ultravnc-builtin vnchooks; do
+                        builtin-ultravnc-server vnchooks; do
             if cmake --build build --parallel 4 --target "$target" > /tmp/plugin-one.log 2>&1; then
               echo "built:   $target"
             else
               echo "skipped: $target"
               tail -n 12 /tmp/plugin-one.log || true
+              if [ "$target" = "builtin-ultravnc-server" ]; then
+                echo "::error::the VNC server plugin failed to build - ikeback-server cannot start without it"
+                tail -n 8 /tmp/plugin-one.log | while IFS= read -r line; do echo "::error::vs|${line}"; done
+                exit 1
+              fi
             fi
           done
+          ls -1 build/plugins/vncserver/ultravnc-builtin/*.dll 2>/dev/null || true
 
       # A hand-written DLL whitelist caused missing libbz2 / libmd4c / libbrotli
       # errors at runtime. collect_mingw_deps.py instead walks the real PE import
@@ -230,7 +242,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           case "$VERSION" in
             [0-9]*) : ;;
-            *) VERSION=5.2.0 ;;
+            *) VERSION=5.2.1 ;;
           esac
           if ! makensis -DVERSION="$VERSION" -DROLE=teacher installer.nsi > nsis.log 2>&1; then
             cat nsis.log

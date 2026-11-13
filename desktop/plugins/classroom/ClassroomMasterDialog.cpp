@@ -1698,6 +1698,32 @@ void ClassroomMasterDialog::restartService()
 }
 
 
+void ClassroomMasterDialog::deployInstaller()
+{
+	const auto path = QFileDialog::getOpenFileName(
+		this, tr( "选择要下发安装的软件包" ), QString{},
+		tr( "安装包 (*.exe *.msi);;所有文件 (*)" ) );
+	if( path.isEmpty() ) { return; }
+
+	const auto command = ClassroomSystem::softwareInstallCommand( path );
+	if( command.isEmpty() )
+	{
+		QMessageBox::warning( this, windowTitle(),
+							  tr( "只支持 .exe 与 .msi 安装包，且路径中不能包含引号。" ) );
+		return;
+	}
+
+	IkebackCore::featureManager().controlFeature(
+		Feature::Uid{ QStringLiteral("da9ca56a-b2ad-4fff-8f8a-929b2927b442") },
+		FeatureProviderInterface::Operation::Start,
+		QVariantMap{ { QStringLiteral("Applications"), QStringList{ command } } },
+		m_master.allComputerControlInterfaces() );
+
+	setToolStatus( tr( "已下发安装命令：%1" ).arg( command ) );
+	appendTeacherEvent( EventType::connection(), tr( "远程装软件：%1" ).arg( path ) );
+}
+
+
 void ClassroomMasterDialog::syncNow()
 {
 	if( m_bridge == nullptr ) { return; }
@@ -2220,7 +2246,12 @@ void ClassroomMasterDialog::setupToolsTab()
 
 	group( tr( "Client protection" ), QStringLiteral(":/core/icon22.png"), {
 		{ QStringLiteral("protection.on"), tr( "Enable" ), [this]() { setClientProtection( true ); } },
-		{ QStringLiteral("protection.off"), tr( "Disable" ), [this]() { setClientProtection( false ); } } } );
+		{ QStringLiteral("protection.off"), tr( "Disable" ), [this]() { setClientProtection( false ); } },
+		// Single tool-bar button: each click flips the current state.
+		{ QStringLiteral("protection.toggle"), tr( "保护" ), [this]() {
+			m_protectionOn = !m_protectionOn;
+			setClientProtection( m_protectionOn );
+		} } } );
 
 	group( tr( "UWF restore" ), QStringLiteral(":/core/document-save.png"), {
 		{ QStringLiteral("uwf.on"), tr( "Enable UWF" ), [this]() { setUwfFilter( true ); } },
@@ -2233,13 +2264,21 @@ void ClassroomMasterDialog::setupToolsTab()
 		{ QStringLiteral("uwf.restart"), tr( "Restart students" ), [this]() {
 			sendToAll( Classroom::message( Command::UwfRestart ) );
 			setToolStatus( tr( "Reboot command sent to all students." ) );
+		} },
+		{ QStringLiteral("uwf.toggle"), tr( "UWF" ), [this]() {
+			m_uwfOn = !m_uwfOn;
+			setUwfFilter( m_uwfOn );
 		} } } );
 
 	group( tr( "Gateway" ), QStringLiteral(":/core/go-next.png"), {
 		{ QStringLiteral("gateway.block"), tr( "Disable gateway" ),
 		  [send]() { send( Command::SetInternetBlock, true ); } },
 		{ QStringLiteral("gateway.allow"), tr( "Enable gateway" ),
-		  [send]() { send( Command::SetInternetBlock, false ); } } } );
+		  [send]() { send( Command::SetInternetBlock, false ); } },
+		{ QStringLiteral("gateway.toggle"), tr( "外网" ), [this, send]() {
+			m_gatewayBlocked = !m_gatewayBlocked;
+			send( Command::SetInternetBlock, m_gatewayBlocked );
+		} } } );
 
 	input( tr( "Silence page text:" ), m_toolSilence,
 		   tr( "Text shown on every student screen, e.g. Please read page 42" ) );
@@ -2255,7 +2294,22 @@ void ClassroomMasterDialog::setupToolsTab()
 			setToolStatus( tr( "Silence page shown and text saved." ) );
 		} },
 		{ QStringLiteral("silence.hide"), tr( "Hide" ),
-		  [send]() { send( Command::HideSilencePage, false ); } } } );
+		  [send]() { send( Command::HideSilencePage, false ); } },
+		{ QStringLiteral("silence.toggle"), tr( "肃静页" ), [this, send]() {
+			m_silenceShown = !m_silenceShown;
+			if( m_silenceShown )
+			{
+				auto object = settingsJson();
+				object.insert( SettingKey::silencePageText(), m_toolSilence ? m_toolSilence->text() : QString{} );
+				m_settings.setObject( object );
+				m_settings.save();
+				send( Command::ShowSilencePage, true, m_toolSilence ? m_toolSilence->text() : QString{} );
+			}
+			else
+			{
+				send( Command::HideSilencePage, false );
+			}
+		} } } );
 
 	input( tr( "Blocked apps (fuzzy):" ), m_toolAppRules,
 		   tr( "Comma or newline separated, e.g. game, steam, notepad" ) );
@@ -2265,6 +2319,11 @@ void ClassroomMasterDialog::setupToolsTab()
 		{ QStringLiteral("appblock.clear"), tr( "Clear" ), [this]() {
 			m_toolAppRules->clear();
 			applyFuzzyRules( SettingKey::blockedApps(), {} );
+		} },
+		{ QStringLiteral("appblock.toggle"), tr( "禁用应用" ), [this]() {
+			m_appBlockOn = !m_appBlockOn;
+			if( m_appBlockOn ) { applyFuzzyRules( SettingKey::blockedApps(), m_toolAppRules->text() ); }
+			else { applyFuzzyRules( SettingKey::blockedApps(), {} ); }
 		} } } );
 
 	input( tr( "Blocked sites (fuzzy):" ), m_toolWebRules,
@@ -2275,6 +2334,11 @@ void ClassroomMasterDialog::setupToolsTab()
 		{ QStringLiteral("webblock.clear"), tr( "Clear" ), [this]() {
 			m_toolWebRules->clear();
 			applyFuzzyRules( SettingKey::blockedWebsites(), {} );
+		} },
+		{ QStringLiteral("webblock.toggle"), tr( "禁用网址" ), [this]() {
+			m_webBlockOn = !m_webBlockOn;
+			if( m_webBlockOn ) { applyFuzzyRules( SettingKey::blockedWebsites(), m_toolWebRules->text() ); }
+			else { applyFuzzyRules( SettingKey::blockedWebsites(), {} ); }
 		} } } );
 
 	input( tr( "Software path:" ), m_toolSoftware, tr( "Full path of the program on the student machine" ) );
@@ -2305,7 +2369,14 @@ void ClassroomMasterDialog::setupToolsTab()
 		{ QStringLiteral("other.lock"), tr( "Lock all" ), [this]() { lockAll( true ); } },
 		{ QStringLiteral("other.unlock"), tr( "Unlock all" ), [this]() { lockAll( false ); } },
 		{ QStringLiteral("other.refresh"), tr( "Refresh" ),
-		  [this]() { refreshStatus(); refreshMachines(); } } } );
+		  [this]() { refreshStatus(); refreshMachines(); } },
+		{ QStringLiteral("mute.toggle"), tr( "静音" ), [this, send]() {
+			m_muted = !m_muted;
+			send( Command::SetMute, m_muted );
+		} } } );
+
+	group( tr( "远程装软件" ), QStringLiteral(":/classroom/icons/install.png"), {
+		{ QStringLiteral("remote.install"), tr( "远程装软件" ), [this]() { deployInstaller(); } } } );
 
 	auto* toolbarHint = new QLabel(
 		tr( "所有动作都可直接在 iKeback 主工具栏上点击（图标下方有名称）。"

@@ -14,8 +14,8 @@ android {
         applicationId = "top.ikee002.ikeback"
         minSdk = 30
         targetSdk = 36
-        versionCode = 10
-        versionName = "5.2.0"
+        versionCode = 11
+        versionName = "5.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

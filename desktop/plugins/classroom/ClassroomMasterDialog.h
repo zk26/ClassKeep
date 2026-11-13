@@ -87,6 +87,18 @@ public:
 	void runConnectivityCheck();
 	//! Restarts the Windows service with the bundled CLI (needs elevation).
 	void restartService();
+	//! Asks for an installer and pushes it to the students (remote install).
+	void deployInstaller();
+
+	// Toggle state kept by the tool-bar buttons, so one click flips the
+	// behaviour instead of offering a separate "on" and "off" button.
+	bool m_protectionOn = false;
+	bool m_uwfOn = false;
+	bool m_gatewayBlocked = false;
+	bool m_silenceShown = false;
+	bool m_appBlockOn = false;
+	bool m_webBlockOn = false;
+	bool m_muted = false;
 	//! Called by the plugin when a student submits the attendance prompt.
 	void recordCheckIn( const QString& className, const QString& seat, const QString& typedName );
 

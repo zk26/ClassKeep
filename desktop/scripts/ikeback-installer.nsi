@@ -1,9 +1,9 @@
 ; ikeback - Windows installer (based on upstream Ikeback nsis/ikeback.nsi.in)
 ;
 ; Compile twice from the repository root (the release workflow supplies VERSION;
-; 5.2.0 is only the fallback defined below):
-;   makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
-;   makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
+; 5.2.1 is only the fallback defined below):
+;   makensis -DVERSION=5.2.1 -DROLE=teacher installer.nsi
+;   makensis -DVERSION=5.2.1 -DROLE=student installer.nsi
 ;
 ; ROLE=teacher : component page with "Service" (read-only, registers/starts the
 ;                ikebackService service) and "Master" (optional console).
@@ -23,7 +23,7 @@ Unicode true
 !include "FileFunc.nsh"
 
 !ifndef VERSION
-  !define VERSION "5.2.0"
+  !define VERSION "5.2.1"
 !endif
 !ifndef ROLE
   !define ROLE "teacher"

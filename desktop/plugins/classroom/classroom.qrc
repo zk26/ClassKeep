@@ -1,0 +1,15 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+  <qresource prefix="/classroom">
+    <file>icons/shield.png</file>
+    <file>icons/lock.png</file>
+    <file>icons/globe.png</file>
+    <file>icons/silence.png</file>
+    <file>icons/block-app.png</file>
+    <file>icons/block-web.png</file>
+    <file>icons/mute.png</file>
+    <file>icons/plus.png</file>
+    <file>icons/minus.png</file>
+    <file>icons/install.png</file>
+  </qresource>
+</RCC>

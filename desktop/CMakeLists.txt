@@ -57,7 +57,7 @@ if(VERSION_STRING STREQUAL "")
 	# 5.2.0 is the first official ikeback release.
 	set(VERSION_MAJOR 5)
 	set(VERSION_MINOR 2)
-	set(VERSION_PATCH 0)
+	set(VERSION_PATCH 1)
 	set(VERSION_BUILD 0)
 	set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 else()
