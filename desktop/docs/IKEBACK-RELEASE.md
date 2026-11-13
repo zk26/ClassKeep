@@ -16,7 +16,7 @@
 
 版本格式 `vMAJOR.MINOR.PATCH`，与 `mobile/app/build.gradle.kts` 的 `versionName` 一致。
 
-> **5.2.0 是经过 7 个内部测试版本打磨后的最终节点，也是 ikeback 的第一个正式版本。**
+> **5.2.1 是经过 7 个内部测试版本打磨后的最终节点，也是 ikeback 的第一个正式版本。**
 
 | 产物 | 文件名 | 格式 |
 |---|---|---|
@@ -100,8 +100,8 @@ Windows 依赖、3rdparty 锁定 SHA 与编译目标详见
 bash desktop/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat desktop/scripts/ikeback-installer.nsi; } > installer.nsi
-makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
+makensis -DVERSION=5.2.1 -DROLE=teacher installer.nsi
+makensis -DVERSION=5.2.1 -DROLE=student installer.nsi
 ```
 
 `payload/` 由第一条命令从 `build/` 组装；图标 `.ico` 已提交进仓库，CI 不重新生成。
@@ -113,9 +113,9 @@ makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
 `SHA256SUMS.txt` 由 `package` job 自动生成，覆盖三类产物：
 
 ```
-<sha256小写>  ikeback-Mobile-5.2.0.apk
-<sha256小写>  ikeback-student-5.2.0-win64-setup.exe
-<sha256小写>  ikeback-teacher-5.2.0-win64-setup.exe
+<sha256小写>  ikeback-Mobile-5.2.1.apk
+<sha256小写>  ikeback-student-5.2.1-win64-setup.exe
+<sha256小写>  ikeback-teacher-5.2.1-win64-setup.exe
 ```
 
 ```powershell

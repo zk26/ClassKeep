@@ -64,8 +64,8 @@ CI 已把 `windows-platform` 设为必需的独立构建步骤，不再静默跳
 
 ```bash
 { printf '\xEF\xBB\xBF'; cat desktop/scripts/ikeback-installer.nsi; } > installer.nsi
-makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
+makensis -DVERSION=5.2.1 -DROLE=teacher installer.nsi
+makensis -DVERSION=5.2.1 -DROLE=student installer.nsi
 ```
 
 输出：`dist/ikeback-teacher-<ver>-win64-setup.exe`、

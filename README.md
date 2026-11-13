@@ -67,7 +67,7 @@ CMake 构建目标、核心库 `ikeback-core.dll`、插件 DLL 与配置数据�
 > | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
 > 三类产物全部真实编译，不含占位包或伪造二进制。
-> **5.2.0 是经过 7 个内部测试版本打磨后的最终节点，也是 ikeback 的第一个正式版本。**
+> **5.2.1 是经过 7 个内部测试版本迭代后的最终节点，也是 ikeback 的第一个正式版本。**
 > **教师端工具栏**：常用工具（广播 / 边看边做 / 停止广播、客户端保护开关、
 > UWF 开关、网关开关、肃静页、禁用应用/网址、全班加减分、静音）不再是下拉菜单里的
 > 二级项，而是与「屏幕演示」「远程控制」同级的一级按钮，放不下时自动换行成两列。
@@ -119,8 +119,8 @@ cd mobile
 bash desktop/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat desktop/scripts/ikeback-installer.nsi; } > installer.nsi
-makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
+makensis -DVERSION=5.2.1 -DROLE=teacher installer.nsi
+makensis -DVERSION=5.2.1 -DROLE=student installer.nsi
 ```
 
 详见 [`desktop/scripts/README.md`](desktop/scripts/README.md)。
