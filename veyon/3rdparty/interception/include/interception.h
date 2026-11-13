@@ -2,7 +2,7 @@
  * interception.h - minimal compatibility header for the optional Interception
  *                 keyboard/mouse driver API.
  *
- * ClassKeep build shim. Upstream Veyon links against `-linterception`, a
+ * ikeback build shim. Upstream Veyon links against `-linterception`, a
  * library that only exists inside Veyon's private Windows cross-build image.
  * It is NOT shipped in the upstream 3rdparty/interception/ directory (that
  * directory contains only install-interception.exe and two .bat files) and is

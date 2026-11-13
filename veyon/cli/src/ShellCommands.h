@@ -51,12 +51,12 @@ public:
 
 	QString description() const override
 	{
-		return tr( "Interactive shell and script execution for ClassKeep CLI" );
+		return tr( "Interactive shell and script execution for ikeback CLI" );
 	}
 
 	QString vendor() const override
 	{
-		return QStringLiteral( "ClassKeep" );
+		return QStringLiteral( "ikeback" );
 	}
 
 	QString copyright() const override

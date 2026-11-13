@@ -52,12 +52,12 @@ public:
 
 	QString description() const override
 	{
-		return tr( "Configure ClassKeep at command line" );
+		return tr( "Configure ikeback at command line" );
 	}
 
 	QString vendor() const override
 	{
-		return QStringLiteral( "ClassKeep" );
+		return QStringLiteral( "ikeback" );
 	}
 
 	QString copyright() const override
@@ -72,7 +72,7 @@ public:
 
 	QString commandLineModuleHelp() const override
 	{
-		return tr( "Commands for managing the configuration of ClassKeep" );
+		return tr( "Commands for managing the configuration of ikeback" );
 	}
 
 	QStringList commands() const override;

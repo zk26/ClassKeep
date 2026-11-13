@@ -15,7 +15,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ClassKeep"
+        android:theme="@style/Theme.ikeback"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"

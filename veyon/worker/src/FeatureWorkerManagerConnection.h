@@ -47,9 +47,9 @@ public:
 
 private:
 	static constexpr auto ConnectTimeout = 3000;
-	//! ClassKeep 2.3.0: bound the retry loop. A worker that never reaches the
+	//! ikeback 2.3.0: bound the retry loop. A worker that never reaches the
 	//! service (service restarted, session changed, stdin token lost) used to
-	//! retry every 3 s forever and pile up as idle ClassKeep-worker.exe processes.
+	//! retry every 3 s forever and pile up as idle ikeback-worker.exe processes.
 	static constexpr auto StartupTimeout = 45000;
 
 	void tryConnection();

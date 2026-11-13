@@ -37,7 +37,7 @@
 ConfigCommands::ConfigCommands( QObject* parent ) :
 	QObject( parent ),
 	m_commands( {
-{ QStringLiteral("clear"), tr( "Clear system-wide ClassKeep configuration" ) },
+{ QStringLiteral("clear"), tr( "Clear system-wide ikeback configuration" ) },
 { QStringLiteral("list"), tr( "List all configuration keys and values" ) },
 { QStringLiteral("import"), tr( "Import configuration from given file" ) },
 { QStringLiteral("export"), tr( "Export configuration to given file" ) },

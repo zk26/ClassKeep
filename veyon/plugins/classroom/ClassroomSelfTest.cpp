@@ -49,7 +49,7 @@ int main( int argc, char** argv )
 		   QStringLiteral("a&lt;b&gt;&amp;&quot;"), "xml escaping" );
 	check( ClassroomSecrets::reveal( QStringLiteral("plain-key") ) == QStringLiteral("plain-key"),
 		   "legacy plain secrets stay readable" );
-	// Shared HMAC reference vector with mobile/ClassKeepCryptoTest.
+	// Shared HMAC reference vector with mobile/IkebackCryptoTest.
 	const auto referenceToken = ClassroomSecrets::requestToken(
 		QStringLiteral("ABC123"), QStringLiteral("GET"), QStringLiteral("/api/classroom/state"),
 		QStringLiteral("nonce-0001"), QByteArray() );
@@ -73,8 +73,8 @@ int main( int argc, char** argv )
 											  QStringLiteral("/api/classroom/score"),
 											  QStringLiteral("nonce-0001"), QByteArrayLiteral("[]") ),
 		   "HMAC is bound to method, path, nonce and body" );
-	check( Classroom::announcementPrefix() == QStringLiteral("CLASSKEEP:") &&
-		   Classroom::discoveryMagic() == QStringLiteral("CLASSKEEP_DISCOVER"),
+	check( Classroom::announcementPrefix() == QStringLiteral("IKEBACK:") &&
+		   Classroom::discoveryMagic() == QStringLiteral("IKEBACK_DISCOVER"),
 		   "mobile discovery constants match the Kotlin app" );
 
 	// Bridge request parsing: half packets, oversized bodies and bad inputs.

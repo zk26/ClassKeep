@@ -1,5 +1,5 @@
 /*
- * ClassroomSignInDialog.cpp - ClassKeep name + seat sign-in dialog
+ * ClassroomSignInDialog.cpp - ikeback name + seat sign-in dialog
  *
  * This file is part of the Veyon classroom modification.
  */

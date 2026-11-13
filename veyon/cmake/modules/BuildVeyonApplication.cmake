@@ -10,16 +10,16 @@ function(build_veyon_application TARGET)
 		""
 		"SOURCES")
 
-	# ClassKeep 2.0: every shipped process is named ClassKeep-* so that Task
+	# ikeback 2.0: every shipped process is named ikeback-* so that Task
 	# Manager / service console / firewall rules are unambiguous to teachers.
 	# The CMake target keeps its upstream `veyon-*` name (CI --target lists and
 	# plugin build graphs still refer to it); only the OUTPUT_NAME changes.
-	string(REPLACE "veyon-" "ClassKeep-" CLASSKEEP_OUTPUT_NAME "${TARGET}")
+	string(REPLACE "veyon-" "ikeback-" IKEBACK_OUTPUT_NAME "${TARGET}")
 	if(VEYON_BUILD_ANDROID)
 		add_library(${TARGET} SHARED ${arg_SOURCES})
 	else()
 		add_executable(${TARGET} ${arg_SOURCES})
-		set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "${CLASSKEEP_OUTPUT_NAME}")
+		set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "${IKEBACK_OUTPUT_NAME}")
 		install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
 	endif()
 	target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src)

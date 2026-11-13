@@ -141,7 +141,7 @@ bool FeatureWorkerManager::startUnmanagedSessionWorker( Feature::Uid featureUid 
 		return false;
 	}
 
-	// ClassKeep 2.2.0: starting a session worker must be idempotent. The old
+	// ikeback 2.2.0: starting a session worker must be idempotent. The old
 	// unconditional stopWorker() tore down a worker that had only just been
 	// launched (its authentication takes up to 30s) and started a brand new OS
 	// process on every queued message, leaving the previous processes behind.
@@ -225,7 +225,7 @@ bool FeatureWorkerManager::stopWorker( Feature::Uid featureUid )
 		if( worker.process )
 		{
 			// Terminate immediately. Waiting 5s while a replacement is already
-			// being started is what left several ClassKeep-worker.exe instances
+			// being started is what left several ikeback-worker.exe instances
 			// alive at the same time (visible as ~10 entries in Task Manager).
 			worker.process->terminate();
 			auto killTimer = new QTimer;
@@ -279,7 +279,7 @@ void FeatureWorkerManager::sendMessageToUnmanagedSessionWorker( const FeatureMes
 
 void FeatureWorkerManager::enqueueSessionWorkerMessage(const FeatureMessage& message)
 {
-	// ClassKeep 2.2.0: the map operator[] below IS the creation. Upstream
+	// ikeback 2.2.0: the map operator[] below IS the creation. Upstream
 	// bailed out here whenever the queue did not exist yet - and nothing ever
 	// created it - so every message sent before a session worker was ready was
 	// silently dropped. Keep the queue instead so retryPendingSessionWorker-

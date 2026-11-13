@@ -127,7 +127,7 @@ ClassroomMasterDialog::ClassroomMasterDialog( VeyonMasterInterface& master,
 	// user, so the one-time enc: -> dpapi: migration must happen here.
 	if( m_settings.migrateSecrets() == false )
 	{
-		qWarning( "ClassKeep: could not migrate legacy settings.json secrets" );
+		qWarning( "ikeback: could not migrate legacy settings.json secrets" );
 	}
 	currentSessionId();
 	refreshRosterTable();
@@ -583,8 +583,8 @@ void ClassroomMasterDialog::registerComputers( const QVector<ClassroomStudent>& 
 	if( configuration.isStoreWritable() == false )
 	{
 		QMessageBox::information( this, windowTitle(),
-								  tr( "ClassKeep Master cannot write the global computer directory. "
-									  "Run it as administrator or use the ClassKeep Configurator. "
+								  tr( "ikeback Master cannot write the global computer directory. "
+									  "Run it as administrator or use the ikeback Configurator. "
 									  "IP addresses can still be reached directly." ) );
 		return;
 	}
@@ -1465,7 +1465,7 @@ void ClassroomMasterDialog::setToolStatus( const QString& text )
 
 void ClassroomMasterDialog::setClientProtection( bool enabled )
 {
-	// CLIENT protection: stop the student from quitting the ClassKeep worker /
+	// CLIENT protection: stop the student from quitting the ikeback worker /
 	// floating card. Completely unrelated to UWF or the uninstall guard.
 	auto message = Classroom::message( Command::SetExitProtection );
 	message.addArgument( Argument::Enabled, enabled );
@@ -1478,7 +1478,7 @@ void ClassroomMasterDialog::setClientProtection( bool enabled )
 	if( m_exitProtection ) { m_exitProtection->setChecked( enabled ); }
 
 	setToolStatus( enabled ?
-		tr( "Client protection ON: students can no longer quit the ClassKeep card." ) :
+		tr( "Client protection ON: students can no longer quit the ikeback card." ) :
 		tr( "Client protection OFF: the card may now be closed (use only for maintenance)." ) );
 	appendTeacherEvent( EventType::protection(),
 						enabled ? tr( "client protection enabled" ) : tr( "client protection disabled" ) );
@@ -1723,7 +1723,7 @@ void ClassroomMasterDialog::setupTimetableTab()
 	} );
 	connect( exportTimetable, &QPushButton::clicked, this, [this]() {
 		const auto path = QFileDialog::getSaveFileName( this, tr( "Export timetable JSON" ),
-													   QStringLiteral("ClassKeep-timetable.json"),
+													   QStringLiteral("ikeback-timetable.json"),
 													   tr( "JSON (*.json);;All files (*)" ) );
 		if( path.isEmpty() ) { return; }
 		QFile source( timetableFilePath() );
@@ -1810,7 +1810,7 @@ void ClassroomMasterDialog::setupToolsTab()
 	scopeRow->addWidget( m_toolsStatus, 1 );
 	layout->addLayout( scopeRow );
 
-	auto* note = new QLabel( tr( "Client protection = students cannot quit the ClassKeep card. "
+	auto* note = new QLabel( tr( "Client protection = students cannot quit the ikeback card. "
 								 "UWF = Windows write filter / restore on reboot, disabled before installing software. "
 								 "They are independent switches." ), page );
 	note->setWordWrap( true );
@@ -1979,7 +1979,7 @@ void ClassroomMasterDialog::setupToolsTab()
 		{ tr( "Refresh" ), [this]() { refreshStatus(); refreshMachines(); } } } );
 
 	auto* toolbarHint = new QLabel(
-		tr( "All actions are available from the ClassKeep tool bar: open the \"Quick tools\" menu, "
+		tr( "All actions are available from the ikeback tool bar: open the \"Quick tools\" menu, "
 			"or press the \"Check-in\" button. This page only holds their parameters." ), page );
 	toolbarHint->setWordWrap( true );
 	toolbarHint->setStyleSheet( QStringLiteral("color:#546e7a; font-size:11px;") );
@@ -2097,8 +2097,8 @@ void ClassroomMasterDialog::refreshSeatGrid()
 				// Qualify through QObject: ComputerControlInterface hides the
 				// base setProperty() with a QUuid-keyed overload of its own.
 				auto* object = static_cast<QObject*>( controlInterface.data() );
-				object->setProperty( "classkeepScore", m_scorePanel->scoreForSeat( student.seat ) );
-				object->setProperty( "classkeepProtected",
+				object->setProperty( "ikebackScore", m_scorePanel->scoreForSeat( student.seat ) );
+				object->setProperty( "ikebackProtected",
 									 settingsJson().value( SettingKey::exitProtection() ).toBool( true ) );
 				break;
 			}
@@ -2333,7 +2333,7 @@ void ClassroomMasterDialog::setupSystemTab()
 	{
 		if( m_bridge->start( m_bridgePort->value(), QHostAddress( m_teacherIp->text().trimmed() ) ) == false )
 		{
-			qWarning( "ClassKeep: mobile bridge did not start" );
+			qWarning( "ikeback: mobile bridge did not start" );
 		}
 		m_systemStatus->setText( m_bridge->status() );
 	}

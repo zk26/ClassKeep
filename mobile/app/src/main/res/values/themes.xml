@@ -1,26 +1,26 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Base.Theme.ClassKeep" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/ck_primary</item>
-        <item name="colorPrimaryDark">@color/ck_primary_dark</item>
-        <item name="colorAccent">@color/ck_accent</item>
-        <item name="colorSurface">@color/ck_card</item>
-        <item name="android:colorBackground">@color/ck_background</item>
-        <item name="android:textColorPrimary">@color/ck_title</item>
-        <item name="android:textColorSecondary">@color/ck_body</item>
+    <style name="Base.Theme.ikeback" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/ikeback_primary</item>
+        <item name="colorPrimaryDark">@color/ikeback_primary_dark</item>
+        <item name="colorAccent">@color/ikeback_accent</item>
+        <item name="colorSurface">@color/ikeback_card</item>
+        <item name="android:colorBackground">@color/ikeback_background</item>
+        <item name="android:textColorPrimary">@color/ikeback_title</item>
+        <item name="android:textColorSecondary">@color/ikeback_body</item>
         <!-- targetSdk 35+ enforces edge-to-edge: statusBarColor is ignored and
              the bar is transparent over a light background, so icons must be dark. -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowBackground">@color/ck_background</item>
+        <item name="android:windowBackground">@color/ikeback_background</item>
     </style>
 
-    <style name="Theme.ClassKeep" parent="Base.Theme.ClassKeep" />
+    <style name="Theme.ikeback" parent="Base.Theme.ikeback" />
 
-    <style name="ClassKeepSection">
+    <style name="IkebackSection">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginBottom">10dp</item>
-        <item name="android:textColor">@color/ck_title</item>
+        <item name="android:textColor">@color/ikeback_title</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.02</item>

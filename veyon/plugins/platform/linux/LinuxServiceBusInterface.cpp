@@ -172,9 +172,9 @@ bool LinuxServiceBusInterface::verifyCaller() const
 	}
 
 	static const QStringList allowedExecutables = {
-		QStringLiteral("ClassKeep-server") + VeyonCore::executableSuffix(),
-		QStringLiteral("ClassKeep-master") + VeyonCore::executableSuffix(),
-		QStringLiteral("ClassKeep-configurator") + VeyonCore::executableSuffix(),
+		QStringLiteral("ikeback-server") + VeyonCore::executableSuffix(),
+		QStringLiteral("ikeback-master") + VeyonCore::executableSuffix(),
+		QStringLiteral("ikeback-configurator") + VeyonCore::executableSuffix(),
 	};
 
 	const auto binaryDirectory = QFileInfo(QCoreApplication::applicationDirPath()).canonicalFilePath();

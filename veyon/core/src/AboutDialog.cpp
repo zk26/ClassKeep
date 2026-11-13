@@ -37,7 +37,7 @@ AboutDialog::AboutDialog( QWidget *parent ) :
 {
 	ui->setupUi( this );
 
-	setWindowTitle(tr("About ClassKeep %1").arg(VeyonCore::versionString()));
+	setWindowTitle(tr("About ikeback %1").arg(VeyonCore::versionString()));
 
 	ui->versionLabel->setText( VeyonCore::versionString() );
 
@@ -65,5 +65,5 @@ AboutDialog::~AboutDialog()
 
 void AboutDialog::openDonationWebsite()
 {
-	  QDesktopServices::openUrl( QUrl( QStringLiteral( "https://github.com/zk26/ClassKeep" ) ) );
+	  QDesktopServices::openUrl( QUrl( QStringLiteral( "https://github.com/zk26/ikeback" ) ) );
 }

@@ -11,7 +11,7 @@
 
 #define FOREACH_CLASSROOM_CONFIG_PROPERTY(OP) \
 	OP( ClassroomConfiguration, m_configuration, bool, enabled, setEnabled, "Enabled", "Classroom", true, Configuration::Property::Flag::Standard ) \
-	OP( ClassroomConfiguration, m_configuration, QString, dataDirectory, setDataDirectory, "DataDirectory", "Classroom", QStringLiteral("%APPDATA%/ClassKeep"), Configuration::Property::Flag::Standard ) \
+	OP( ClassroomConfiguration, m_configuration, QString, dataDirectory, setDataDirectory, "DataDirectory", "Classroom", QStringLiteral("%APPDATA%/ikeback"), Configuration::Property::Flag::Standard ) \
 	OP( ClassroomConfiguration, m_configuration, QString, sessionKey, setSessionKey, "SessionKey", "Classroom", QString(), Configuration::Property::Flag::Standard ) \
 	OP( ClassroomConfiguration, m_configuration, bool, exitProtection, setExitProtection, "ExitProtection", "Classroom", true, Configuration::Property::Flag::Standard ) \
 	OP( ClassroomConfiguration, m_configuration, bool, exitRequiresAdmin, setExitRequiresAdmin, "ExitRequiresAdmin", "Classroom", true, Configuration::Property::Flag::Standard ) \

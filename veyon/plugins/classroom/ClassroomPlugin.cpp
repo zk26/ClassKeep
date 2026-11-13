@@ -66,7 +66,7 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 							   Feature::Flag::Action | Feature::Flag::Master,
 							   consoleFeatureUid(), Feature::Uid(),
 							   Classroom::productName(), {},
-							   tr( "ClassKeep - classes, sign-in by IP, logs, scoring and control" ),
+							   tr( "ikeback - classes, sign-in by IP, logs, scoring and control" ),
 							   QStringLiteral(":/core/icon22.png") ) ),
 	m_clientFeature( Feature( QStringLiteral("ClassroomClient"),
 							  Feature::Flag::Session | Feature::Flag::Service | Feature::Flag::Worker,
@@ -89,7 +89,7 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 							   QStringLiteral(":/core/edit-delete.png") ) ),
 	// 2.3.0: the quick tools and check-in actions are first-class tool-bar
 	// buttons. They only open UI in the Master process - no Worker flag, so no
-	// extra ClassKeep Worker process is created.
+	// extra ikeback Worker process is created.
 	m_quickToolsFeature( Feature( QStringLiteral("ClassroomQuickTools"),
 								  Feature::Flag::Action | Feature::Flag::Master,
 								  quickToolsFeatureUid(), Feature::Uid(),
@@ -126,7 +126,7 @@ ClassroomPlugin::~ClassroomPlugin()
 
 void ClassroomPlugin::ensureTrayIcon()
 {
-	// The ClassKeep worker always runs in the interactive user session, so it
+	// The ikeback worker always runs in the interactive user session, so it
 	// can own the tray icon itself. Veyon's built-in SystemTrayIcon feature is
 	// a separate worker process which is exactly what we want to avoid here.
 	if( m_trayIcon ) { return; }
@@ -146,7 +146,7 @@ void ClassroomPlugin::ensureTrayIcon()
 	m_trayIcon->setToolTip( Classroom::productName() );
 
 	auto* menu = new QMenu;
-	menu->addAction( tr( "Show ClassKeep card" ), this, [this]() {
+	menu->addAction( tr( "Show ikeback card" ), this, [this]() {
 		if( m_clientWidget ) { m_clientWidget->reactivate(); }
 	} );
 	menu->addAction( tr( "My score" ), this, [this]() {
@@ -342,7 +342,7 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 
 	if( feature.uid() != consoleFeatureUid() ) { return false; }
 
-	// ClassKeep 2.2.0: the console is no longer a floating QDialog. It lives in
+	// ikeback 2.2.0: the console is no longer a floating QDialog. It lives in
 	// a docked panel inside the Veyon Master main window so the monitoring view
 	// and the classroom tools are visible at the same time. Fall back to a
 	// standalone widget only when there is no QMainWindow (e.g. headless tests).
@@ -353,7 +353,7 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 		{
 			m_dialog = new ClassroomMasterDialog( master, m_configuration, *roster(), *store(), *settings() );
 			auto* dock = new QDockWidget( Classroom::productName(), mainWindow );
-			dock->setObjectName( QStringLiteral("ClassKeepConsoleDock") );
+			dock->setObjectName( QStringLiteral("IkebackConsoleDock") );
 			dock->setAllowedAreas( Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea );
 			dock->setFeatures( QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
 							   QDockWidget::DockWidgetFloatable );
@@ -386,7 +386,7 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 	// One message, one session-worker wake-up. The old three-message burst
 	// re-armed the watchdog and repeatedly called startUnmanagedSessionWorker()
 	// while the previous worker was still being torn down (5s kill timer),
-	// which is what produced a dozen ClassKeep-worker.exe processes.
+	// which is what produced a dozen ikeback-worker.exe processes.
 	auto stateMessage = Classroom::message( Command::ApplySession );
 	stateMessage.addArgument( Argument::SettingsJson,
 							  QString::fromUtf8( QJsonDocument( ClassroomSettings::forStudents( settings()->object() ) ).
@@ -429,7 +429,7 @@ void ClassroomPlugin::startSessionFeature( VeyonServerInterface& server )
 	m_watchdog = new QTimer( this );
 	// 30s matches FeatureWorkerManager's authentication timeout. Polling every
 	// 5s used to re-enter startClient() while the previous worker was still
-	// authenticating, multiplying ClassKeep-worker.exe processes.
+	// authenticating, multiplying ikeback-worker.exe processes.
 	m_watchdog->setInterval( 30000 );
 	connect( m_watchdog, &QTimer::timeout, this, [this]() {
 		if( m_stopAllowed || m_server == nullptr || m_configuration.enabled() == false ) { return; }
@@ -962,7 +962,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		const bool protect = message.argument( Argument::Enabled ).toBool();
 		bool confirmed = false;
 #ifdef Q_OS_WIN
-		QSettings settings( QStringLiteral("HKEY_LOCAL_MACHINE\\SOFTWARE\\ClassKeep\\Student"),
+		QSettings settings( QStringLiteral("HKEY_LOCAL_MACHINE\\SOFTWARE\\ikeback\\Student"),
 							QSettings::Registry64Format );
 		settings.setValue( QStringLiteral("UninstallProtection"), protect ? 1 : 0 );
 		settings.sync();
@@ -971,7 +971,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		confirmed = status == QSettings::NoError && readBack == ( protect ? 1 : 0 );
 		if( confirmed == false )
 		{
-			qWarning( "ClassKeep: SetUninstallProtection failed (status=%d, readback=%d, lastError=%s)",
+			qWarning( "ikeback: SetUninstallProtection failed (status=%d, readback=%d, lastError=%s)",
 					  static_cast<int>( status ), readBack, qPrintable( ClassroomSystem::lastError() ) );
 		}
 #endif
@@ -997,7 +997,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	case Command::SetMute:
 		if( ClassroomSystem::setMute( message.argument( Argument::Enabled ).toBool() ) == false )
 		{
-			qWarning( "ClassKeep: SetMute failed: %s", qPrintable( ClassroomSystem::lastError() ) );
+			qWarning( "ikeback: SetMute failed: %s", qPrintable( ClassroomSystem::lastError() ) );
 		}
 		reportEvent( EventType::mute(), QStringLiteral("audio mute changed by teacher"), {} );
 		break;
@@ -1009,7 +1009,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		const auto teacherIp = Classroom::sanitizeUnicastIp( message.argument( Argument::Ip ).toString() );
 		if( ClassroomSystem::setInternetBlock( message.argument( Argument::Enabled ).toBool(), teacherIp ) == false )
 		{
-			qWarning( "ClassKeep: SetInternetBlock failed: %s", qPrintable( ClassroomSystem::lastError() ) );
+			qWarning( "ikeback: SetInternetBlock failed: %s", qPrintable( ClassroomSystem::lastError() ) );
 		}
 		reportEvent( EventType::internet(), QStringLiteral("InternetGuard changed by teacher"), {} );
 		break;
@@ -1025,7 +1025,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 	case Command::UwfSetFilter:
 		if( ClassroomSystem::setUwfFilter( message.argument( Argument::Enabled ).toBool() ) == false )
 		{
-			qWarning( "ClassKeep: UwfSetFilter failed: %s", qPrintable( ClassroomSystem::lastError() ) );
+			qWarning( "ikeback: UwfSetFilter failed: %s", qPrintable( ClassroomSystem::lastError() ) );
 		}
 		reportEvent( EventType::uwf(), QStringLiteral("UWF filter change queued (reboot required)"), {} );
 		break;
@@ -1061,7 +1061,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		if( path.isEmpty() || info.isFile() == false ||
 			info.suffix().compare( QStringLiteral("exe"), Qt::CaseInsensitive ) != 0 )
 		{
-			qWarning( "ClassKeep: OpenSoftware rejected a non-.exe or missing path" );
+			qWarning( "ikeback: OpenSoftware rejected a non-.exe or missing path" );
 			break;
 		}
 		const auto args = message.argument( Argument::SoftwareArgs ).toString();

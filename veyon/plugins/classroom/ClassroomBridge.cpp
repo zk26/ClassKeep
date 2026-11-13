@@ -104,13 +104,13 @@ bool ClassroomBridge::start( int port, const QHostAddress& bindAddress )
 	if( address.isNull() ) { address = localUnicastAddress(); }
 	if( ClassroomBridge::sanitizeTeacherIp( address.toString() ).isEmpty() )
 	{
-		qWarning( "ClassKeep: refusing to start the bridge on %s (not a LAN unicast address)",
+		qWarning( "ikeback: refusing to start the bridge on %s (not a LAN unicast address)",
 				  qPrintable( address.toString() ) );
 		return false;
 	}
 	if( m_server->listen( address, static_cast<quint16>( port ) ) == false )
 	{
-		qWarning( "ClassKeep: bridge could not listen on %s:%d: %s", qPrintable( address.toString() ),
+		qWarning( "ikeback: bridge could not listen on %s:%d: %s", qPrintable( address.toString() ),
 				  port, qPrintable( m_server->errorString() ) );
 		return false;
 	}
@@ -122,7 +122,7 @@ bool ClassroomBridge::start( int port, const QHostAddress& bindAddress )
 	if( m_udp->bind( QHostAddress::Any, static_cast<quint16>( port ),
 					 QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint ) == false )
 	{
-		qWarning( "ClassKeep: discovery socket could not bind: %s", qPrintable( m_udp->errorString() ) );
+		qWarning( "ikeback: discovery socket could not bind: %s", qPrintable( m_udp->errorString() ) );
 	}
 	m_broadcastTimer->start();
 	broadcast();
@@ -217,7 +217,7 @@ void ClassroomBridge::noteAuthFailure( const QString& peer )
 	if( ++failure.count < AuthFailureLimit ) { return; }
 	failure.count = 0;
 	failure.lockUntil = QDateTime::currentDateTime().addSecs( AuthLockSeconds );
-	qWarning( "ClassKeep: bridge authentication locked for %s after %d failures",
+	qWarning( "ikeback: bridge authentication locked for %s after %d failures",
 			  qPrintable( peer ), AuthFailureLimit );
 }
 
@@ -530,7 +530,7 @@ void ClassroomBridge::handleCommand( const QJsonObject& command, bool* handled )
 	}
 	else
 	{
-		qWarning( "ClassKeep: bridge rejected unknown command %s", qPrintable( name ) );
+		qWarning( "ikeback: bridge rejected unknown command %s", qPrintable( name ) );
 		return;
 	}
 
@@ -806,6 +806,6 @@ void ClassroomBridge::handleRoute( QTcpSocket* socket, const QString& method,
 		return;
 	}
 
-	qWarning( "ClassKeep: bridge 404 for %s %s", qPrintable( method ), qPrintable( path ) );
+	qWarning( "ikeback: bridge 404 for %s %s", qPrintable( method ), qPrintable( path ) );
 	respondError( socket, 404, QByteArrayLiteral("Not Found"), QStringLiteral("unknown route") );
 }

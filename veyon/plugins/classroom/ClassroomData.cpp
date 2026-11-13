@@ -135,7 +135,7 @@ bool ClassroomSettings::migrateSecrets()
 			onDisk.value( key ).toString().isEmpty() == false &&
 			m_object.value( key ).toString().isEmpty() )
 		{
-			qWarning( "ClassKeep: refusing to migrate %s: secret could not be revealed", qPrintable( key ) );
+			qWarning( "ikeback: refusing to migrate %s: secret could not be revealed", qPrintable( key ) );
 			return false;
 		}
 	}
@@ -188,7 +188,7 @@ bool ClassroomSettings::save() const
 			const auto protectedValue = ClassroomSecrets::protect( plain );
 			if( plain.isEmpty() == false && protectedValue.isEmpty() )
 			{
-				qWarning( "ClassKeep: could not protect %s, refusing to store it in the clear", qPrintable( key ) );
+				qWarning( "ikeback: could not protect %s, refusing to store it in the clear", qPrintable( key ) );
 				return false;
 			}
 			onDisk.insert( key, protectedValue );

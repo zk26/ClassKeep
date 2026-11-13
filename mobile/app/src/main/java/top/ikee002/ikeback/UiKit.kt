@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
@@ -39,7 +39,7 @@ object Ui {
     /** Outer container: one hairline border, no elevation (no muddy shadows). */
     fun card(context: Context): LinearLayout = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        background = shape(context, c(context, R.color.ck_card), 20, c(context, R.color.ck_border))
+        background = shape(context, c(context, R.color.ikeback_card), 20, c(context, R.color.ikeback_border))
         val pad = dp(context, 16)
         setPadding(pad, dp(context, 18), pad, dp(context, 18))
         layoutParams = LinearLayout.LayoutParams(
@@ -51,7 +51,7 @@ object Ui {
     fun section(context: Context, text: String): TextView = TextView(context).apply {
         this.text = text
         textSize = 16f
-        setTextColor(c(context, R.color.ck_title))
+        setTextColor(c(context, R.color.ikeback_title))
         setTypeface(typeface, android.graphics.Typeface.BOLD)
         letterSpacing = 0.02f
         layoutParams = LinearLayout.LayoutParams(
@@ -62,14 +62,14 @@ object Ui {
     fun body(context: Context, text: String = "", size: Float = 13f): TextView = TextView(context).apply {
         this.text = text
         textSize = size
-        setTextColor(c(context, R.color.ck_body))
+        setTextColor(c(context, R.color.ikeback_body))
         setLineSpacing(dp(context, 3).toFloat(), 1f)
     }
 
     fun helper(context: Context, text: String): TextView = TextView(context).apply {
         this.text = text
         textSize = 11f
-        setTextColor(c(context, R.color.ck_hint))
+        setTextColor(c(context, R.color.ikeback_hint))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply { topMargin = dp(context, 6) }
@@ -98,15 +98,15 @@ object Ui {
         val labelView = TextView(context).apply {
             text = label
             textSize = 12f
-            setTextColor(c(context, R.color.ck_secondary))
+            setTextColor(c(context, R.color.ikeback_secondary))
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         }
         val edit = EditText(context).apply {
             setText(initial)
-            setTextColor(c(context, R.color.ck_title))
-            setHintTextColor(c(context, R.color.ck_hint))
+            setTextColor(c(context, R.color.ikeback_title))
+            setHintTextColor(c(context, R.color.ikeback_hint))
             textSize = 14f
-            background = shape(context, c(context, R.color.ck_input_bg), 14)
+            background = shape(context, c(context, R.color.ikeback_input_bg), 14)
             val p = dp(context, 12)
             setPadding(p, dp(context, 11), p, dp(context, 11))
             isSingleLine = true
@@ -140,9 +140,9 @@ object Ui {
             ).apply { topMargin = dp(context, 8) }
             minimumHeight = dp(context, 44)
             minHeight = dp(context, 44)
-            val normal = if (primary) c(context, R.color.ck_primary) else c(context, R.color.ck_chip_bg)
-            val pressed = if (primary) c(context, R.color.ck_primary_dark) else c(context, R.color.ck_chip_pressed)
-            val fg = if (primary) c(context, R.color.white) else c(context, R.color.ck_primary)
+            val normal = if (primary) c(context, R.color.ikeback_primary) else c(context, R.color.ikeback_chip_bg)
+            val pressed = if (primary) c(context, R.color.ikeback_primary_dark) else c(context, R.color.ikeback_chip_pressed)
+            val fg = if (primary) c(context, R.color.white) else c(context, R.color.ikeback_primary)
             setTextColor(fg)
             background = StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_pressed), shape(context, pressed, 14))
@@ -171,10 +171,10 @@ object Ui {
         this.text = text
         textSize = 11f
         setTypeface(typeface, android.graphics.Typeface.BOLD)
-        setTextColor(c(context, if (ok) R.color.ck_badge_ok_fg else R.color.ck_badge_off_fg))
+        setTextColor(c(context, if (ok) R.color.ikeback_badge_ok_fg else R.color.ikeback_badge_off_fg))
         background = shape(
             context,
-            c(context, if (ok) R.color.ck_badge_ok_bg else R.color.ck_badge_off_bg),
+            c(context, if (ok) R.color.ikeback_badge_ok_bg else R.color.ikeback_badge_off_bg),
             12
         )
         val h = dp(context, 12)

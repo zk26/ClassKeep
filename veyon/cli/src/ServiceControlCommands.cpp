@@ -29,12 +29,12 @@
 ServiceControlCommands::ServiceControlCommands( QObject* parent ) :
 	QObject( parent ),
 	m_commands( {
-{ QStringLiteral("register"), tr( "Register ClassKeep Service" ) },
-{ QStringLiteral("unregister"), tr( "Unregister ClassKeep Service" ) },
-{ QStringLiteral("start"), tr( "Start ClassKeep Service" ) },
-{ QStringLiteral("stop"), tr( "Stop ClassKeep Service" ) },
-{ QStringLiteral("restart"), tr( "Restart ClassKeep Service" ) },
-{ QStringLiteral("status"), tr( "Query status of ClassKeep Service" ) },
+{ QStringLiteral("register"), tr( "Register ikeback Service" ) },
+{ QStringLiteral("unregister"), tr( "Unregister ikeback Service" ) },
+{ QStringLiteral("start"), tr( "Start ikeback Service" ) },
+{ QStringLiteral("stop"), tr( "Stop ikeback Service" ) },
+{ QStringLiteral("restart"), tr( "Restart ikeback Service" ) },
+{ QStringLiteral("status"), tr( "Query status of ikeback Service" ) },
 				} )
 {
 }

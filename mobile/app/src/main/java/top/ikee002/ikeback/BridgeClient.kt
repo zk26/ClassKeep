@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import org.json.JSONObject
 import java.io.IOException
@@ -8,12 +8,12 @@ import java.net.URL
 class UnauthorizedException : IOException("课堂密钥被教师机拒绝")
 
 /**
- * Talks to the teacher machine's ClassKeep bridge.
+ * Talks to the teacher machine's ikeback bridge.
  *
  * Reuses the per-lesson connection key. The key itself is never transmitted:
  * every request proves knowledge of it with an HMAC-SHA256 over the method,
  * path, nonce and body hash. /state issues a single-use challenge, so one
- * nonce can never authorize two requests (see ClassKeepCrypto).
+ * nonce can never authorize two requests (see IkebackCrypto).
  * Uses only the JDK/Android built-ins - no Retrofit, OkHttp or crypto library.
  */
 class BridgeClient {
@@ -51,7 +51,7 @@ class BridgeClient {
             if (auth) {
                 connection.setRequestProperty("X-Classroom-Nonce", challenge)
                 connection.setRequestProperty("X-Classroom-Token",
-                    ClassKeepCrypto.token(lessonKey, method, "/api/classroom/$route", challenge, body))
+                    IkebackCrypto.token(lessonKey, method, "/api/classroom/$route", challenge, body))
             }
             if (body != null) {
                 connection.doOutput = true

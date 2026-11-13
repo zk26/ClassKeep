@@ -60,7 +60,7 @@ CommandLinePluginInterface::RunResult ShellCommands::handle_main()
 
 	while( true )
 	{
-		printf("CLASSKEEP> ");
+		printf("IKEBACK> ");
 
 		QString line;
 		if( stream.readLineInto( &line ) && line != QLatin1String("exit") )

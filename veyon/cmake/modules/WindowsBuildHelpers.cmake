@@ -13,10 +13,10 @@ function(add_windows_resources TARGET)
 	endif()
 
 	if (NOT arg_DESCRIPTION)
-		set(arg_DESCRIPTION "ClassKeep ${arg_NAME}")
+		set(arg_DESCRIPTION "ikeback ${arg_NAME}")
 	endif()
 
-	string(REPLACE "veyon-" "ClassKeep-" CLASSKEEP_OUTPUT_NAME "${TARGET}")
+	string(REPLACE "veyon-" "ikeback-" IKEBACK_OUTPUT_NAME "${TARGET}")
 
 	if (arg_CONSOLE)
 		set_target_properties(${TARGET} PROPERTIES LINK_FLAGS -mconsole)
@@ -47,14 +47,14 @@ function(add_windows_resources TARGET)
 		"	BEGIN\n"
 		"		BLOCK \"040904E4\"\n"
 		"		BEGIN\n"
-		"			VALUE \"Comments\",         \"ClassKeep - based on Veyon (https://veyon.io)\\0\"\n"
+		"			VALUE \"Comments\",         \"ikeback - based on Veyon (https://veyon.io)\\0\"\n"
 		"			VALUE \"CompanyName\",      \"zk26\\0\"\n"
-		"			VALUE \"ProductName\",      \"ClassKeep\\0\"\n"
+		"			VALUE \"ProductName\",      \"ikeback\\0\"\n"
 		"			VALUE \"ProductVersion\",   \"${VERSION_STRING}\\0\"\n"
 		"			VALUE \"FileDescription\",  \"${arg_DESCRIPTION}\\0\"\n"
 		"			VALUE \"FileVersion\",      \"${VERSION_STRING}\\0\"\n"
 		"			VALUE \"LegalCopyright\",   \"Copyright (c) 2017-2026 Veyon Solutions / Tobias Junghans\\0\"\n"
-		"			VALUE \"OriginalFilename\", \"${CLASSKEEP_OUTPUT_NAME}.${SUFFIX}\\0\"\n"
+		"			VALUE \"OriginalFilename\", \"${IKEBACK_OUTPUT_NAME}.${SUFFIX}\\0\"\n"
 		"		END\n"
 		"	END\n"
 		"	BLOCK \"VarFileInfo\"\n"
@@ -81,7 +81,7 @@ function(add_windows_resources TARGET)
 
 	string(CONCAT MANIFEST_DATA "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
 		"<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\">\n"
-		"	<assemblyIdentity version=\"${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILD}\" name=\"ClassKeep.${arg_NAME}\" type=\"win32\"/>\n"
+		"	<assemblyIdentity version=\"${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}.${VERSION_BUILD}\" name=\"ikeback.${arg_NAME}\" type=\"win32\"/>\n"
 		"	<description>${arg_DESCRIPTION}</description>\n"
 		"	<compatibility xmlns=\"urn:schemas-microsoft-com:compatibility.v1\">\n"
 		"		<application>\n"

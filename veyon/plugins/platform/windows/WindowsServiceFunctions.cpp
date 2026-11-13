@@ -29,7 +29,7 @@
 
 QString WindowsServiceFunctions::veyonServiceName() const
 {
-	return QStringLiteral("ClassKeepService");
+	return QStringLiteral("ikebackService");
 }
 
 

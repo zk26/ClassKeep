@@ -23,10 +23,10 @@ cmake_install.cmake
 *.obj
 *.pdb
 
-# --------------------------------------------------- ClassKeep release output
+# --------------------------------------------------- ikeback release output
 dist/
-ClassKeep-Teacher-*.zip
-ClassKeep-Student-*.zip
+ikeback-teacher-*.zip
+ikeback-student-*.zip
 
 # ------------------------------------------------------------------- Python
 __pycache__/

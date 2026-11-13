@@ -177,7 +177,7 @@ QString Filesystem::screenshotDirectoryPath() const
 QString Filesystem::serverFilePath() const
 {
 	return QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + QDir::separator() +
-									 QStringLiteral("ClassKeep-server" ) + VeyonCore::executableSuffix() );
+									 QStringLiteral("ikeback-server" ) + VeyonCore::executableSuffix() );
 }
 
 
@@ -185,5 +185,5 @@ QString Filesystem::serverFilePath() const
 QString Filesystem::workerFilePath() const
 {
 	return QDir::toNativeSeparators( QCoreApplication::applicationDirPath() + QDir::separator() +
-									 QStringLiteral("ClassKeep-worker" ) + VeyonCore::executableSuffix() );
+									 QStringLiteral("ikeback-worker" ) + VeyonCore::executableSuffix() );
 }

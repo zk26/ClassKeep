@@ -1,5 +1,5 @@
 /*
- * ClassroomSignInDialog.h - ClassKeep name + seat sign-in dialog
+ * ClassroomSignInDialog.h - ikeback name + seat sign-in dialog
  *
  * Replaces Veyon's native username/password logon (usersessioncontrol) with
  * the classroom identity model: a student name and a seat number. No Windows

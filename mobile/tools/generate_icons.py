@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Generate ClassKeep launcher icons from the project logo.
+"""Generate ikeback launcher icons from the project logo.
 
-Source: G:/veyon/ClassKeep_logo.png (repository root, provided by the owner).
+Source: G:/veyon/ikeback_logo.png (repository root, provided by the owner).
 Run from anywhere:  python mobile/tools/generate_icons.py
 
 Produces ic_launcher.png (rounded-square logo) and ic_launcher_round.png
@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 MOBILE = os.path.dirname(TOOLS)
 REPO = os.path.dirname(MOBILE)
-LOGO = os.path.join(REPO, "ClassKeep_logo.png")
+LOGO = os.path.join(REPO, "ikeback_logo.png")
 RES = os.path.join(MOBILE, "app", "src", "main", "res")
 
 SIZES = {
@@ -69,7 +69,7 @@ def main():
 
         print(f"{density:8s} {size:3d}px  -> {folder}")
 
-    print("ClassKeep launcher icons generated.")
+    print("ikeback launcher icons generated.")
 
 
 if __name__ == "__main__":

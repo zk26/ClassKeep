@@ -40,9 +40,9 @@ QMutex Logger::s_instanceMutex;
 Logger::Logger( const QString &appName ) :
 	m_logLevel( LogLevel::Default ),
 	m_logMutex(),
-	// ClassKeep: log files are named ClassKeep<Component>.log so the
+	// ikeback: log files are named ikeback<Component>.log so the
 	// Configurator's "open log" action and Task Manager diagnostics agree.
-	m_appName( QStringLiteral( "ClassKeep" ) + appName ),
+	m_appName( QStringLiteral( "ikeback" ) + appName ),
 	m_logFile( nullptr ),
 	m_logFileSizeLimit( -1 ),
 	m_logFileRotationCount( -1 )

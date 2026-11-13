@@ -1,21 +1,21 @@
-# 课守 ClassKeep
+# ikeback
 
-基于 [Veyon](https://veyon.io/) 4.x 的教学管理定制分支。中文名「课守」，英文名 `ClassKeep`。
-仓库：<https://github.com/zk26/ClassKeep> · 许可 **GPL-2.0-or-later**（`SPDX-License-Identifier: GPL-2.0-or-later`）。
+基于 [Veyon](https://veyon.io/) 4.x 的教学管理定制分支。产品名统一为 `ikeback`（英文小写）。
+仓库：<https://github.com/zk26/ikeback> · 许可 **GPL-2.0-or-later**（`SPDX-License-Identifier: GPL-2.0-or-later`）。
 本分支不是 Veyon 官方版本，与上游项目无隶属、背书或合作关系。
 
 > **部署前必读**：本项目会采集学生行为数据。请先阅读
-> [`CLASSKEEP-PRIVACY.md`](CLASSKEEP-PRIVACY.md) 履行告知与数据保护义务，
-> 再阅读 [`CLASSKEEP-LICENSE.md`](CLASSKEEP-LICENSE.md)、[`../../NOTICE.md`](../../NOTICE.md)
-> 与 [`CLASSKEEP-THIRD-PARTY.md`](CLASSKEEP-THIRD-PARTY.md) 确认许可与分发要求。
+> [`IKEBACK-PRIVACY.md`](IKEBACK-PRIVACY.md) 履行告知与数据保护义务，
+> 再阅读 [`IKEBACK-LICENSE.md`](IKEBACK-LICENSE.md)、[`../../NOTICE.md`](../../NOTICE.md)
+> 与 [`IKEBACK-THIRD-PARTY.md`](IKEBACK-THIRD-PARTY.md) 确认许可与分发要求。
 > 完整文档索引见仓库根 [`../../README.md`](../../README.md)；
-> **逐条需求对照**见 [`CLASSKEEP-FEATURES.md`](CLASSKEEP-FEATURES.md)。
+> **逐条需求对照**见 [`IKEBACK-FEATURES.md`](IKEBACK-FEATURES.md)。
 
 ---
 
 ## 1. 它解决什么
 
-普通 Veyon 解决「看得见、控得住」，课守在此基础上补齐「这堂课是谁、他做了什么、怎么长期评价」：
+普通 Veyon 解决「看得见、控得住」，ikeback 在此基础上补齐「这堂课是谁、他做了什么、怎么长期评价」：
 
 | 能力 | 说明 |
 |---|---|
@@ -38,9 +38,9 @@
 Android 教室端 App
    │  UDP 发现（只带挑战值）  ┌──────────────────────────────┐
    │  HTTP/JSON（密钥认证）   │ 教师机 Veyon Master           │
-   └─────────────────────────>│  ├ 课守控制台（Qt 对话框）    │
+   └─────────────────────────>│  ├ ikeback 控制台（Qt 对话框）    │
                               │  ├ ClassroomBridge（HTTP/UDP）│
-                              │  └ 数据主库 %APPDATA%/ClassKeep│
+                              │  └ 数据主库 %APPDATA%/ikeback│
                               └───────────┬──────────────────┘
                                           │ Veyon FeatureMessage（原有加密 VNC 通道）
                                           v
@@ -62,11 +62,11 @@ Android 教室端 App
 
 ## 3. 目录结构
 
-仓库根为 `G:\veyon`（=<https://github.com/zk26/ClassKeep>），本文件位于 `veyon/docs/`。
+仓库根为 `G:\veyon`（=<https://github.com/zk26/ikeback>），本文件位于 `veyon/docs/`。
 下列路径中，带 `veyon/` 前缀的是桌面端子目录，带 `mobile/` 前缀的是仓库根下的 Android 工程。
 
 ```
-veyon/plugins/classroom/      课守插件（全部新增）
+veyon/plugins/classroom/      ikeback 插件（全部新增）
   ClassroomPlugin.*             Master / Server / Worker 三端消息分发与生命周期
   ClassroomProtocol.h           Feature UID、Command / Argument 枚举、事件类型、配置键、产品名
   ClassroomConfiguration.h      配置项宏
@@ -86,19 +86,19 @@ veyon/plugins/classroom/      课守插件（全部新增）
 ClassroomSelfTest.cpp         零依赖自检用例（WITH_TESTS=ON）
 
 mobile/                       Android 教室端（Kotlin，零第三方网络库）— 唯一工程
-  app/src/main/java/top/ikee002/classkeep/
-  tools/generate_icons.py     从根 ClassKeep_logo.png 生成启动图标
+  app/src/main/java/top/ikee002/ikeback/
+  tools/generate_icons.py     从根 ikeback_logo.png 生成启动图标
 
 核心扩展点（对上游的最小改动）
   veyon/core/src/FeatureProviderInterface.h    增加 startSessionFeature() 钩子
   veyon/core/src/FeatureManager.h/.cpp         增加 startSessionFeatures() 分发
   veyon/server/src/ComputerControlServer.cpp   start() 时调用该钩子
   veyon/master/src/ComputerMonitoringWidget.cpp  Ctrl+双击缩略图直接远控
-  veyon/cmake/modules/WindowsBuildHelpers.cmake  EXE 版本信息产品名改为 ClassKeep
+  veyon/cmake/modules/WindowsBuildHelpers.cmake  EXE 版本信息产品名改为 ikeback
 
 仓库根级
   README.md / LICENSE / NOTICE.md / .gitignore
-  ClassKeep_logo.png           唯一品牌图标来源
+  ikeback_logo.png           唯一品牌图标来源
   .github/workflows/           编译验证 / Windows 构建 / 发布
   veyon/scripts/              依赖闭包收集、NSIS 安装器、图标生成
 ```
@@ -113,7 +113,7 @@ mobile/                       Android 教室端（Kotlin，零第三方网络库
 
 ### 4.1 桌面端（Windows）
 
-> **完整构建方案见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)**。下面只是要点摘要。
+> **完整构建方案见 [`IKEBACK-BUILD.md`](IKEBACK-BUILD.md)**。下面只是要点摘要。
 
 Veyon 4.11.4 的 CMake **只能用 MinGW-w64 / GCC 编译**（硬编码 `-Wno-attributes`、
 `-fno-exceptions`、`-Wl,-no-undefined`、`-mwindows`、`-lws2_32`，
@@ -128,8 +128,8 @@ Veyon 4.11.4 的 CMake **只能用 MinGW-w64 / GCC 编译**（硬编码 `-Wno-at
 
 | 工作流 | 环境 | 验证范围 |
 |---|---|---|
-| [`classkeep-build.yml`](../../.github/workflows/classkeep-build.yml) | Linux/Qt6/GCC | 除 Windows 专属分支外的全部 C++ 文件 + Android APK |
-| [`classkeep-windows.yml`](../../.github/workflows/classkeep-windows.yml) | Windows/MSYS2 UCRT64 | UWF / Core Audio / WFP 专属代码 + 两个 NSIS 安装 EXE |
+| [`ikeback-build.yml`](../../.github/workflows/ikeback-build.yml) | Linux/Qt6/GCC | 除 Windows 专属分支外的全部 C++ 文件 + Android APK |
+| [`ikeback-windows.yml`](../../.github/workflows/ikeback-windows.yml) | Windows/MSYS2 UCRT64 | UWF / Core Audio / WFP 专属代码 + 两个 NSIS 安装 EXE |
 
 `plugins/classroom/` 会被 `plugins/CMakeLists.txt` 的 GLOB 自动发现，无需手工注册；
 但 `-DWITH_CORE_ONLY=ON` 会跳过整个 `plugins/`，必须保持 OFF。
@@ -155,7 +155,7 @@ cd mobile
 4. 教师机 Bridge 每 5 秒广播一次挑战值；App 发现后用本堂课密钥做 SHA-256 摘要请求数据/控制接口。
 5. 期末导出按节次生成列，积分明细富文本经 base64 图片内联后随 `ScoreReply` 下发到学生端 `QTextBrowser`。
 
-完整的命令字、路由、认证算法与文件格式见 [CLASSKEEP-PROTOCOL.md](CLASSKEEP-PROTOCOL.md)。
+完整的命令字、路由、认证算法与文件格式见 [IKEBACK-PROTOCOL.md](IKEBACK-PROTOCOL.md)。
 
 ---
 
@@ -163,16 +163,16 @@ cd mobile
 
 - **Android 端已实测编译通过**：`:app:assembleDebug` 与 `:app:testDebugUnitTest` 均 `BUILD SUCCESSFUL`，
   产出 `app-debug.apk`；本机需 JDK 21+（实测 JDK 23）与 Android SDK。
-- **桌面端 Linux/Qt6/GCC 已真实编译通过**：`ClassKeep Build Check` 产出 `classroom.so`。
-- **桌面端 Windows/Qt6/MinGW 已真实编译通过**：`ClassKeep Windows Build` 产出 `classroom.dll` 与
+- **桌面端 Linux/Qt6/GCC 已真实编译通过**：`ikeback Build Check` 产出 `classroom.so`。
+- **桌面端 Windows/Qt6/MinGW 已真实编译通过**：`ikeback Windows Build` 产出 `classroom.dll` 与
   教师端/学生端全部 `.exe`，UWF / Core Audio / WFP 的 Windows 专属实现均已过编译器。
-  详见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。
+  详见 [`IKEBACK-BUILD.md`](IKEBACK-BUILD.md)。
 - 开发机本身仍缺 Qt/CMake 工具链；以上编译均在 GitHub Actions 上完成。
 - 尚未完成：真实 UWF 学生机上的安装联调与功能验证（需实际机房环境）。
 - UWF 仅存在于 Windows 10/11 **企业版、教育版、IoT 企业版**；专业版/家庭版不支持。
 - `uwfmgr filter enable/disable` 是「排队到下次会话」，必须**重启**才生效，且不能用「关机再开机」代替（快速启动）。
 - Bridge 认证依赖每堂课密钥；教师机未生成密钥时所有数据/控制接口 fail-closed 返回 401。
 - iOS 端尚未提供工程；协议为标准 HTTP/JSON + UDP + SHA-256，可直接复用。
-- 本软件处理学生行为数据，部署前必须阅读 [`CLASSKEEP-PRIVACY.md`](CLASSKEEP-PRIVACY.md)；
-  分发二进制前必须阅读 [`CLASSKEEP-LICENSE.md`](CLASSKEEP-LICENSE.md) 与
-  [`CLASSKEEP-THIRD-PARTY.md`](CLASSKEEP-THIRD-PARTY.md)。
+- 本软件处理学生行为数据，部署前必须阅读 [`IKEBACK-PRIVACY.md`](IKEBACK-PRIVACY.md)；
+  分发二进制前必须阅读 [`IKEBACK-LICENSE.md`](IKEBACK-LICENSE.md) 与
+  [`IKEBACK-THIRD-PARTY.md`](IKEBACK-THIRD-PARTY.md)。

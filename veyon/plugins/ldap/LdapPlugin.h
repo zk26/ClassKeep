@@ -51,7 +51,7 @@ public:
 
 	QString vendor() const override
 	{
-		return QStringLiteral( "ClassKeep" );
+		return QStringLiteral( "ikeback" );
 	}
 
 	QString copyright() const override

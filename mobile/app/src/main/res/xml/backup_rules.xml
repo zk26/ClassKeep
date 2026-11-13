@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    ClassKeep (API <= 30 fallback): the lesson key is stored in
-    getSharedPreferences("classkeep"), so that file must never be backed up.
+    ikeback (API <= 30 fallback): the lesson key is stored in
+    getSharedPreferences("ikeback"), so that file must never be backed up.
 -->
 <full-backup-content>
-    <exclude domain="sharedpref" path="classkeep.xml" />
+    <exclude domain="sharedpref" path="ikeback.xml" />
 </full-backup-content>

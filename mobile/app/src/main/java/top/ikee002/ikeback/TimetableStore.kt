@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import android.content.Context
 import org.json.JSONArray
@@ -185,7 +185,7 @@ fun courseAt(timetable: Timetable, day: Int, row: Int): TimetableCourse? =
 
 class TimetableStore(context: Context) {
     private val prefs = context.applicationContext
-        .getSharedPreferences("classkeep_timetable", Context.MODE_PRIVATE)
+        .getSharedPreferences("ikeback_timetable", Context.MODE_PRIVATE)
 
     fun load(): Timetable = try {
         val raw = prefs.getString("json", "") ?: ""
@@ -241,7 +241,7 @@ class TimetableStore(context: Context) {
          * Accepts three shapes:
          *  1. ClassBoard bundle  { "timetables": [ {...} ] }
          *  2. ClassBoard single  { "name", "timeLabels", "periods":[{label,times,isBreak}], "courses":[...] }
-         *  3. Legacy ClassKeep   { "name", "periods":[{label,start,end,isBreak}], "courses":[{day,period,subject}], "config":{...} }
+         *  3. Legacy ikeback   { "name", "periods":[{label,start,end,isBreak}], "courses":[{day,period,subject}], "config":{...} }
          */
         fun fromJson(raw: String): Timetable {
             val root = JSONObject(raw)

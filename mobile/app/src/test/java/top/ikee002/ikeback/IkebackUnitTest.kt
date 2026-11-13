@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ClassKeepUnitTest {
+class IkebackUnitTest {
 
     @Test
     fun tokenMatchesTeacherMachineReference() {
@@ -14,14 +14,14 @@ class ClassKeepUnitTest {
         // HMAC-SHA256("ABC123", "GET\n/api/classroom/state\nnonce-0001\nSHA256(\"\")")
         assertEquals(
             "bd41d1e94c8c04a9ae857dce47c9f1d6907b65cfcd5c1bcbd8d08711a7c14e50",
-            ClassKeepCrypto.token("ABC123", "GET", "/api/classroom/state", "nonce-0001", null),
+            IkebackCrypto.token("ABC123", "GET", "/api/classroom/state", "nonce-0001", null),
         )
     }
 
     @Test
     fun tokenIsBoundToMethodPathNonceAndBody() {
         val base = { method: String, path: String, nonce: String, body: String? ->
-            ClassKeepCrypto.token("key", method, path, nonce, body)
+            IkebackCrypto.token("key", method, path, nonce, body)
         }
         assertTrue(base("GET", "/a", "n", null) != base("POST", "/a", "n", null))
         assertTrue(base("GET", "/a", "n", null) != base("GET", "/b", "n", null))
@@ -32,7 +32,7 @@ class ClassKeepUnitTest {
 
     @Test
     fun announcementIsParsed() {
-        val state = Announcement.parse("CLASSKEEP:11880:abc123:42:nonce9")!!
+        val state = Announcement.parse("IKEBACK:11880:abc123:42:nonce9")!!
         assertEquals(11880, state.port)
         assertEquals("abc123", state.teacherId)
         assertEquals(42L, state.revision)
@@ -42,8 +42,8 @@ class ClassKeepUnitTest {
     @Test
     fun foreignPayloadIsRejected() {
         assertNull(Announcement.parse("VEYON_CLASSROOM:11880:abc:1:n"))
-        assertNull(Announcement.parse("CLASSKEEP:bad:abc:1:n"))
-        assertNull(Announcement.parse("CLASSKEEP:11880::1:n"))
+        assertNull(Announcement.parse("IKEBACK:bad:abc:1:n"))
+        assertNull(Announcement.parse("IKEBACK:11880::1:n"))
     }
 
     @Test

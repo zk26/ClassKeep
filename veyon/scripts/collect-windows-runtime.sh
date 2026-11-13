@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Assemble the payload consumed by classkeep-installer.nsi.
+# Assemble the payload consumed by ikeback-installer.nsi.
 # Run from the repository root inside an MSYS2 UCRT64 shell.
 #
 # Layout follows upstream nsis/veyon.nsi.in:
@@ -17,14 +17,14 @@ rm -rf "$PAYLOAD"
 mkdir -p "$PAYLOAD/plugins" "$PAYLOAD/platforms" "$PAYLOAD/styles" \
          "$PAYLOAD/tls" "$PAYLOAD/imageformats" "$PAYLOAD/crypto"
 
-echo "== built executables (ClassKeep-* since 2.0.0) =="
-find "$BUILD" -type f -name 'ClassKeep-*.exe' ! -path '*CMakeFiles*' \
+echo "== built executables (ikeback-* since 2.0.0) =="
+find "$BUILD" -type f -name 'ikeback-*.exe' ! -path '*CMakeFiles*' \
   -exec cp '{}' "$PAYLOAD/" \;
 
 echo "== core DLL =="
 find "$BUILD/core" -maxdepth 1 -type f -name '*.dll' -exec cp '{}' "$PAYLOAD/" \;
 
-echo "== ClassKeep plugins =="
+echo "== ikeback plugins =="
 find "$BUILD/plugins" -type f -name '*.dll' ! -path '*CMakeFiles*' \
   -exec cp '{}' "$PAYLOAD/plugins/" \;
 
@@ -85,20 +85,20 @@ echo "== documentation and icon =="
 cp "$ROOT/LICENSE" "$PAYLOAD/LICENSE.TXT"
 cp "$ROOT/veyon/COPYING" "$PAYLOAD/COPYING.TXT"
 cp "$ROOT/veyon/scripts/windows-install-readme.txt" "$PAYLOAD/README.TXT"
-cp "$ROOT/veyon/scripts/ClassKeep.ico" "$PAYLOAD/ClassKeep.ico"
+cp "$ROOT/veyon/scripts/ikeback.ico" "$PAYLOAD/ikeback.ico"
 
 echo "== verify (startup-critical files included) =="
-for f in veyon-core.dll ClassKeep-master.exe ClassKeep-configurator.exe ClassKeep-cli.exe \
-         ClassKeep-wcli.exe ClassKeep-service.exe ClassKeep-server.exe ClassKeep-worker.exe \
+for f in veyon-core.dll ikeback-master.exe ikeback-configurator.exe ikeback-cli.exe \
+         ikeback-wcli.exe ikeback-service.exe ikeback-server.exe ikeback-worker.exe \
          plugins/classroom.dll plugins/windows-platform.dll \
          crypto/libqca-ossl.dll libqca-qt6.dll \
-         platforms/qwindows.dll ClassKeep.ico translations/veyon_zh_CN.qm; do
+         platforms/qwindows.dll ikeback.ico translations/veyon_zh_CN.qm; do
   if [ ! -f "$PAYLOAD/$f" ]; then
     echo "MISSING REQUIRED FILE: $f" >&2
     exit 1
   fi
 done
-echo "windows-platform.dll: PRESENT (ClassKeep core can start)"
+echo "windows-platform.dll: PRESENT (ikeback core can start)"
 echo "libqca-ossl.dll:      PRESENT (CryptoCore RSA available)"
 
 echo "translation catalogs: $(find "$PAYLOAD/translations" -type f -name '*.qm' | wc -l)"

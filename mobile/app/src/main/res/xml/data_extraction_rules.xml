@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    ClassKeep: the "classkeep" SharedPreferences holds the lesson key. Never
+    ikeback: the "ikeback" SharedPreferences holds the lesson key. Never
     include it in cloud backups or device-to-device transfers, even if
     allowBackup is turned on again in a future version.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="classkeep.xml" />
+        <exclude domain="sharedpref" path="ikeback.xml" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="classkeep.xml" />
+        <exclude domain="sharedpref" path="ikeback.xml" />
     </device-transfer>
 </data-extraction-rules>

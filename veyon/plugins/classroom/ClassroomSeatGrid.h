@@ -44,7 +44,7 @@ public:
 	using ThumbnailProvider = std::function<QImage( const QString& ip )>;
 	using ScoreProvider = std::function<int( const QString& seat )>;
 	using ScoreSink = std::function<void( const QString& seat, int delta, const QString& reason )>;
-	//! Client-process protection (student cannot quit the ClassKeep worker).
+	//! Client-process protection (student cannot quit the ikeback worker).
 	using ProtectionProvider = std::function<bool( const QString& seat )>;
 	//! OS-level UWF restore state, as text for the list view.
 	using UwfProvider = std::function<QString( const QString& seat )>;

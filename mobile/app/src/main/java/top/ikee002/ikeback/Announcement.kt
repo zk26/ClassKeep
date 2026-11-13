@@ -1,9 +1,9 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
-/** Parsed from the UDP announcement: CLASSKEEP:<port>:<teacherId>:<revision>:<nonce>. */
+/** Parsed from the UDP announcement: IKEBACK:<port>:<teacherId>:<revision>:<nonce>. */
 object Announcement {
-    const val PREFIX = "CLASSKEEP:"
-    const val MAGIC = "CLASSKEEP_DISCOVER"
+    const val PREFIX = "IKEBACK:"
+    const val MAGIC = "IKEBACK_DISCOVER"
     const val DEFAULT_PORT = 11880
 
     fun parse(payload: String): TeacherState? {

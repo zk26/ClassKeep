@@ -40,7 +40,7 @@ SasEventListener::SasEventListener()
 		vWarning() << "SendSAS is not supported by operating system!";
 	}
 
-	m_sasEvent.reset(CreateEvent(nullptr, false, false, L"Global\\ClassKeepServiceSasEvent"));
+	m_sasEvent.reset(CreateEvent(nullptr, false, false, L"Global\\ikebackServiceSasEvent"));
 	if (m_sasEvent.isInvalid())
 	{
 		vWarning() << "failed to create SAS event";

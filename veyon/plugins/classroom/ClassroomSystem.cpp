@@ -186,7 +186,7 @@ bool ClassroomSystem::setInternetBlock( bool blocked, const QString& teacherIp )
 		const auto safeIp = Classroom::sanitizeUnicastIp( teacherIp );
 		if( teacherIp.trimmed().isEmpty() == false && safeIp.isEmpty() )
 		{
-			qWarning( "ClassKeep: rejected invalid teacherIp for InternetGuard allow rule" );
+			qWarning( "ikeback: rejected invalid teacherIp for InternetGuard allow rule" );
 		}
 		if( safeIp.isEmpty() == false )
 		{

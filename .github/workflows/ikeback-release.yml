@@ -1,4 +1,4 @@
-name: ClassKeep Release
+name: ikeback Release
 
 # Publishes THREE real, compiled artifacts on tag push / manual dispatch:
 #   - Android APK                 (Ubuntu + JDK21 + Android SDK)
@@ -54,12 +54,12 @@ jobs:
           APK=$(find mobile/app/build/outputs -name '*.apk' -type f | head -n 1)
           test -n "$APK" || { echo 'No APK produced'; exit 1; }
           mkdir -p dist
-          cp "$APK" dist/ClassKeep-Mobile.apk
+          cp "$APK" dist/ikeback-Mobile.apk
 
       - uses: actions/upload-artifact@v6
         with:
-          name: classkeep-android
-          path: dist/ClassKeep-Mobile.apk
+          name: ikeback-android
+          path: dist/ikeback-Mobile.apk
           if-no-files-found: error
 
   # ------------------------------------------------------------------ Windows
@@ -209,14 +209,14 @@ jobs:
         run: |
           set -e
           mkdir -p dist
-          { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+          { printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
           makensis -DVERSION='${{ steps.ver.outputs.value }}' -DROLE=teacher installer.nsi
           makensis -DVERSION='${{ steps.ver.outputs.value }}' -DROLE=student installer.nsi
           ls -lh dist
 
       - uses: actions/upload-artifact@v6
         with:
-          name: classkeep-windows
+          name: ikeback-windows
           path: dist/*.exe
           if-no-files-found: error
 
@@ -231,12 +231,12 @@ jobs:
 
       - uses: actions/download-artifact@v6
         with:
-          name: classkeep-android
+          name: ikeback-android
           path: artifacts
 
       - uses: actions/download-artifact@v6
         with:
-          name: classkeep-windows
+          name: ikeback-windows
           path: windows-setups
 
       - name: Resolve version
@@ -257,7 +257,7 @@ jobs:
 
           $apk = Get-ChildItem -LiteralPath 'artifacts' -Filter '*.apk' -File | Select-Object -First 1
           if (-not $apk) { throw 'Android APK artifact missing' }
-          Copy-Item -LiteralPath $apk.FullName -Destination "dist/ClassKeep-Mobile-$v.apk" -Force
+          Copy-Item -LiteralPath $apk.FullName -Destination "dist/ikeback-Mobile-$v.apk" -Force
 
           $setups = @(Get-ChildItem -LiteralPath 'windows-setups' -Filter '*-setup.exe' -File)
           if ($setups.Count -ne 2) { throw "Expected 2 setup EXEs, got $($setups.Count)" }
@@ -266,7 +266,7 @@ jobs:
           }
 
           $lines = Get-ChildItem -LiteralPath 'dist' -File |
-            Where-Object { $_.Name -like 'ClassKeep-*' } |
+            Where-Object { $_.Name -like 'ikeback-*' } |
             Sort-Object Name |
             ForEach-Object {
               ((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower()) + '  ' + $_.Name
@@ -285,7 +285,7 @@ jobs:
 
       - uses: actions/upload-artifact@v6
         with:
-          name: classkeep-release-final
+          name: ikeback-release-final
           path: dist/*
           if-no-files-found: error
 
@@ -297,16 +297,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6
         with:
-          name: classkeep-release-final
+          name: ikeback-release-final
           path: dist
 
       - name: Verify all three artifacts and checksums
         shell: bash
         run: |
           set -e
-          ls dist/ClassKeep-Teacher-*-win64-setup.exe
-          ls dist/ClassKeep-Student-*-win64-setup.exe
-          ls dist/ClassKeep-Mobile-*.apk
+          ls dist/ikeback-teacher-*-win64-setup.exe
+          ls dist/ikeback-student-*-win64-setup.exe
+          ls dist/ikeback-Mobile-*.apk
           ls dist/SHA256SUMS.txt
           cd dist
           while read -r hash file; do
@@ -317,12 +317,12 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
-          name: ClassKeep ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
+          name: ikeback ${{ github.ref_type == 'tag' && github.ref_name || format('v{0}', github.event.inputs.version) }}
           body_path: dist/RELEASE-NOTES.md
           files: |
-            dist/ClassKeep-Teacher-*-win64-setup.exe
-            dist/ClassKeep-Student-*-win64-setup.exe
-            dist/ClassKeep-Mobile-*.apk
+            dist/ikeback-teacher-*-win64-setup.exe
+            dist/ikeback-student-*-win64-setup.exe
+            dist/ikeback-Mobile-*.apk
             dist/SHA256SUMS.txt
             dist/RELEASE-NOTES.md
           fail_on_unmatched_files: true

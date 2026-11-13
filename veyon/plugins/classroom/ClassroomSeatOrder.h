@@ -18,11 +18,11 @@
 namespace Classroom
 {
 
-/** One file per class, next to the rest of the ClassKeep data. */
+/** One file per class, next to the rest of the ikeback data. */
 inline QString seatOrderPath( const QString& className )
 {
 	const auto base = QStandardPaths::writableLocation( QStandardPaths::AppLocalDataLocation )
-					  + QStringLiteral("/ClassKeep");
+					  + QStringLiteral("/ikeback");
 	QDir().mkpath( base );
 	// Class names come from a CSV; keep only filesystem-safe characters.
 	QString safe = className;

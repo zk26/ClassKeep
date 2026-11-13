@@ -435,7 +435,7 @@ bool WebApiHttpServer::setupTls()
 QString WebApiHttpServer::getDebugInformation()
 {
 	const QString sysInfo =
-			QStringLiteral("ClassKeep WebAPI server version: %1<br/>\n").arg(VeyonCore::versionString()) +
+			QStringLiteral("ikeback WebAPI server version: %1<br/>\n").arg(VeyonCore::versionString()) +
 			QStringLiteral("Local hostname: %1<br/>\n").arg(HostAddress::localFQDN()) +
 			QStringLiteral("Operating system: %1 %2 %3<br/>\n").arg(QSysInfo::prettyProductName(), QSysInfo::productType(), QSysInfo::productVersion()) +
 			QStringLiteral("Kernel: %1 %2<br/>\n").arg(QSysInfo::kernelType(), QSysInfo::kernelVersion());

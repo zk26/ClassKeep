@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import android.content.Context
 import android.net.wifi.WifiManager
@@ -33,7 +33,7 @@ class Discovery(
             var lock: WifiManager.MulticastLock? = null
             try {
                 val wifi = appContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-                lock = wifi?.createMulticastLock("classkeep")?.also { it.acquire() }
+                lock = wifi?.createMulticastLock("ikeback")?.also { it.acquire() }
 
                 socket = DatagramSocket(InetSocketAddress(port)).apply {
                     reuseAddress = true

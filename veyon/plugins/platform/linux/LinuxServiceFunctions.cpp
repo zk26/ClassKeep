@@ -29,7 +29,7 @@
 
 QString LinuxServiceFunctions::veyonServiceName() const
 {
-	return QStringLiteral("classkeep");
+	return QStringLiteral("ikeback");
 }
 
 

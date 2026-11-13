@@ -19,23 +19,23 @@ namespace Classroom
 
 inline QString productName()
 {
-	return QStringLiteral("ClassKeep");
+	return QStringLiteral("ikeback");
 }
 
 inline QString productNameEn()
 {
-	return QStringLiteral("ClassKeep");
+	return QStringLiteral("ikeback");
 }
 
-/** UDP announcement shared with the ClassKeep mobile app. The lesson key is NEVER included. */
+/** UDP announcement shared with the ikeback mobile app. The lesson key is NEVER included. */
 inline QString announcementPrefix()
 {
-	return QStringLiteral("CLASSKEEP:");
+	return QStringLiteral("IKEBACK:");
 }
 
 inline QString discoveryMagic()
 {
-	return QStringLiteral("CLASSKEEP_DISCOVER");
+	return QStringLiteral("IKEBACK_DISCOVER");
 }
 
 //! Validate anything that ends up in "remoteip=" (netsh) or in a listen()
@@ -80,7 +80,7 @@ inline Feature::Uid clientFeatureUid()
 	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000002") };
 }
 
-//! 2.2.0: ClassKeep's own name+seat sign-in replaces Veyon's username/password
+//! 2.2.0: ikeback's own name+seat sign-in replaces Veyon's username/password
 //! logon in the Master tool bar. These are Action|Master features; the messages
 //! they send still travel over clientFeatureUid() so the wire format is unchanged.
 inline Feature::Uid signInFeatureUid()
@@ -167,7 +167,7 @@ enum class Command
 	// protocol and must stay compatible with already deployed 1.x workers.
 	// "Protection" and "UWF" are TWO INDEPENDENT switches:
 	//   SetExitProtection = client process protection (student cannot quit the
-	//                       ClassKeep worker / floating card).
+	//                       ikeback worker / floating card).
 	//   UwfSetFilter      = OS-level write filter / restore-on-reboot, used to
 	//                       survive reboots and to install software.
 	SetExitProtection,

@@ -1,11 +1,11 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=@CMAKE_INSTALL_PREFIX@/bin/ClassKeep-configurator
+Exec=@CMAKE_INSTALL_PREFIX@/bin/ikeback-configurator
 Icon=veyon-configurator
 Terminal=false
-Name=ClassKeep Configurator
-Comment=Configuration tool for ClassKeep
-Comment[de]=Einrichtungswerkzeug für ClassKeep
+Name=ikeback Configurator
+Comment=Configuration tool for ikeback
+Comment[de]=Einrichtungswerkzeug für ikeback
 Categories=Qt;Education;Network;Settings;System;RemoteAccess;
 Keywords=classroom,control,computer,room,lab,monitoring,teacher,student,settings,configuration

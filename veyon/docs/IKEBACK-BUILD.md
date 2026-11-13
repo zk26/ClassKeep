@@ -1,7 +1,7 @@
-# 课守 ClassKeep — 真实编译方案
+# ikeback — 真实编译方案
 
 > 目标：把「只做过静态复核」变成**真正编译过**，并搞清楚怎样才能产出 Windows 教师端 / 学生端二进制。
-> 仓库：<https://github.com/zk26/ClassKeep> · 上游 Veyon **4.11.4**
+> 仓库：<https://github.com/zk26/ikeback> · 上游 Veyon **4.11.4**
 
 ---
 
@@ -10,7 +10,7 @@
 | 障碍 | 事实 | 证据 |
 |---|---|---|
 | 本机没有工具链 | 无 `cmake`、无 Qt、无 QCA、无 LibVNC | 本机 `cmake --version` 失败；Android 侧有 JDK 23 + SDK，已实测编译成功 |
-| **workflow 放错位置** | 仓库根是 `G:\veyon`，但所有 workflow 都在 `veyon/.github/workflows/`；GitHub Actions **只读取仓库根** `.github/workflows/*.yml` → 从来没被触发过 | 已修：根下新建 `classkeep-build.yml` / `classkeep-release.yml` |
+| **workflow 放错位置** | 仓库根是 `G:\veyon`，但所有 workflow 都在 `veyon/.github/workflows/`；GitHub Actions **只读取仓库根** `.github/workflows/*.yml` → 从来没被触发过 | 已修：根下新建 `ikeback-build.yml` / `ikeback-release.yml` |
 | **子模块全空** | 仓库根没有 `.gitmodules`（只有 `veyon/.gitmodules`），7 个 `3rdparty/*` 目录都是 0 文件；`actions/checkout` 的 `submodules: recursive` 拉不到 | 已在 build workflow 里显式 clone |
 | **MSVC 路线不可行** | Veyon 的 CMake 硬编码 GCC 参数：`-Wno-attributes`、`-fno-exceptions`、`-Wl,-no-undefined`、`-fPIE/-pie`、`-lws2_32`、`-mwindows`、`-Wno-*`（UltraVNC）；`windows-binaries` target 全是 `cp/strip/mv/find/sed` Unix 命令并依赖 `${MINGW_PREFIX}` | `CMakeLists.txt:106-107,256-273`、`SetDefaultTargetProperties.cmake:16,30`、`WindowsInstaller.cmake:3-6,17-69` |
 | **QCA 没有 vcpkg port** | `find_package(Qca-qt6 REQUIRED)` 要 `Qca-qt6Config.cmake`（CONFIG 模式），仓库无 `FindQCA.cmake`；vcpkg 无 `qca` port，且 MSVC ABI 与 MinGW 不兼容 | `CMakeLists.txt:234`、`core/CMakeLists.txt:37-43` |
@@ -21,40 +21,40 @@
 
 | Workflow | 作用 | 当前状态 |
 |---|---|---|
-| **ClassKeep Build Check** | Linux/Qt6/GCC 全量验证课守插件，产出 `classroom.so` | ✅ 已跑通，两个 job 全绿 |
-| **ClassKeep Windows Build** | MSYS2 UCRT64/MinGW 产出真实 Windows `.exe`/`.dll` | ✅ 已跑通 |
-| **ClassKeep Release** | 汇总 APK + 教师端/学生端包，自动发 Release | 见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) |
+| **ikeback Build Check** | Linux/Qt6/GCC 全量验证ikeback 插件，产出 `classroom.so` | ✅ 已跑通，两个 job 全绿 |
+| **ikeback Windows Build** | MSYS2 UCRT64/MinGW 产出真实 Windows `.exe`/`.dll` | ✅ 已跑通 |
+| **ikeback Release** | 汇总 APK + 教师端/学生端包，自动发 Release | 见 [`IKEBACK-RELEASE.md`](IKEBACK-RELEASE.md) |
 
 ---
 
 ## 1. 路线 A（推荐，现在就能做）：GitHub Actions 上真实编译
 
-已写好 [`.github/workflows/classkeep-build.yml`](../../.github/workflows/classkeep-build.yml)。
+已写好 [`.github/workflows/ikeback-build.yml`](../../.github/workflows/ikeback-build.yml)。
 它做两件事：
 
 | Job | 环境 | 做什么 |
 |---|---|---|
-| `desktop-linux` | `ubuntu-24.04` + 上游 Ubuntu 24.04 那套 **Qt6**/QCA 依赖 | **全量编译 Veyon + 课守插件**，产出 `classroom.so` 与完整编译日志 |
+| `desktop-linux` | `ubuntu-24.04` + 上游 Ubuntu 24.04 那套 **Qt6**/QCA 依赖 | **全量编译 Veyon + ikeback 插件**，产出 `classroom.so` 与完整编译日志 |
 | `android` | `ubuntu-latest` + JDK 21 | `:app:assembleDebug` + `:app:testDebugUnitTest`（本机已验证可行） |
 
 ### 你现在的操作
 
 1. 把本次改动推到 `main`（已推送 / 或你自己 push）；
-2. 打开 <https://github.com/zk26/ClassKeep/actions>；
-3. 选 **ClassKeep Build Check** → **Run workflow**（`main` 分支）；
+2. 打开 <https://github.com/zk26/ikeback/actions>；
+3. 选 **ikeback Build Check** → **Run workflow**（`main` 分支）；
 4. 看 `desktop-linux` 的 `Build` 日志。**这一步会真正把所有 C++ 文件交给 GCC**，
    静态复核发现不了的错误（缺 include、签名不匹配、模板推导）都会在这里暴露；
 5. 把报错日志贴给我，我逐个修，直到 `BUILD SUCCESS`。
 
 ### 它用的确切配置
 
-> **Qt6 是正确路线**：Windows 平台插件无条件 `find_package(Qt6 GuiPrivate)`，课守代码也使用 Qt6 API。
+> **Qt6 是正确路线**：Windows 平台插件无条件 `find_package(Qt6 GuiPrivate)`，ikeback 代码也使用 Qt6 API。
 > 依赖清单照搬上游 `.ci/linux.ubuntu.24.04/Dockerfile`。
 >
 > ⚠️ 但**不要跑全量 `cmake --build build`**：这份 4.11.4 上游快照里的 `plugins/filetransfer`
 > 在 **Qt5 和 Qt6 下都编不过**（`FileCollection.h` 缺 `#include <QUuid>`、
-> `qApp->setQuitOnLastWindowClosed` 在 `QCoreApplication` 上不存在），与课守无关。
-> 因此 CI 只编译 `--target classroom`——它会连带编译课守依赖的 `veyon-core` 等，
+> `qApp->setQuitOnLastWindowClosed` 在 `QCoreApplication` 上不存在），与ikeback无关。
+> 因此 CI 只编译 `--target classroom`——它会连带编译ikeback 依赖的 `veyon-core` 等，
 > 但不会去碰那个损坏的上游插件。
 
 ```bash
@@ -99,7 +99,7 @@ cmake --build build --target classroom --parallel 4
 ```
 
 `-DCMAKE_CXX_FLAGS="-include cmath"` 是因为上游 `core/src/Toast.cpp` 用了 `floor()` / `ceil()`
-却没包含 `<cmath>`，旧 Qt 会间接带入、新 Qt/GCC 不会——属于上游的环境差异，不是课守代码问题。
+却没包含 `<cmath>`，旧 Qt 会间接带入、新 Qt/GCC 不会——属于上游的环境差异，不是ikeback 代码问题。
 
 **Qt5 路线已实测失败，不要再试**：Ubuntu 22.04 + Qt5 会依次遇到
 `qsizepolicy.h` 的 `-Werror=deprecated-enum-enum-conversion`、`Toast.cpp` 缺 `<cmath>`、
@@ -122,9 +122,9 @@ kldap master 的 Qt6-only 符号。
 - `WITH_QT6=ON`：**必须**。`plugins/filetransfer` 等上游插件是 Qt6-only；Windows 平台插件还无条件 `find_package(Qt6 GuiPrivate)`。
 - `WITH_BUNDLED_LIBVNC=ON`：免掉系统 `libvncserver >= 0.9.14`（发行版自带版本偏低）。
   注意它会连带把 `WITH_TESTS` 置 OFF（`CMakeLists.txt:199`），所以 `ClassroomSelfTest` 在这个配置下不会构建。
-- `WITH_WEBAPI=OFF` / `WITH_TRANSLATIONS=OFF`：免 `Qt6::HttpServer` 与 LinguistTools 的额外要求；课守 Bridge 只用 `QTcpServer/QUdpSocket`，不依赖 WebAPI。
+- `WITH_WEBAPI=OFF` / `WITH_TRANSLATIONS=OFF`：免 `Qt6::HttpServer` 与 LinguistTools 的额外要求；ikeback Bridge 只用 `QTcpServer/QUdpSocket`，不依赖 WebAPI。
 - `WITH_UNITY_BUILD=OFF`：让每个 `.cpp` 单独编译，最容易暴露真实错误。
-- `WITH_CORE_ONLY=OFF`：**必须**，否则整个 `plugins/`（含课守）都不会构建。
+- `WITH_CORE_ONLY=OFF`：**必须**，否则整个 `plugins/`（含ikeback）都不会构建。
 
 ### ⚠️ 路线 A 验证不到什么
 
@@ -137,7 +137,7 @@ Linux 编译走 `#else` 分支，**不会验证这些 Windows 专属代码**。
 
 ## 路线 D：GitHub Actions 产出 Windows 二进制（推荐用于出包）
 
-workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Build**
+workflow：`.github/workflows/ikeback-windows.yml` → **ikeback Windows Build**
 
 | 项 | 值 |
 |---|---|
@@ -146,7 +146,7 @@ workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Bui
 | 编译器 | `mingw-w64-ucrt-x86_64-gcc` + Ninja |
 | Qt | `mingw-w64-ucrt-x86_64-qt6-base` 等，用 `cmake -DCMAKE_PREFIX_PATH=/ucrt64` 配置（MSYS2 没有 `qt-cmake` wrapper） |
 | 关键包名 | `qca-qt6`、`openldap`、`cyrus-sasl`、`ntldd`、`nsis`、`python`（**不是** `qca` / `libldap` / `libsasl`） |
-| 产物 | `classkeep-windows-setups` artifact：教师端 / 学生端两个 `*-setup.exe`（内含完整 DLL 闭包） |
+| 产物 | `ikeback-windows-setups` artifact：教师端 / 学生端两个 `*-setup.exe`（内含完整 DLL 闭包） |
 
 设计要点：
 
@@ -161,20 +161,20 @@ workflow：`.github/workflows/classkeep-windows.yml` → **ClassKeep Windows Bui
 ```
 plugins/classroom.dll + 其它 Veyon 插件 DLL
 veyon-core.dll
-ClassKeep-master.exe / ClassKeep-configurator.exe / ClassKeep-cli.exe / ClassKeep-wcli.exe
-ClassKeep-service.exe / ClassKeep-server.exe / ClassKeep-worker.exe
+ikeback-master.exe / ikeback-configurator.exe / ikeback-cli.exe / ikeback-wcli.exe
+ikeback-service.exe / ikeback-server.exe / ikeback-worker.exe
 Qt6*.dll / libqca-qt6.dll / libbz2-1.dll / libmd4c.dll / CRT 运行时（递归闭包）
 platforms/ styles/ tls/ imageformats/ crypto/               Qt 与 QCA 插件
-LICENSE.TXT / COPYING.TXT / README.TXT / ClassKeep.ico
+LICENSE.TXT / COPYING.TXT / README.TXT / ikeback.ico
 ```
 
 运行时 DLL 由 `scripts/collect_mingw_deps.py` **用 `ntldd` 递归解析 PE 导入闭包**收集，
 不再使用文件名白名单。旧版白名单漏掉 `libbz2-1.dll`、`libmd4c.dll`、`libbrotli*.dll`，
 安装后所有 EXE 都报「找不到 DLL」——这是 `v1.3.0` 修复的核心问题。
 
-`classkeep-release.yml` 内联同一套 Windows 步骤，再用 NSIS 生成
-`ClassKeep-Teacher-<ver>-win64-setup.exe` 与 `ClassKeep-Student-<ver>-win64-setup.exe`
-（详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) 与 `scripts/README.md`）。
+`ikeback-release.yml` 内联同一套 Windows 步骤，再用 NSIS 生成
+`ikeback-teacher-<ver>-win64-setup.exe` 与 `ikeback-student-<ver>-win64-setup.exe`
+（详见 [`IKEBACK-RELEASE.md`](IKEBACK-RELEASE.md) 与 `scripts/README.md`）。
 
 ---
 
@@ -229,8 +229,8 @@ cmake -S veyon -B build -G Ninja \
   -DCMAKE_SKIP_INSTALL_RULES=ON \
   -DCMAKE_CXX_FLAGS="-include cmath"
 cmake --build build --parallel 4 --target \
-  classroom ClassKeep-master ClassKeep-configurator ClassKeep-cli \
-  ClassKeep-service ClassKeep-server ClassKeep-worker
+  classroom ikeback-master ikeback-configurator ikeback-cli \
+  ikeback-service ikeback-server ikeback-worker
 ```
 
 > **不要跑全量 `cmake --build build`**（会撞上损坏的上游 `filetransfer` 插件），
@@ -246,14 +246,14 @@ cmake --build build --parallel 4 --target \
 cd /g/veyon
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
-{ printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+{ printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
 makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
 makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 ```
 
-`collect-windows-runtime.sh` 会校验 `plugins/classroom.dll`、`ClassKeep-wcli.exe`、
+`collect-windows-runtime.sh` 会校验 `plugins/classroom.dll`、`ikeback-wcli.exe`、
 `platforms/qwindows.dll` 等关键文件，缺一即报错，不产半成品。
-详见 [`CLASSKEEP-RELEASE.md`](CLASSKEEP-RELEASE.md) 与 [`../scripts/README.md`](../scripts/README.md)。
+详见 [`IKEBACK-RELEASE.md`](IKEBACK-RELEASE.md) 与 [`../scripts/README.md`](../scripts/README.md)。
 
 ---
 
@@ -270,7 +270,7 @@ makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 | **自托管 runner** | 中 | 一台按路线 B 配好的 Windows/MSYS2 机器注册为 self-hosted runner，workflow 里 `runs-on: self-hosted` 直接调现成工具链 |
 
 **建议顺序**：先跑路线 A 把 30 多个 C++ 文件的编译错误全部消灭 → 再决定是否为 Windows 产物投入路线 C。
-`classkeep-release.yml` 目前已改成「只发布能真实构建的东西」（Android APK + 两个部署预设包 + 校验），
+`ikeback-release.yml` 目前已改成「只发布能真实构建的东西」（Android APK + 两个部署预设包 + 校验），
 **不再假装能编译 Windows，也不上传占位二进制**。
 
 ---
@@ -289,11 +289,11 @@ makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 | `ninja: error: loading 'build.ninja': No such file or directory` | 上一条 CMake 错误导致未生成构建文件 | 看 `configure.log`；同时确认 `tee` 步骤有 `set -o pipefail` |
 | `sdkmanager failed with exit code 1`（Android CI） | `android-actions/setup-android@v3` 覆盖 runner 预装的 cmdline-tools 版本 | 去掉该 action，用 runner 自带 SDK + `sdkmanager --licenses`，让 AGP 自动装 platform |
 | `classroom.dll` 没生成 | `-DWITH_CORE_ONLY=ON` 跳过了 `plugins/` | 设为 OFF；`plugins/CMakeLists.txt` 是 GLOB，改插件后需重新跑 CMake |
-| `plugins/filetransfer`: `QUuid` incomplete / `QCoreApplication::setQuitOnLastWindowClosed` 不存在 | 上游该插件在 **Qt5 与 Qt6 下都编不过**（缺 `#include <QUuid>`、`qApp` 类型不对），与课守无关 | 用 `cmake --build build --target classroom` 只编译课守目标；不要跑全量 `cmake --build build` |
+| `plugins/filetransfer`: `QUuid` incomplete / `QCoreApplication::setQuitOnLastWindowClosed` 不存在 | 上游该插件在 **Qt5 与 Qt6 下都编不过**（缺 `#include <QUuid>`、`qApp` 类型不对），与ikeback无关 | 用 `cmake --build build --target classroom` 只编译ikeback 目标；不要跑全量 `cmake --build build` |
 | `Qt::Literals / StringLiterals / _L1 / QLatin1StringView` 未定义（在 `3rdparty/kldap-qt5` 里，仅 Qt5 路线） | clone 了 KDE kldap 最新 master 而非锁定版本 | 按 v4.11.4 的 gitlink SHA 精确检出；或直接用本方案的 Qt6 `kldap` |
 | `qsizepolicy.h: bitwise operation between different enumeration types ... [-Werror=deprecated-enum-enum-conversion]` | Ubuntu 22.04 的 GCC 11+ 对 Qt5 头文件产生新警告，被 Veyon 的 `-Werror` 放大；连上游 `AboutDialog.cpp` 都失败 | 加 `-DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion"`，或改用 Debian 11 / GCC 10 容器 |
 | 校验步骤说插件没生成，其实生成了 | `find build -name A -o -name B` 的 `-o` 会让 `-print` 只作用于最后一个表达式 | 写成 `find build \( -name A -o -name B \) -print` |
-| 安装/卸载弹「ClassKeep-wcli.exe - 快速异常检测失败」，程序也全打不开 | `windows-platform.dll` 没编出来（`-linterception` 只存在于上游私有镜像），`VeyonCore::initPlatformPlugin()` 触发 `qFatal("no platform plugin available!")` → UCRT `__fastfail` | 用自制 `3rdparty/interception/include/interception.h` 桩替代 `-linterception`；把 `windows-platform` 设为**必需**构建目标；`collect-windows-runtime.sh` 硬校验该 DLL |
+| 安装/卸载弹「ikeback-wcli.exe - 快速异常检测失败」，程序也全打不开 | `windows-platform.dll` 没编出来（`-linterception` 只存在于上游私有镜像），`VeyonCore::initPlatformPlugin()` 触发 `qFatal("no platform plugin available!")` → UCRT `__fastfail` | 用自制 `3rdparty/interception/include/interception.h` 桩替代 `-linterception`；把 `windows-platform` 设为**必需**构建目标；`collect-windows-runtime.sh` 硬校验该 DLL |
 | 同上但平台插件在，仍崩 | `crypto/libqca-ossl.dll` 缺失或挑到了 qca-qt5 版本，`CryptoCore.cpp:39` → `qFatal("RSA not supported!")` | 从精确路径 `/ucrt64/lib/qca-qt6/crypto/libqca-ossl.dll` 复制，并硬校验 |
 | `-linterception` 找不到（MSYS2 UCRT64） | 该库既不在上游 `3rdparty/interception/`（只有安装器 exe + bat），也不在 MSYS2 | 使用上述自制最小兼容头，去掉链接参数；Interception 驱动是可选的，默认不启用 |
 
@@ -301,9 +301,9 @@ makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 
 ## 5. 已修正的坑（本轮）
 
-1. 新建仓库根 `.github/workflows/classkeep-build.yml` — **真实编译验证**（Linux/GCC + Android）。
-2. 新建仓库根 `.github/workflows/classkeep-release.yml` — 只发布能真实构建的东西。
-3. 删除 `veyon/.github/workflows/classkeep-release.yml`（位置错误 + 基于不可行的 `vcpkg install qca` + MSVC）。
+1. 新建仓库根 `.github/workflows/ikeback-build.yml` — **真实编译验证**（Linux/GCC + Android）。
+2. 新建仓库根 `.github/workflows/ikeback-release.yml` — 只发布能真实构建的东西。
+3. 删除 `veyon/.github/workflows/ikeback-release.yml`（位置错误 + 基于不可行的 `vcpkg install qca` + MSVC）。
 4. build workflow 显式 clone 5 个 3rdparty 源码，绕开根仓库缺 `.gitmodules`。
 5. 文档不再声称「MSVC 可用」。
 

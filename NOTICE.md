@@ -1,16 +1,16 @@
-# ClassKeep — 版权、许可与声明 / NOTICE
+# ikeback — 版权、许可与声明 / NOTICE
 
 本文件用于明确本仓库的权利归属、授权范围与责任边界，避免任何归属或授权上的歧义。
-若本文件与其他说明有冲突，**以 `LICENSE`（GPL v2 全文）与 `veyon/docs/CLASSKEEP-LICENSE.md` 为准**。
+若本文件与其他说明有冲突，**以 `LICENSE`（GPL v2 全文）与 `veyon/docs/IKEBACK-LICENSE.md` 为准**。
 
 ---
 
 ## 1. 项目性质
 
-- 名称：`ClassKeep`（**自 2.0.0 起只使用英文名称**，不再使用中文「课守」作为产品名）。
+- 名称：`ikeback`（统一使用英文小写名称，不使用中文别名或已停用的旧品牌名）。
 - 性质：基于开源项目 [Veyon](https://veyon.io/) 4.x 的**修改 / 衍生作品**（derivative work），
   用于课堂教学管理场景的定制分支。
-- 仓库：<https://github.com/zk26/ClassKeep>
+- 仓库：<https://github.com/zk26/ikeback>
 - **本仓库不是 Veyon 官方版本**，不由 Veyon 项目、其作者或 Veyon Solutions 维护、认可或背书；
   与其无任何隶属、代理、合作或商业关联。
 
@@ -39,8 +39,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 
 完整的分发义务、修改声明与第三方清单见：
 
-- [`veyon/docs/CLASSKEEP-LICENSE.md`](veyon/docs/CLASSKEEP-LICENSE.md)
-- [`veyon/docs/CLASSKEEP-THIRD-PARTY.md`](veyon/docs/CLASSKEEP-THIRD-PARTY.md)
+- [`veyon/docs/IKEBACK-LICENSE.md`](veyon/docs/IKEBACK-LICENSE.md)
+- [`veyon/docs/IKEBACK-THIRD-PARTY.md`](veyon/docs/IKEBACK-THIRD-PARTY.md)
 
 ## 4. 修改声明（GPL 第 2(a) 条）
 
@@ -50,8 +50,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 `server/src/ComputerControlServer.cpp`、`master/src/ComputerMonitoringWidget.cpp` 的扩展。
 
 - 修改日期与逐次变更：**本仓库 git 提交历史**（含作者、时间、diff）。
-- 修改内容总览：[`veyon/docs/CLASSKEEP.md`](veyon/docs/CLASSKEEP.md)。
-- 通信协议（命令字、路由、认证、数据格式）：[`veyon/docs/CLASSKEEP-PROTOCOL.md`](veyon/docs/CLASSKEEP-PROTOCOL.md)。
+- 修改内容总览：[`veyon/docs/IKEBACK.md`](veyon/docs/IKEBACK.md)。
+- 通信协议（命令字、路由、认证、数据格式）：[`veyon/docs/IKEBACK-PROTOCOL.md`](veyon/docs/IKEBACK-PROTOCOL.md)。
 
 ### 4.1 名称与标识变更声明（自 2.0.0 起）
 
@@ -59,22 +59,22 @@ SPDX-License-Identifier: GPL-2.0-or-later
 改名只涉及**用户可感知的名称与标识**，不改变软件来源、版权归属或许可；
 上游 Veyon 的版权与 GPL 声明在所有文件中均予保留。
 
-| 类别 | 上游名称（≤ 1.5.1） | ClassKeep 2.0.0 |
+| 类别 | 上游名称（≤ 1.5.1） | 当前 ikeback |
 |---|---|---|
-| 产品 / 应用名 | 课守 ClassKeep、Veyon | `ClassKeep`（仅英文） |
-| 教师控制台进程 | `veyon-master.exe` | `ClassKeep-master.exe` |
-| 配置器进程 | `veyon-configurator.exe` | `ClassKeep-configurator.exe` |
-| 命令行进程 | `veyon-cli.exe` / `veyon-wcli.exe` | `ClassKeep-cli.exe` / `ClassKeep-wcli.exe` |
-| 服务进程 | `veyon-service.exe` | `ClassKeep-service.exe` |
-| 被控端进程 | `veyon-server.exe` | `ClassKeep-server.exe` |
-| 学生端悬浮卡片进程 | `veyon-worker.exe` | `ClassKeep-worker.exe` |
-| Windows 服务名 | `VeyonService` | `ClassKeepService` |
-| SAS 事件名 | `Global\VeyonServiceSasEvent` | `Global\ClassKeepServiceSasEvent` |
-| 防火墙规则名 | `Veyon Server` / `Veyon Worker` | `ClassKeep Server` / `ClassKeep Worker` |
-| 安装目录 | `%PROGRAMFILES64%\ClassKeep\Teacher` / `Student` | `%PROGRAMFILES64%\ClassKeep\Master` / `Student` |
-| 开始菜单 / 快捷方式 | `课守 ClassKeep 控制台` 等 | `ClassKeep Master`、`ClassKeep Configurator` |
-| 窗口标题 / 关于 / 菜单 | `About Veyon`、`Veyon Configurator` 等 | `About ClassKeep`、`ClassKeep Configurator` 等 |
-| Linux 桌面项显示名 | `Veyon Master` / `Veyon Service` 等 | `ClassKeep Master` / `ClassKeep Service` 等 |
+| 产品 / 应用名 | Veyon | `ikeback`（仅英文小写） |
+| 教师控制台进程 | `veyon-master.exe` | `ikeback-master.exe` |
+| 配置器进程 | `veyon-configurator.exe` | `ikeback-configurator.exe` |
+| 命令行进程 | `veyon-cli.exe` / `veyon-wcli.exe` | `ikeback-cli.exe` / `ikeback-wcli.exe` |
+| 服务进程 | `veyon-service.exe` | `ikeback-service.exe` |
+| 被控端进程 | `veyon-server.exe` | `ikeback-server.exe` |
+| 学生端悬浮卡片进程 | `veyon-worker.exe` | `ikeback-worker.exe` |
+| Windows 服务名 | `VeyonService` | `ikebackService` |
+| SAS 事件名 | `Global\VeyonServiceSasEvent` | `Global\ikebackServiceSasEvent` |
+| 防火墙规则名 | `Veyon Server` / `Veyon Worker` | `ikeback Server` / `ikeback Worker` |
+| 安装目录 | `%PROGRAMFILES64%\Veyon\Teacher` / `Student` | `%PROGRAMFILES64%\ikeback\Master` / `Student` |
+| 开始菜单 / 快捷方式 | 旧中文快捷方式名称等 | `ikeback Master`、`ikeback Configurator` |
+| 窗口标题 / 关于 / 菜单 | `About Veyon`、`Veyon Configurator` 等 | `About ikeback`、`ikeback Configurator` 等 |
+| Linux 桌面项显示名 | `Veyon Master` / `Veyon Service` 等 | `ikeback Master` / `ikeback Service` 等 |
 
 **为兼容而刻意保留的上游技术标识**（不属于用户可见名称，故未改动）：
 C++ 类/命名空间 `VeyonCore`、`VeyonServiceControl` 等，`VEYON_*` 编译宏与配置键，
@@ -86,8 +86,8 @@ CMake 构建目标 `veyon-master` …（仅编译期标识，实际产物名见�
 
 **升级提示**：2.0.0 安装程序会自动停止并清理旧 `veyon-*.exe` 进程、
 `VeyonService` 服务注册、旧的 `Teacher` 安装目录与旧卸载注册表项；
-`QCoreApplication` 组织名/应用名改为 `ClassKeep`，因此部分界面偏好设置会回到默认值，
-需要在 `ClassKeep Configurator` 中重新确认一次。
+`QCoreApplication` 组织名/应用名改为 `ikeback`，因此部分界面偏好设置会回到默认值，
+需要在 `ikeback Configurator` 中重新确认一次。
 
 ## 5. 第三方与参考项目（无代码复制声明）
 
@@ -101,7 +101,7 @@ CMake 构建目标 `veyon-master` …（仅编译期标识，实际产物名见�
 | Ollama 或其他 OpenAI 兼容推理服务 | 可选外部服务 | 由使用者自行部署与授权，与本仓库无关 |
 
 本仓库**不包含**任何第三方预编译库、内核驱动、字体或第三方图片素材。
-桌面端图标沿用 Veyon 自带资源（现已替换为 `ClassKeep_logo.png` 生成的图标）；
+桌面端图标沿用 Veyon 自带资源（现已替换为 `ikeback_logo.png` 生成的图标）；
 Android Studio 模板生成的默认图标资源已被移除。
 
 `veyon/3rdparty/interception/include/interception.h` 是本分支**自行编写的最小兼容头**，
@@ -109,18 +109,18 @@ Android Studio 模板生成的默认图标资源已被移除。
 `windows-platform` 插件能在 MSYS2 下编译。它不包含 Interception 项目的任何代码、
 二进制或驱动；Interception 驱动本身为可选组件，默认不启用。
 随安装包分发的 Qt6 / QCA / OpenSSL / MinGW 运行时 DLL 的许可与分发义务见
-[`veyon/docs/CLASSKEEP-THIRD-PARTY.md`](veyon/docs/CLASSKEEP-THIRD-PARTY.md)。
+[`veyon/docs/IKEBACK-THIRD-PARTY.md`](veyon/docs/IKEBACK-THIRD-PARTY.md)。
 
-Android 启动图标由仓库根的 `ClassKeep_logo.png` 经 `mobile/tools/generate_icons.py` 生成。
-该图由**本仓库所有者提供**，作为「课守 ClassKeep」定制分支的视觉标识，权利归提供者所有；
+Android 启动图标由仓库根的 `ikeback_logo.png` 经 `mobile/tools/generate_icons.py` 生成。
+该图由**本仓库所有者提供**，作为「ikeback」定制分支的视觉标识，权利归提供者所有；
 本声明不对图中可能包含的第三方元素主张权利，也不构成任何商标授权。
 分发方若需替换为自有图标，应自行确认素材来源与授权。
 
 ## 6. 商标与名称
 
 - 「Veyon」名称、徽标及相关标识归其各自权利人所有；本仓库保留它们仅为说明来源，不构成商标授权或背书。
-- 「ClassKeep」是本定制分支的名称与标识，由仓库所有者提供，不主张对「Veyon」商标的任何权利；完整的改名清单见 §4.1。
-- `ClassKeep_logo.png` 及其派生的应用图标仅用于识别本分支；不得据此推断与 Veyon 或任何第三方存在授权、背书或隶属关系。
+- 「ikeback」是本定制分支的名称与标识，由仓库所有者提供，不主张对「Veyon」商标的任何权利；完整的改名清单见 §4.1。
+- `ikeback_logo.png` 及其派生的应用图标仅用于识别本分支；不得据此推断与 Veyon 或任何第三方存在授权、背书或隶属关系。
 - 上游 README 中保留的徽章、文档链接与 Transifex 链接为原样引用，仅用于标示上游来源，不代表本分支由上游维护。
 
 ## 7. 数据与隐私
@@ -130,7 +130,7 @@ Android 启动图标由仓库根的 `ClassKeep_logo.png` 经 `mobile/tools/gener
 访问授权、保存期限与删除要求），并承担相应责任。
 
 具体范围、默认配置、日志保留与访问控制见
-[`veyon/docs/CLASSKEEP-PRIVACY.md`](veyon/docs/CLASSKEEP-PRIVACY.md)。
+[`veyon/docs/IKEBACK-PRIVACY.md`](veyon/docs/IKEBACK-PRIVACY.md)。
 **项目作者不对使用者的部署方式、数据处理行为或由此产生的任何纠纷承担责任。**
 
 ## 8. 无担保与责任限制
@@ -140,9 +140,9 @@ Android 启动图标由仓库根的 `ClassKeep_logo.png` 经 `mobile/tools/gener
 作者/贡献者不对任何直接、间接、附带或后果性损失承担责任。
 
 UWF 还原、断网、远程安装、锁定输入等操作存在**数据丢失或设备不可用风险**，
-部署前请备份并阅读 [`veyon/docs/CLASSKEEP-DEPLOY.md`](veyon/docs/CLASSKEEP-DEPLOY.md)。
+部署前请备份并阅读 [`veyon/docs/IKEBACK-DEPLOY.md`](veyon/docs/IKEBACK-DEPLOY.md)。
 
 ## 9. 联系
 
-许可、归属或合规相关问题请通过仓库 Issues 提出：<https://github.com/zk26/ClassKeep/issues>。
+许可、归属或合规相关问题请通过仓库 Issues 提出：<https://github.com/zk26/ikeback/issues>。
 本文件不授予任何超出 GPL-2.0-or-later 的额外权利。

@@ -342,8 +342,8 @@ void DocumentationFigureCreator::createOpenWebsiteDialogFigure()
 void DocumentationFigureCreator::createWebsiteMenuFigure()
 {
 	const auto openWebsiteButton = m_master.mainWindow()->findChild<ToolButton *>( QStringLiteral("OpenWebsite") );
-	// ClassKeep hides the upstream StartApp/OpenWebsite buttons (duplicates in
-	// the ClassKeep "Quick tools" menu), so this figure generator may not find it.
+	// ikeback hides the upstream StartApp/OpenWebsite buttons (duplicates in
+	// the ikeback "Quick tools" menu), so this figure generator may not find it.
 	if( openWebsiteButton == nullptr ) { return; }
 
 	QMenu menu;

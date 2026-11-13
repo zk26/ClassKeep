@@ -492,7 +492,7 @@ void ClassroomClientWidget::reactivate()
 
 void ClassroomClientWidget::closeEvent( QCloseEvent* event )
 {
-	// The card cannot be closed while the ClassKeep service is running. Only
+	// The card cannot be closed while the ikeback service is running. Only
 	// the teacher's StopClient command (or an authorized protected exit) may
 	// stop it; a plain close/hide request is simply refused.
 	// With client protection OFF (teacher switched it off) the student may hide

@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import android.app.AlertDialog
 import android.content.Context
@@ -100,11 +100,11 @@ class MainActivity : AppCompatActivity() {
         bottomBar = BottomBar(
             this,
             listOf(
-                BottomBar.Tab(R.drawable.ck_tab_class, "课堂"),
-                BottomBar.Tab(R.drawable.ck_tab_classroom, "班级"),
-                BottomBar.Tab(R.drawable.ck_tab_schedule, "课表"),
-                BottomBar.Tab(R.drawable.ck_tab_config, "配置"),
-                BottomBar.Tab(R.drawable.ck_tab_more, "更多"),
+                BottomBar.Tab(R.drawable.ikeback_tab_class, "课堂"),
+                BottomBar.Tab(R.drawable.ikeback_tab_classroom, "班级"),
+                BottomBar.Tab(R.drawable.ikeback_tab_schedule, "课表"),
+                BottomBar.Tab(R.drawable.ikeback_tab_config, "配置"),
+                BottomBar.Tab(R.drawable.ikeback_tab_more, "更多"),
             ),
         ) { index -> showTab(index) }
         // Explicit height keeps the docked bar from ever eating the content area.
@@ -387,8 +387,8 @@ class MainActivity : AppCompatActivity() {
 
             val about = Ui.card(this)
             about.addView(Ui.section(this, "关于"))
-            about.addView(Ui.body(this, "ClassKeep · 教师机移动伴侣\n基于 Veyon 4.x 的教学管理定制分支\n许可：GPL-2.0-or-later"))
-            about.addView(Ui.helper(this, "本软件采集学生行为数据，部署前请阅读 CLASSKEEP-PRIVACY.md"))
+            about.addView(Ui.body(this, "ikeback · 教师机移动伴侣\n基于 Veyon 4.x 的教学管理定制分支\n许可：GPL-2.0-or-later"))
+            about.addView(Ui.helper(this, "本软件采集学生行为数据，部署前请阅读 IKEBACK-PRIVACY.md"))
             column.addView(about)
         }
     }
@@ -397,7 +397,7 @@ class MainActivity : AppCompatActivity() {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = Ui.shape(this@MainActivity, getColor(R.color.ck_primary), 20)
+            background = Ui.shape(this@MainActivity, getColor(R.color.ikeback_primary), 20)
             val p = Ui.dp(this@MainActivity, 18)
             setPadding(p, p, p, p)
             layoutParams = LinearLayout.LayoutParams(
@@ -406,7 +406,7 @@ class MainActivity : AppCompatActivity() {
             ).apply { bottomMargin = Ui.dp(this@MainActivity, 14) }
             elevation = 0f
         }
-        // Real ClassKeep launcher icon instead of the "CK" text placeholder.
+        // Real ikeback launcher icon instead of the "CK" text placeholder.
         val mark = ImageView(this).apply {
             setImageResource(R.mipmap.ic_launcher_round)
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -417,7 +417,7 @@ class MainActivity : AppCompatActivity() {
         header.addView(mark, LinearLayout.LayoutParams(Ui.dp(this, 52), Ui.dp(this, 52)))
         val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val name = TextView(this).apply {
-            this.text = "ClassKeep"
+            this.text = "ikeback"
             textSize = 22f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(R.color.white))
@@ -425,7 +425,7 @@ class MainActivity : AppCompatActivity() {
         val sub = TextView(this).apply {
             this.text = "课堂看得见 · 成长记得下"
             textSize = 11f
-            setTextColor(getColor(R.color.ck_brand_subtext))
+            setTextColor(getColor(R.color.ikeback_brand_subtext))
         }
         text.addView(name)
         text.addView(sub)
@@ -486,10 +486,10 @@ class MainActivity : AppCompatActivity() {
     private fun setStatus(ok: Boolean) {
         if (::statusBadge.isInitialized.not()) return
         statusBadge.text = if (ok) "已连接" else "离线"
-        statusBadge.setTextColor(getColor(if (ok) R.color.ck_badge_ok_fg else R.color.ck_badge_off_fg))
+        statusBadge.setTextColor(getColor(if (ok) R.color.ikeback_badge_ok_fg else R.color.ikeback_badge_off_fg))
         statusBadge.background = Ui.shape(
             this,
-            getColor(if (ok) R.color.ck_badge_ok_bg else R.color.ck_badge_off_bg),
+            getColor(if (ok) R.color.ikeback_badge_ok_bg else R.color.ikeback_badge_off_bg),
             12,
         )
     }
@@ -638,7 +638,7 @@ class MainActivity : AppCompatActivity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                background = Ui.shape(this@MainActivity, getColor(R.color.ck_card), 14, getColor(R.color.ck_border))
+                background = Ui.shape(this@MainActivity, getColor(R.color.ikeback_card), 14, getColor(R.color.ikeback_border))
                 val p = Ui.dp(this@MainActivity, 14)
                 setPadding(p, p, p, p)
                 isClickable = true
@@ -647,19 +647,19 @@ class MainActivity : AppCompatActivity() {
             val seat = TextView(this).apply {
                 text = "${student.seat} 号"
                 textSize = 12f
-                setTextColor(getColor(R.color.ck_secondary))
+                setTextColor(getColor(R.color.ikeback_secondary))
             }
             val name = TextView(this).apply {
                 text = student.student.ifEmpty { "—" }
                 textSize = 15f
                 setTypeface(typeface, Typeface.BOLD)
-                setTextColor(getColor(R.color.ck_title))
+                setTextColor(getColor(R.color.ikeback_title))
             }
             val score = TextView(this).apply {
                 text = "${student.score} 分"
                 textSize = 18f
                 setTypeface(typeface, Typeface.BOLD)
-                setTextColor(getColor(R.color.ck_primary))
+                setTextColor(getColor(R.color.ikeback_primary))
             }
             card.addView(seat)
             card.addView(name)
@@ -798,7 +798,7 @@ class MainActivity : AppCompatActivity() {
                 textSize = 14f
                 val pad = Ui.dp(this@MainActivity, 10)
                 setPadding(pad, pad, pad, pad)
-                background = Ui.shape(this@MainActivity, getColor(R.color.ck_input_bg), 12)
+                background = Ui.shape(this@MainActivity, getColor(R.color.ikeback_input_bg), 12)
             }
             box.addView(edit, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -812,7 +812,7 @@ class MainActivity : AppCompatActivity() {
             ((existing?.endSection ?: row) - (existing?.startSection ?: row) + 1).toString())
         val color = android.widget.CheckBox(this).apply {
             text = "换一个颜色"
-            setTextColor(getColor(R.color.ck_title))
+            setTextColor(getColor(R.color.ikeback_title))
         }
         box.addView(color)
 
@@ -885,7 +885,7 @@ class MainActivity : AppCompatActivity() {
                 inputType = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
                 val pad = Ui.dp(this@MainActivity, 10)
                 setPadding(pad, pad, pad, pad)
-                background = Ui.shape(this@MainActivity, this@MainActivity.getColor(R.color.ck_input_bg), 12)
+                background = Ui.shape(this@MainActivity, this@MainActivity.getColor(R.color.ikeback_input_bg), 12)
             }
             box.addView(
                 edit,
@@ -908,7 +908,7 @@ class MainActivity : AppCompatActivity() {
         val dual = android.widget.CheckBox(this).apply {
             text = "双列作息（两套并行时间，如 小学 / 初高中）"
             isChecked = config.dualTime
-            setTextColor(this@MainActivity.getColor(R.color.ck_title))
+            setTextColor(this@MainActivity.getColor(R.color.ikeback_title))
         }
         box.addView(dual)
         val label1 = addField("第一栏标题", config.timeLabel1, numeric = false)
@@ -1013,7 +1013,7 @@ class MainActivity : AppCompatActivity() {
     private fun exportTimetable() {
         try {
             val dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: filesDir
-            val file = File(dir, "ClassKeep-课表.json")
+            val file = File(dir, "ikeback-课表.json")
             file.writeText(TimetableStore.toJson(timetableStore.load()), Charsets.UTF_8)
             message("课表已导出：${file.absolutePath}")
         } catch (e: Exception) {
@@ -1043,7 +1043,7 @@ class MainActivity : AppCompatActivity() {
             }
             obj.put("events", events)
             val dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: filesDir
-            val file = File(dir, "ClassKeep-本地数据.json")
+            val file = File(dir, "ikeback-本地数据.json")
             file.writeText(obj.toString(2), Charsets.UTF_8)
             message("本地数据已导出：${file.absolutePath}")
         } catch (e: Exception) {
@@ -1159,7 +1159,7 @@ class MainActivity : AppCompatActivity() {
                 bridge.connect(host)
                 val xml = bridge.report(host)
                 val dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                val file = File(dir, "ClassKeep-期末成绩表.xls")
+                val file = File(dir, "ikeback-期末成绩表.xls")
                 file.writeText(xml, Charsets.UTF_8)
                 ui { message("期末表已保存：${file.absolutePath}") }
             } catch (e: Exception) {

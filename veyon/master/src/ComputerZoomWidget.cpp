@@ -141,11 +141,11 @@ void ComputerZoomWidget::updateComputerZoomWidgetTitle()
 
 	if (username.isEmpty())
 	{
-		setWindowTitle(QStringLiteral("%1 - ClassKeep").arg(m_vncView->computerControlInterface()->computerName()));
+		setWindowTitle(QStringLiteral("%1 - ikeback").arg(m_vncView->computerControlInterface()->computerName()));
 	}
 	else
 	{
-		setWindowTitle(QStringLiteral( "%1 - %2 - ClassKeep").arg(username,
+		setWindowTitle(QStringLiteral( "%1 - %2 - ikeback").arg(username,
 															  m_vncView->computerControlInterface()->computerName()));
 	}
 }

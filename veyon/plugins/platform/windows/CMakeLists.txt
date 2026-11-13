@@ -68,22 +68,22 @@ target_include_directories(windows-platform PRIVATE
 	${ultravnc_DIR}
 	)
 
-# ClassKeep: upstream links -linterception, which only exists in Veyon's private
+# ikeback: upstream links -linterception, which only exists in Veyon's private
 # cross-build image (not in MSYS2, not in 3rdparty/interception/). The optional
 # driver API is stubbed in 3rdparty/interception/include/interception.h so the
 # mandatory windows-platform plugin can be built. See that header for details.
 target_link_libraries(windows-platform PRIVATE -lws2_32 -lwtsapi32 -lnetapi32 -luserenv -limm32 -lntdll -liphlpapi -lsetupapi -lsecur32)
 target_link_libraries(windows-platform PRIVATE Qt6::GuiPrivate)
-# ClassKeep: do NOT redefine _WIN32_WINNT / WINVER here. The MSYS2 UCRT64
+# ikeback: do NOT redefine _WIN32_WINNT / WINVER here. The MSYS2 UCRT64
 # toolchain already defines them, and Veyon's global -Werror turns the
 # "redefined" warning into a hard error. Fixing the windows.h include order
 # in the .cpp files is sufficient for DsGetDcNameW / WTSQueryUserToken /
 # AF_INET6 / ConvertSidToStringSidW to be visible.
 target_compile_definitions(windows-platform PRIVATE ULTRAVNC_VEYON_SUPPORT)
-# ClassKeep: this target also compiles the pinned upstream UltraVNC sources
+# ikeback: this target also compiles the pinned upstream UltraVNC sources
 # (vnckeymap.cpp / authSSP.cpp). Modern GCC + Veyon's global -Wall -Werror
 # flag their legacy unused variables as hard errors. Scope the exemptions to
-# this target only; ClassKeep's own code keeps full warnings-as-errors.
+# this target only; ikeback's own code keeps full warnings-as-errors.
 target_compile_options(windows-platform PRIVATE
 	"-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation;-Wno-unused-but-set-variable;-Wno-unused-variable;-Wno-deprecated-declarations;-Wno-sign-compare;-Wno-unused-result"
 )

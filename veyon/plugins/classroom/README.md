@@ -1,13 +1,13 @@
-# `plugins/classroom` — ClassKeep 插件
+# `plugins/classroom` — ikeback 插件
 
-本目录是 ClassKeep 的全部桌面端实现，作为 Veyon 插件编译（`plugins/CMakeLists.txt` 的 GLOB 自动发现，无需注册）。
+本目录是 ikeback 的全部桌面端实现，作为 Veyon 插件编译（`plugins/CMakeLists.txt` 的 GLOB 自动发现，无需注册）。
 
-- 仓库：<https://github.com/zk26/ClassKeep> · 本目录位于 `veyon/plugins/classroom/`
+- 仓库：<https://github.com/zk26/ikeback> · 本目录位于 `veyon/plugins/classroom/`
 - 许可：**GPL-2.0-or-later**（`SPDX-License-Identifier: GPL-2.0-or-later`），
   见仓库根 [`../../../LICENSE`](../../../LICENSE) 与 [`../../../NOTICE.md`](../../../NOTICE.md)
-- 总览：[`../../docs/CLASSKEEP.md`](../../docs/CLASSKEEP.md)
-- 协议（命令字、参数、认证）：[`../../docs/CLASSKEEP-PROTOCOL.md`](../../docs/CLASSKEEP-PROTOCOL.md)
-- 部署与数据合规：[`../../docs/CLASSKEEP-DEPLOY.md`](../../docs/CLASSKEEP-DEPLOY.md)、[`../../docs/CLASSKEEP-PRIVACY.md`](../../docs/CLASSKEEP-PRIVACY.md)
+- 总览：[`../../docs/IKEBACK.md`](../../docs/IKEBACK.md)
+- 协议（命令字、参数、认证）：[`../../docs/IKEBACK-PROTOCOL.md`](../../docs/IKEBACK-PROTOCOL.md)
+- 部署与数据合规：[`../../docs/IKEBACK-DEPLOY.md`](../../docs/IKEBACK-DEPLOY.md)、[`../../docs/IKEBACK-PRIVACY.md`](../../docs/IKEBACK-PRIVACY.md)
 
 ## 文件职责
 
@@ -36,14 +36,14 @@
 
 | 组件 | 进程 | 主要工作 |
 |---|---|---|
-| Master | `ClassKeep-master` | 教师端控制台、名单/设置下发（**密钥不下发**）、日志与积分主库、Bridge 服务、AI 模型代理 |
-| Server | `ClassKeep-server`（SYSTEM） | FeatureMessage 转发、离线事件补传队列、worker 看门狗、UWF/网络/音频系统操作入口 |
-| Worker | `ClassKeep-worker`（登录用户） | 悬浮条、登录认证、AI/积分/肃静窗口、行为采集、上报事件 |
+| Master | `ikeback-master` | 教师端控制台、名单/设置下发（**密钥不下发**）、日志与积分主库、Bridge 服务、AI 模型代理 |
+| Server | `ikeback-server`（SYSTEM） | FeatureMessage 转发、离线事件补传队列、worker 看门狗、UWF/网络/音频系统操作入口 |
+| Worker | `ikeback-worker`（登录用户） | 悬浮条、登录认证、AI/积分/肃静窗口、行为采集、上报事件 |
 
 ## 2.0.0 常用工具与三种「保护」
 
 > **不变式（必读）**：`sessionKey` / `aiApiKey` 只允许存在于教师机与教师手机。
-> 任何发给 `ClassKeep-server` / `ClassKeep-worker` 的设置都必须先经过
+> 任何发给 `ikeback-server` / `ikeback-worker` 的设置都必须先经过
 > `ClassroomSettings::forStudents()`；学生端只收 `keyConfigured` 布尔值，
 > 退出保护只认管理员凭据，AI 只提交 prompt 由教师机代理调用模型。
 
@@ -67,21 +67,21 @@
 > **三个开关互不相同**：`SetExitProtection`（客户端保护，学生退不出 worker）、
 > `SetUninstallProtection`（卸载保护，学生卸不掉程序）、
 > `UwfSetFilter`（系统还原，重启生效，装软件前关闭）。
-> 详见 [`../../docs/CLASSKEEP-PROTOCOL.md`](../../docs/CLASSKEEP-PROTOCOL.md) 第 2 节。
+> 详见 [`../../docs/IKEBACK-PROTOCOL.md`](../../docs/IKEBACK-PROTOCOL.md) 第 2 节。
 
 ## 修改约束
 
 1. **`ClassroomProtocol.h` 中的枚举数值就是线上协议**（`FeatureMessage` 用 `QString::number(int)` 作参数键），
    **只允许在末尾追加**，禁止插入、删除、重排或改数值。详见协议文档第 1 节「兼容性铁律」。
 2. 认证公式、UDP 广播前缀、数据文件字段属于破坏性变更，需提升协议版本并同步
-   `ClassroomSelfTest.cpp` 与 Android `ClassKeepUnitTest.kt` 的断言。
+   `ClassroomSelfTest.cpp` 与 Android `IkebackUnitTest.kt` 的断言。
 3. 新增能力应复用本插件的 `FeatureMessage` 通道，不新增常驻服务、端口或第三方库。
 4. 学生端保持**零落盘**；教师机离线时的事件走 Server 补传队列。
-5. 任何涉及采集字段的改动，须同步更新 `CLASSKEEP-PROTOCOL.md` 与 `CLASSKEEP-PRIVACY.md`。
+5. 任何涉及采集字段的改动，须同步更新 `IKEBACK-PROTOCOL.md` 与 `IKEBACK-PRIVACY.md`。
 
 ## 构建与自检
 
-完整构建方案见 [`../../docs/CLASSKEEP-BUILD.md`](../../docs/CLASSKEEP-BUILD.md)。
+完整构建方案见 [`../../docs/IKEBACK-BUILD.md`](../../docs/IKEBACK-BUILD.md)。
 Veyon 4.11.4 **只能用 MinGW-w64/GCC 编译**（MSVC 不可行）。
 
 ```bash
@@ -90,7 +90,7 @@ cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_TESTS=ON -DWITH_CORE_ONLY=
 cmake --build build
 ```
 
-最快的编译验证是 GitHub Actions 的 `ClassKeep Build Check`（Linux/Qt6/GCC）。
+最快的编译验证是 GitHub Actions 的 `ikeback Build Check`（Linux/Qt6/GCC）。
 
 Windows 下 `ClassroomSystem.cpp` 需要 Windows SDK（`mmdeviceapi.h` / `endpointvolume.h`）；
 Linux/macOS 下相关功能走 `#else` 分支返回 `false`，不影响编译——

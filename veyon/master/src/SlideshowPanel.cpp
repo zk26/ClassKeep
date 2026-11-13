@@ -115,7 +115,7 @@ void SlideshowPanel::switchViewMode()
 	{
 		m_originalParent = parentWidget();
 		setParent(nullptr);
-		setWindowTitle(tr("ClassKeep – Slideshow"));
+		setWindowTitle(tr("ikeback – Slideshow"));
 		showMaximized();
 	}
 	else

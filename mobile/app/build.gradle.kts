@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "top.ikee002.classkeep"
+    namespace = "top.ikee002.ikeback"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -11,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "top.ikee002.classkeep"
+        applicationId = "top.ikee002.ikeback"
         minSdk = 30
         targetSdk = 36
         versionCode = 9

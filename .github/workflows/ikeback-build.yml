@@ -1,7 +1,7 @@
-name: ClassKeep Build Check
+name: ikeback Build Check
 
 # Real compilation of the C++/Qt desktop code and the Android app.
-# See docs/CLASSKEEP-BUILD.md for the rationale and the Windows (MinGW) route.
+# See docs/IKEBACK-BUILD.md for the rationale and the Windows (MinGW) route.
 #
 # IMPORTANT: workflows must live at the REPOSITORY ROOT .github/workflows/.
 # Files under veyon/.github/workflows/ are inert and never triggered.
@@ -86,17 +86,17 @@ jobs:
             -DCMAKE_SKIP_INSTALL_RULES=ON \
             -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion -include cmath" 2>&1 | tee configure.log
 
-      # Build only the ClassKeep plugin target (plus everything it depends on:
+      # Build only the ikeback plugin target (plus everything it depends on:
       # veyon-core, Qt, etc.). Upstream plugins/filetransfer is broken in this
       # 4.11.4 snapshot under BOTH Qt5 and Qt6 (missing <QUuid> include,
       # qApp->setQuitOnLastWindowClosed on QCoreApplication); it is unrelated to
-      # ClassKeep and would make every full-project build fail.
-      - name: Build the ClassKeep plugin
+      # ikeback and would make every full-project build fail.
+      - name: Build the ikeback plugin
         run: |
           set -o pipefail
           cmake --build build --target classroom --parallel 4 2>&1 | tee build.log
 
-      - name: Verify the ClassKeep plugin was produced
+      - name: Verify the ikeback plugin was produced
         run: |
           set -e
           find build \( -name 'classroom*.so' -o -name 'classroom*.dll' \) -print | tee plugin-paths.txt
@@ -106,7 +106,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: classkeep-desktop-build-logs
+          name: ikeback-desktop-build-logs
           path: |
             configure.log
             build.log
@@ -144,10 +144,10 @@ jobs:
         run: |
           APK=$(find mobile/app/build/outputs -name '*.apk' -type f | head -n 1)
           test -n "$APK" || { echo 'No APK produced'; exit 1; }
-          cp "$APK" ClassKeep-Mobile.apk
+          cp "$APK" ikeback-Mobile.apk
 
       - uses: actions/upload-artifact@v6
         with:
-          name: classkeep-mobile
-          path: ClassKeep-Mobile.apk
+          name: ikeback-mobile
+          path: ikeback-Mobile.apk
           if-no-files-found: error

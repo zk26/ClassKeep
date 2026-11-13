@@ -16,7 +16,7 @@ option(WITH_THREAD_SANITIZER "Build with thread sanitizer" OFF)
 option(WITH_UB_SANITIZER "Build with undefined behavior sanitizer" OFF)
 option(WITH_FUZZERS "Build LLVM fuzzer tests (implies WITH_TESTS=ON)" OFF)
 option(WITH_BUNDLED_LIBVNC "Build with bundled LibVNCServer/Client" OFF)
-# ClassKeep: the mobile bridge is the ONLY HTTP surface we ship. Leave the
+# ikeback: the mobile bridge is the ONLY HTTP surface we ship. Leave the
 # upstream WebAPI plugin off by default so a deployment that forgets
 # -DWITH_WEBAPI=OFF does not silently open a second, unauthenticated server.
 option(WITH_WEBAPI "Build WebAPI plugin" OFF)
@@ -52,7 +52,7 @@ if (NOT VERSION_STRING MATCHES "^v.*")
 endif()
 
 if(VERSION_STRING STREQUAL "")
-	# ClassKeep release baseline (the upstream Veyon tree this fork is based on
+	# ikeback release baseline (the upstream Veyon tree this fork is based on
 	# is 4.11.4). A v* tag or GITHUB_REF_NAME overrides this in CI.
 	set(VERSION_MAJOR 2)
 	set(VERSION_MINOR 3)

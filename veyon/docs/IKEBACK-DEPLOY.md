@@ -1,11 +1,11 @@
-# 课守 ClassKeep 部署与使用说明
+# ikeback 部署与使用说明
 
-仓库：<https://github.com/zk26/ClassKeep> · 许可 **GPL-2.0-or-later**。
-本文件只讲部署与操作；许可见 [`CLASSKEEP-LICENSE.md`](CLASSKEEP-LICENSE.md) 与 [`../../NOTICE.md`](../../NOTICE.md)，
-第三方依赖见 [`CLASSKEEP-THIRD-PARTY.md`](CLASSKEEP-THIRD-PARTY.md)。
+仓库：<https://github.com/zk26/ikeback> · 许可 **GPL-2.0-or-later**。
+本文件只讲部署与操作；许可见 [`IKEBACK-LICENSE.md`](IKEBACK-LICENSE.md) 与 [`../../NOTICE.md`](../../NOTICE.md)，
+第三方依赖见 [`IKEBACK-THIRD-PARTY.md`](IKEBACK-THIRD-PARTY.md)。
 
 > ⚠️ **部署前置条件**：本软件会采集学生行为数据。部署方必须先阅读
-> [`CLASSKEEP-PRIVACY.md`](CLASSKEEP-PRIVACY.md)，完成告知/同意、目的限定、访问控制与保存期限评估，
+> [`IKEBACK-PRIVACY.md`](IKEBACK-PRIVACY.md)，完成告知/同意、目的限定、访问控制与保存期限评估，
 > 并确认符合所在地法律与学校制度。项目作者不接触实际数据，也不对部署行为承担责任。
 
 ## 1. 环境要求
@@ -27,36 +27,36 @@
 ### 桌面端
 
 桌面端**只能用 MinGW-w64 / GCC 编译**（Veyon CMake 硬编码 GCC 参数，MSVC 不可行）。
-完整依赖与命令见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。最简形式：
+完整依赖与命令见 [`IKEBACK-BUILD.md`](IKEBACK-BUILD.md)。最简形式：
 
 ```bash
 cmake -S veyon -B build -G Ninja -DCMAKE_PREFIX_PATH=/ucrt64 \
   -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
-cmake --build build --target classroom ClassKeep-master ClassKeep-configurator \
-                    ClassKeep-cli ClassKeep-wcli ClassKeep-service ClassKeep-server ClassKeep-worker
+cmake --build build --target classroom ikeback-master ikeback-configurator \
+                    ikeback-cli ikeback-wcli ikeback-service ikeback-server ikeback-worker
 bash veyon/scripts/collect-windows-runtime.sh
 ```
 
 > 必须显式列出目标，**不要**跑全量 `cmake --build build`：
 > 上游 `plugins/filetransfer` 在 Qt5/Qt6 下都编不过（缺 `<QUuid>`、`qApp` 类型）。
-> 详见 [`CLASSKEEP-BUILD.md`](CLASSKEEP-BUILD.md)。
+> 详见 [`IKEBACK-BUILD.md`](IKEBACK-BUILD.md)。
 
-若只想先验证代码能否编译，直接用 GitHub Actions 的 **ClassKeep Build Check**（Linux/Qt6/GCC），
+若只想先验证代码能否编译，直接用 GitHub Actions 的 **ikeback Build Check**（Linux/Qt6/GCC），
 无需在本机装整套 MinGW 工具链。
 
 ### 安装（推荐使用 Release 里的安装程序）
 
-1. **学生机**：以管理员运行 `ClassKeep-Student-<ver>-win64-setup.exe`。组件页**只有
+1. **学生机**：以管理员运行 `ikeback-student-<ver>-win64-setup.exe`。组件页**只有
    「服务端（必选）」**，不会安装也不会出现 Master；安装器会自动注册并启动
    Veyon Service、放行防火墙、启用 SAS。
-2. **教师机**：以管理员运行 `ClassKeep-Teacher-<ver>-win64-setup.exe`，组件页另含可选项
-   「教师控制台」（`ClassKeep-master.exe`），保持勾选。
-3. 两端再分别用 `ClassKeep-configurator.exe` 完成 Veyon 认证配置（教师机导出、学生机导入）。
+2. **教师机**：以管理员运行 `ikeback-teacher-<ver>-win64-setup.exe`，组件页另含可选项
+   「教师控制台」（`ikeback-master.exe`），保持勾选。
+3. 两端再分别用 `ikeback-configurator.exe` 完成 Veyon 认证配置（教师机导出、学生机导入）。
 
 安装器沿用上游 `nsis/veyon.nsi.in` 的安装流程；`classroom.dll` 等插件安装在
 `plugins/` 子目录，运行时 DLL 由 `ntldd` 递归收集，**不要**自己手工拷贝 DLL 白名单。
-服务进程 `ClassKeep-service.exe` 以 `LocalSystem` 运行，负责在会话里拉起 `ClassKeep-server.exe`
-与 `ClassKeep-worker.exe`；**worker 本身运行在登录用户的交互会话，不是 SYSTEM**。
+服务进程 `ikeback-service.exe` 以 `LocalSystem` 运行，负责在会话里拉起 `ikeback-server.exe`
+与 `ikeback-worker.exe`；**worker 本身运行在登录用户的交互会话，不是 SYSTEM**。
 `uwfmgr.exe`、`netsh.exe`、`shutdown.exe` 由 worker 调用，登录账户需具备管理员权限；
 写 `HKLM` 的卸载保护会读回确认，失败会在教师端活动日志里显示，不会静默报成功。
 
@@ -73,15 +73,15 @@ cd mobile
 
 ## 3. 学生机首次准备
 
-1. 安装带课守插件的 Veyon，确认 `ClassKeepService` 正在运行。
-2. 用 Veyon Configurator 打开「课守 ClassKeep」页，按需设置：
+1. 安装带 ikeback 插件的 Veyon，确认 `ikebackService` 正在运行。
+2. 用 Veyon Configurator 打开「ikeback」页，按需设置：
    - 退出保护 / 退出需超管账号 / 超管账户名
    - 允许学生自助登录
    - AI 接口地址与模型
    - 行为采集开关与采样间隔
    - **Bridge 端口与开关（教师机才需要开）**
 3. 确认 UWF 保护卷包含系统盘；给需要持久化的目录（如 `D:\作业`）加 `uwfmgr file add-exclusion`。
-4. 重启，确认学生机右上角出现「课守 ClassKeep」悬浮条。
+4. 重启，确认学生机右上角出现「ikeback」悬浮条。
 
 > 学生机**默认零落盘**：行为事件只通过 `ReportEvent` 上报到教师机。教师机未连接时，服务端内存队列最多缓存 5000 条，连接后自动补传；学生机重启会清空该队列。
 
@@ -89,7 +89,7 @@ cd mobile
 
 ## 4. 教师机每堂课流程
 
-1. 打开 Veyon Master，点工具栏「课守 ClassKeep」。
+1. 打开 Veyon Master，点工具栏「ikeback」。
 2. 在「课堂与登录」页选择班级；名单可直接编辑 IP，或用 CSV 导入（列：`seat,name,ip`）。
 3. 点 **开始新课堂**：
    - 生成新 `sessionId` 与 16 位密钥
@@ -132,7 +132,7 @@ cd mobile
 
 ## 6. 数据位置与迁移
 
-数据主库：教师机 `%APPDATA%/ClassKeep/`。
+数据主库：教师机 `%APPDATA%/ikeback/`。
 
 ```
 settings.json            配置（密钥加密）
@@ -143,7 +143,7 @@ teacher/machines/<主机>/ 每台学生机独立日志
 teacher/students/        每生独立日志
 ```
 
-> 本分支早期版本使用 `%APPDATA%/Classroom`。若已有数据，把该目录**重命名为 `ClassKeep`** 即可，内部结构与字段名未变。
+> 本分支早期版本使用 `%APPDATA%/Classroom`。若已有数据，把该目录**重命名为 `ikeback`** 即可，内部结构与字段名未变。
 
 日志保留天数默认 180 天，教师端「行为日志」页可手动清理。
 
@@ -169,4 +169,4 @@ teacher/students/        每生独立日志
 - Bridge 认证已启用（挑战应答 + 失败限流），但仍建议在**受控教学网段**使用，不要把 11880 端口映射到公网。
 - `aiApiKey` 与 `sessionKey` 在 `settings.json` 里是加密的，但教师机本身需按普通管理员权限保护。
 - 行为日志包含学生上网/窗口标题信息，属于敏感数据；按学校规定设置保留天数并限制访问。
-- 本仓库不是 git 上游官方仓库，推送前请确认 remote 指向自己的 fork（见 `docs/CLASSKEEP-LICENSE.md` 的仓库说明）。
+- 本仓库不是 git 上游官方仓库，推送前请确认 remote 指向自己的 fork（见 `docs/IKEBACK-LICENSE.md` 的仓库说明）。

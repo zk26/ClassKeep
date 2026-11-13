@@ -5,7 +5,7 @@ Makefile
 plugins/addons
 plugins/extra
 
-# ClassKeep Android app (generated / machine-local files)
+# ikeback Android app (generated / machine-local files)
 mobile/.gradle/
 mobile/.idea/
 mobile/build/
@@ -18,5 +18,5 @@ mobile/captures/
 # Release artifacts (built by CI / packaging script, never committed)
 dist/
 *.apk
-ClassKeep-Teacher-*.zip
-ClassKeep-Student-*.zip
+ikeback-teacher-*.zip
+ikeback-student-*.zip

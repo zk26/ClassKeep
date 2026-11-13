@@ -167,7 +167,7 @@ void ClassroomSeatGrid::rebuild()
 		card->setStyleSheet( QStringLiteral("background:#ffffff; border:1px solid #dce3ea; border-radius:8px;") );
 		card->setFixedWidth( ThumbWidth + 16 );
 		card->setToolTip( tr( "Drag this card onto another one to swap positions" ) );
-		card->setProperty( "classkeepSeat", student.seat );
+		card->setProperty( "ikebackSeat", student.seat );
 		card->setAcceptDrops( true );
 		card->installEventFilter( this );
 
@@ -178,7 +178,7 @@ void ClassroomSeatGrid::rebuild()
 		thumbnail->setFixedSize( ThumbWidth, ThumbHeight );
 		thumbnail->setAlignment( Qt::AlignCenter );
 		thumbnail->setStyleSheet( QStringLiteral("background:#eef3f6; border-radius:4px;") );
-		thumbnail->setProperty( "classkeepSeat", student.seat );
+		thumbnail->setProperty( "ikebackSeat", student.seat );
 		thumbnail->setAcceptDrops( true );
 		thumbnail->installEventFilter( this );
 		layout->addWidget( thumbnail );
@@ -348,7 +348,7 @@ void ClassroomSeatGrid::chooseDelta( const QString& seat )
 
 bool ClassroomSeatGrid::eventFilter( QObject* watched, QEvent* event )
 {
-	const auto seat = watched->property( "classkeepSeat" ).toString();
+	const auto seat = watched->property( "ikebackSeat" ).toString();
 	if( seat.isEmpty() ) { return QWidget::eventFilter( watched, event ); }
 
 	if( event->type() == QEvent::MouseButtonPress )

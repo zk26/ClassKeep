@@ -24,7 +24,7 @@
 
 #include <QDir>
 
-// ClassKeep: newer MinGW-w64 headers no longer pull in the basic Windows types
+// ikeback: newer MinGW-w64 headers no longer pull in the basic Windows types
 // transitively. wtsapi32.h etc. require windows.h to be included FIRST.
 #include <windows.h>
 

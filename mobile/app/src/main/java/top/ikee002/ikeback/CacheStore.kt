@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import android.content.Context
 import org.json.JSONArray
@@ -24,7 +24,7 @@ data class Cache(
 
 class CacheStore(context: Context) {
     private val prefs = context.applicationContext
-        .getSharedPreferences("classkeep", Context.MODE_PRIVATE)
+        .getSharedPreferences("ikeback", Context.MODE_PRIVATE)
 
     fun load(): Cache = try {
         val events = JSONArray(prefs.getString("events", "[]") ?: "[]")

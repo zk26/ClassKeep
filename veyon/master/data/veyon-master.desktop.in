@@ -1,10 +1,10 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=@CMAKE_INSTALL_PREFIX@/bin/ClassKeep-master
+Exec=@CMAKE_INSTALL_PREFIX@/bin/ikeback-master
 Icon=veyon-master
 Terminal=false
-Name=ClassKeep Master
+Name=ikeback Master
 Comment=Monitor and control remote computers
 Comment[de]=Entfernte Computer beobachten und steuern
 Categories=Qt;Education;Network;RemoteAccess;

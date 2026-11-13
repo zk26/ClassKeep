@@ -223,13 +223,13 @@ QString VeyonCore::sessionIdEnvironmentVariable()
 
 void VeyonCore::setupApplicationParameters()
 {
-	// ClassKeep 2.0: all user-visible application identifiers are English and
-	// ClassKeep-branded. The on-disk data directories in
+	// ikeback 2.0: all user-visible application identifiers are English and
+	// ikeback-branded. The on-disk data directories in
 	// WindowsFilesystemFunctions intentionally keep their legacy `Veyon` name so
 	// existing authentication keys and classroom data survive the 2.0 upgrade.
-	QCoreApplication::setOrganizationName( QStringLiteral( "ClassKeep" ) );
-	QCoreApplication::setOrganizationDomain( QStringLiteral( "github.com/zk26/ClassKeep" ) );
-	QCoreApplication::setApplicationName( QStringLiteral( "ClassKeep" ) );
+	QCoreApplication::setOrganizationName( QStringLiteral( "ikeback" ) );
+	QCoreApplication::setOrganizationDomain( QStringLiteral( "github.com/zk26/ikeback" ) );
+	QCoreApplication::setApplicationName( QStringLiteral( "ikeback" ) );
 
 	QCoreApplication::setAttribute( Qt::AA_ShareOpenGLContexts );
 

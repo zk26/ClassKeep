@@ -3,7 +3,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/ck_background"
+    android:background="@color/ikeback_background"
     android:orientation="vertical">
 
     <!-- Each tab supplies its own ScrollView; the last item inside it pads

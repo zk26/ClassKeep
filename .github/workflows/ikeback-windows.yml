@@ -1,4 +1,4 @@
-name: ClassKeep Windows Build
+name: ikeback Windows Build
 
 # Produces real Windows binaries (teacher + student + classroom.dll) using
 # MSYS2 UCRT64 / Qt6 / MinGW-w64, i.e. the toolchain Veyon's CMake requires.
@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - '.github/workflows/classkeep-windows.yml'
+      - '.github/workflows/ikeback-windows.yml'
       # Windows-only code paths (DPAPI, registry, WTS sessions, Logger) are not
       # compiled by the Linux job, so any tree change needs this build as well.
       - 'veyon/**'
@@ -179,13 +179,13 @@ jobs:
           set -e
           mkdir -p dist
           # Unicode true requires a UTF-8 BOM for the Chinese UI strings.
-          { printf '\xEF\xBB\xBF'; cat veyon/scripts/classkeep-installer.nsi; } > installer.nsi
+          { printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
           makensis -DVERSION=2.3.0 -DROLE=teacher installer.nsi
           makensis -DVERSION=2.3.0 -DROLE=student installer.nsi
           ls -lh dist
 
       - uses: actions/upload-artifact@v6
         with:
-          name: classkeep-windows-setups
+          name: ikeback-windows-setups
           path: dist/*.exe
           if-no-files-found: error

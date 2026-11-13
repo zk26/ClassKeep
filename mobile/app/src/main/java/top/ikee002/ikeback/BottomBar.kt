@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import android.animation.ObjectAnimator
 import android.content.Context
@@ -45,16 +45,16 @@ class BottomBar(
     init {
         background = Ui.shape(
             context,
-            context.getColor(R.color.ck_card),
+            context.getColor(R.color.ikeback_card),
             22,
-            context.getColor(R.color.ck_border),
+            context.getColor(R.color.ikeback_border),
         )
         setPadding(outer, outer, outer, outer)
         elevation = 0f
         // Fixed height: never let this bar consume the content area's space.
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, barHeight + outer * 2)
 
-        indicator.background = Ui.shape(context, context.getColor(R.color.ck_chip_bg), 16)
+        indicator.background = Ui.shape(context, context.getColor(R.color.ikeback_chip_bg), 16)
         addView(indicator, LayoutParams(0, barHeight).apply { gravity = Gravity.TOP })
 
         val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
@@ -72,7 +72,7 @@ class BottomBar(
             val icon = ImageView(context).apply {
                 setImageResource(tab.iconRes)
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                setColorFilter(context.getColor(R.color.ck_secondary), PorterDuff.Mode.SRC_IN)
+                setColorFilter(context.getColor(R.color.ikeback_secondary), PorterDuff.Mode.SRC_IN)
             }
             item.addView(
                 icon,
@@ -83,7 +83,7 @@ class BottomBar(
                 textSize = 10.5f
                 gravity = Gravity.CENTER
                 maxLines = 1
-                setTextColor(context.getColor(R.color.ck_secondary))
+                setTextColor(context.getColor(R.color.ikeback_secondary))
             }
             item.addView(
                 label,
@@ -140,13 +140,13 @@ class BottomBar(
             }
             icons.forEachIndexed { i, view ->
                 view.setColorFilter(
-                    context.getColor(if (i == index) R.color.ck_primary else R.color.ck_secondary),
+                    context.getColor(if (i == index) R.color.ikeback_primary else R.color.ikeback_secondary),
                     PorterDuff.Mode.SRC_IN,
                 )
             }
             labels.forEachIndexed { i, view ->
                 view.setTextColor(
-                    context.getColor(if (i == index) R.color.ck_primary else R.color.ck_secondary)
+                    context.getColor(if (i == index) R.color.ikeback_primary else R.color.ikeback_secondary)
                 )
                 view.setTypeface(
                     view.typeface,

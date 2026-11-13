@@ -52,7 +52,7 @@ static QByteArray dpapiProtect( const QByteArray& plain )
 	input.cbData = static_cast<DWORD>( plain.size() );
 	input.pbData = reinterpret_cast<BYTE*>( const_cast<char*>( plain.constData() ) );
 	DATA_BLOB output{};
-	if( CryptProtectData( &input, L"ClassKeep", nullptr, nullptr, nullptr,
+	if( CryptProtectData( &input, L"ikeback", nullptr, nullptr, nullptr,
 						  CRYPTPROTECT_UI_FORBIDDEN, &output ) == FALSE )
 	{
 		return {};
@@ -92,10 +92,10 @@ QString ClassroomSecrets::protect( const QString& plain )
 	if( blob.isEmpty() == false ) { return dpapiPrefix + QString::fromLatin1( blob.toBase64() ); }
 	// Fail closed: never silently downgrade a secret to plaintext or to the
 	// repository-wide RSA key just because DPAPI is unavailable.
-	qWarning() << "ClassKeep: could not protect a secret with DPAPI";
+	qWarning() << "ikeback: could not protect a secret with DPAPI";
 	return {};
 #else
-	// ClassKeep's supported deployment target is Windows. Keep the legacy
+	// ikeback's supported deployment target is Windows. Keep the legacy
 	// format on other platforms so the tree still builds for CI/development;
 	// ClassroomSettings::save() restricts the file to the owner there.
 	const auto encrypted = VeyonCore::cryptoCore().
@@ -113,7 +113,7 @@ QString ClassroomSecrets::reveal( const QString& stored )
 		const auto blob = QByteArray::fromBase64( stored.mid( dpapiPrefix.size() ).toLatin1() );
 		return QString::fromUtf8( dpapiUnprotect( blob ) );
 #else
-		qWarning() << "ClassKeep: dpapi: secret cannot be read on this platform";
+		qWarning() << "ikeback: dpapi: secret cannot be read on this platform";
 		return {};
 #endif
 	}

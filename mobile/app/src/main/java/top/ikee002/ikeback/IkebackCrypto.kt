@@ -1,4 +1,4 @@
-package top.ikee002.classkeep
+package top.ikee002.ikeback
 
 import java.security.MessageDigest
 import javax.crypto.Mac
@@ -15,7 +15,7 @@ import javax.crypto.spec.SecretKeySpec
  * Binding the method, full path (including the query string) and the request
  * body means a captured token cannot be replayed against a different call.
  */
-object ClassKeepCrypto {
+object IkebackCrypto {
     fun sha256Hex(bytes: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
         return digest.joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }

@@ -48,10 +48,10 @@ public:
 
 	Plugin::Uid uid() const override { return Classroom::pluginUid(); }
 	QVersionNumber version() const override { return QVersionNumber( 1, 0 ); }
-	QString name() const override { return QStringLiteral("ClassKeep"); }
-	QString description() const override { return tr( "ClassKeep - classes, logs, scoring, analysis and control" ); }
+	QString name() const override { return QStringLiteral("ikeback"); }
+	QString description() const override { return tr( "ikeback - classes, logs, scoring, analysis and control" ); }
 	QString vendor() const override { return QStringLiteral("zk26"); }
-	QString copyright() const override { return QStringLiteral("ClassKeep"); }
+	QString copyright() const override { return QStringLiteral("ikeback"); }
 
 	const FeatureList& featureList() const override;
 

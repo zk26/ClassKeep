@@ -22,7 +22,7 @@
  *
  */
 
-// ClassKeep: dsgetdc.h / wtsapi32.h need windows.h first on newer MinGW-w64.
+// ikeback: dsgetdc.h / wtsapi32.h need windows.h first on newer MinGW-w64.
 #include <windows.h>
 
 #include <dsgetdc.h>
@@ -216,7 +216,7 @@ bool WindowsUserFunctions::performLogon( const QString& username, const Password
 	DesktopInputController input( config.logonKeyPressInterval() );
 
 	const auto ctrlAltDel = []() {
-		SmartHandle sasEvent{OpenEvent(EVENT_MODIFY_STATE, false, L"Global\\ClassKeepServiceSasEvent" )};
+		SmartHandle sasEvent{OpenEvent(EVENT_MODIFY_STATE, false, L"Global\\ikebackServiceSasEvent" )};
 		if (sasEvent.isValid())
 		{
 			SetEvent(sasEvent.get());

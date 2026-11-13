@@ -495,15 +495,15 @@ QString ComputerControlListModel::computerToolTipRole( const ComputerControlInte
 
 namespace
 {
-// ClassKeep: the score is injected as a dynamic QObject property by the
+// ikeback: the score is injected as a dynamic QObject property by the
 // classroom plugin (same process, no ABI change and no file I/O). When the
 // plugin is not loaded the label stays exactly as upstream renders it.
-QString withClassKeepScore( const ComputerControlInterface::Pointer& controlInterface,
+QString withIkebackScore( const ComputerControlInterface::Pointer& controlInterface,
 							const QString& label )
 {
 	// Qualify through QObject (the interface has a QUuid-keyed property overload).
 	const auto* object = static_cast<const QObject*>( controlInterface.data() );
-	const auto score = object->property( "classkeepScore" );
+	const auto score = object->property( "ikebackScore" );
 	if( score.isValid() == false )
 	{
 		return label;
@@ -511,7 +511,7 @@ QString withClassKeepScore( const ComputerControlInterface::Pointer& controlInte
 
 	// Agreed layout: shield (client protection on) + name + [score].
 	// The shield is a plain glyph so it renders even without an emoji font.
-	const auto protection = object->property( "classkeepProtected" );
+	const auto protection = object->property( "ikebackProtected" );
 	const auto shield = protection.toBool() ? QString::fromUtf8( "\xF0\x9F\x9B\xA1" )
 											   : QString::fromUtf8( "\xE2\x97\x8B" );
 	return QStringLiteral("%1 %2  [%3]")
@@ -535,16 +535,16 @@ QString ComputerControlListModel::computerDisplayRole( const ComputerControlInte
 
 		if( displayRoleContent() == DisplayRoleContent::UserName )
 		{
-			return withClassKeepScore( controlInterface, user );
+			return withIkebackScore( controlInterface, user );
 		}
 
-		return withClassKeepScore( controlInterface,
+		return withIkebackScore( controlInterface,
 								   QStringLiteral("%1 - %2").arg(user, controlInterface->computerName()) );
 	}
 
 	if( displayRoleContent() != DisplayRoleContent::UserName )
 	{
-		return withClassKeepScore( controlInterface, controlInterface->computerName() );
+		return withIkebackScore( controlInterface, controlInterface->computerName() );
 	}
 
 	return tr("[no user]");
@@ -608,7 +608,7 @@ QString ComputerControlListModel::computerStateDescription( const ComputerContro
 		return tr("Hostname could not be resolved");
 
 	case ComputerControlInterface::State::ServerNotRunning:
-		return tr( "ClassKeep Server unreachable or not running" );
+		return tr( "ikeback Server unreachable or not running" );
 
 	case ComputerControlInterface::State::AuthenticationFailed:
 		return tr( "Authentication failed or access denied" );

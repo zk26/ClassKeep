@@ -39,7 +39,7 @@ MainToolBar::MainToolBar( QWidget* parent ) :
 	m_layout(findChild<QLayout *>())
 {
 	setExpanded();
-	// ClassKeep: smaller icons let the frequently used actions stay on the
+	// ikeback: smaller icons let the frequently used actions stay on the
 	// first row; less common ones wrap to a second row or land in the ">>" menu.
 	setIconSize(QSize(24, 24));
 
@@ -75,7 +75,7 @@ void MainToolBar::setExpanded()
 		// Allow the toolbar to wrap onto a second row when the window is narrow.
 		QMetaObject::invokeMethod(m_layout, "setExpanded", Qt::DirectConnection, Q_ARG(bool, true));
 
-		// ClassKeep: do NOT hide Qt's ">>" overflow button. Actions that still
+		// ikeback: do NOT hide Qt's ">>" overflow button. Actions that still
 		// do not fit are collected there instead of vanishing off-screen.
 	}
 }

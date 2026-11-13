@@ -1,12 +1,12 @@
 [Unit]
-Description=ClassKeep Service
+Description=ikeback Service
 After=network-online.target dbus.service systemd-logind.service
 Wants=network-online.target
 Requires=dbus.service systemd-logind.service
 Documentation=man:veyon-service(1)
 
 [Service]
-ExecStart=@CMAKE_INSTALL_PREFIX@/bin/ClassKeep-service
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/ikeback-service
 Type=simple
 Restart=always
 StartLimitInterval=60

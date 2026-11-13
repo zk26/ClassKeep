@@ -57,12 +57,12 @@ QString VeyonServiceControl::filePath()
 	return QDir::toNativeSeparators(
 				QCoreApplication::applicationDirPath() +
 				QDir::separator() +
-				QStringLiteral("ClassKeep-service") + VeyonCore::executableSuffix() );
+				QStringLiteral("ikeback-service") + VeyonCore::executableSuffix() );
 }
 
 
 
 QString VeyonServiceControl::displayName()
 {
-	return tr( "ClassKeep Service" );
+	return tr( "ikeback Service" );
 }

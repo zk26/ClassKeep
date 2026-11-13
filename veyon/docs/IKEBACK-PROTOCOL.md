@@ -1,15 +1,15 @@
-# 课守 ClassKeep 协议规范
+# ikeback 协议规范
 
 **协议版本：`1`（随本分支首次发布）**
-仓库：<https://github.com/zk26/ClassKeep> · 许可 **GPL-2.0-or-later**（`SPDX-License-Identifier: GPL-2.0-or-later`）。
+仓库：<https://github.com/zk26/ikeback> · 许可 **GPL-2.0-or-later**（`SPDX-License-Identifier: GPL-2.0-or-later`）。
 
 权威定义：`veyon/plugins/classroom/ClassroomProtocol.h`、`ClassroomBridge.cpp`、
-`ClassroomSecrets.cpp`，以及 `mobile/app/src/main/java/top/ikee002/classkeep/Announcement.kt`。
+`ClassroomSecrets.cpp`，以及 `mobile/app/src/main/java/top/ikee002/ikeback/Announcement.kt`。
 
 > 本文件是**技术通信协议**（命令字、路由、认证、数据格式），不是软件许可协议。
-> 软件许可与分发义务见 [`CLASSKEEP-LICENSE.md`](CLASSKEEP-LICENSE.md) 与 [`../../NOTICE.md`](../../NOTICE.md)；
-> 其中描述的采集字段所对应的数据合规要求见 [`CLASSKEEP-PRIVACY.md`](CLASSKEEP-PRIVACY.md)。
-> 第三方组件许可见 [`CLASSKEEP-THIRD-PARTY.md`](CLASSKEEP-THIRD-PARTY.md)。
+> 软件许可与分发义务见 [`IKEBACK-LICENSE.md`](IKEBACK-LICENSE.md) 与 [`../../NOTICE.md`](../../NOTICE.md)；
+> 其中描述的采集字段所对应的数据合规要求见 [`IKEBACK-PRIVACY.md`](IKEBACK-PRIVACY.md)。
+> 第三方组件许可见 [`IKEBACK-THIRD-PARTY.md`](IKEBACK-THIRD-PARTY.md)。
 
 > ### 兼容性铁律
 >
@@ -28,7 +28,7 @@
 | 名称 | UUID | 说明 |
 |---|---|---|
 | `pluginUid()` | `d3f1c0de-7a41-4b8e-9c12-000000000000` | 插件标识 |
-| `consoleFeatureUid()` | `d3f1c0de-7a41-4b8e-9c12-000000000001` | 教师端工具栏「课守 ClassKeep」按钮（`Flag::Action \| Master`） |
+| `consoleFeatureUid()` | `d3f1c0de-7a41-4b8e-9c12-000000000001` | 教师端工具栏「ikeback」按钮（`Flag::Action \| Master`） |
 | `clientFeatureUid()` | `d3f1c0de-7a41-4b8e-9c12-000000000002` | 学生端常驻 worker 通道（`Flag::Session \| Service \| Worker`） |
 
 复用的上游 Feature UID：
@@ -97,7 +97,7 @@
 | 37 | `StartCheckIn` | M→S→W | 教师端「开始签到」，学生机弹出姓名输入框 | `ClassName` |
 | 38 | `CheckInReply` | W→S→M | 学生提交姓名，教师端按「座位号 → 名单姓名」比对 | `ClassName`、`Seat`、`Student`、`CheckInName`、`Host`、`Ip` |
 | 39 | `SetUninstallProtection` | M→S→W | 教师端开启/解除学生端**卸载**保护 | `Enabled` |
-| 40 | `SetExitProtection` | M→S→W | **客户端保护**：禁止学生自行退出 ClassKeep worker / 悬浮卡片 | `Enabled` |
+| 40 | `SetExitProtection` | M→S→W | **客户端保护**：禁止学生自行退出 ikeback worker / 悬浮卡片 | `Enabled` |
 | 41 | `OpenSoftware` | M→S→W | 在学生机打开指定程序 | `SoftwarePath`、`SoftwareArgs` |
 | 42 | `OpenWebsite` | M→S→W | 在学生机打开指定网址 | `Message`(URL) |
 | 43 | `SetAppBlockRules` | M→S→W | 禁用应用（模糊匹配规则数组） | `RulesJson` |
@@ -116,14 +116,14 @@
 | `ClassroomSignOut` | `...0004` | `Action\|Master` | 下发 `ForceLogout` |
 
 `MainWindow::addFeaturesToToolBar()` 过滤掉上游 `UserLogin` / `UserLogoff` 两个按钮，
-因此教师端只暴露 ClassKeep 的姓名+座位号登录入口。上游 `usersessioncontrol` 插件
+因此教师端只暴露 ikeback 的姓名+座位号登录入口。上游 `usersessioncontrol` 插件
 仍参与编译，但其 `prepareLogon()` / 密码加密路径不再被调用。
 
 ### 手机端 ↔ 教师机 HTTP 路由（2.1.0 新增）
 
 | 路径 | 方法 | 鉴权 | 用途 |
 |---|---|---|---|
-| `/api/classroom/timetable` | GET | 需要 | 读取教师机 `%APPDATA%/ClassKeep/timetable.json`，返回 `{"timetable": {...}, "revision": n}`；从未上传时 `timetable` 为空对象 |
+| `/api/classroom/timetable` | GET | 需要 | 读取教师机 `%APPDATA%/ikeback/timetable.json`，返回 `{"timetable": {...}, "revision": n}`；从未上传时 `timetable` 为空对象 |
 | `/api/classroom/timetable` | POST | 需要 | 请求体 `{"timetable": {...}}`，原样写入上述文件并返回 `{"ok": true, "revision": n}` |
 | `/api/classroom/classes` | GET | 需要 | 按当前班级返回名单与当前积分，供手机端「班级」页按班归档 |
 
@@ -134,7 +134,7 @@ endSection, colorIndex, room, teacher, note, className}]`，外加本分支的
 教师机端「课表与课堂」页签读写同一文件，两端始终一致。
 
 > `SetUninstallProtection` 收到后，**运行在登录用户交互会话中的**学生端 worker
-> （不是 `LocalSystem`）尝试写 `HKLM\SOFTWARE\ClassKeep\Student\UninstallProtection` = 1/0。
+> （不是 `LocalSystem`）尝试写 `HKLM\SOFTWARE\ikeback\Student\UninstallProtection` = 1/0。
 > 写入后读回 DWORD 并核对 `QSettings::status()`，失败会写一条活动日志并以
 > `ProtectionStateReport{failed}` 回报教师端——不会再静默显示「已开启」。
 > 因此该保护只在登录账户具备管理员权限时生效。独立的 `uninstall.exe` 启动时读同一 DWORD，
@@ -145,7 +145,7 @@ endSection, colorIndex, room, teacher, note, className}]`，外加本分支的
 > | 名称 | 开关 | 作用 |
 > |---|---|---|
 > | **客户端保护** | `SetExitProtection` / `exitProtection` | 防止学生端**进程/悬浮卡片**被自行退出；开启时关闭请求被 `closeEvent()` 拒绝，1.5s 守护定时器会把它重新显示；**关闭保护后允许隐藏卡片**（worker 仍由服务看门狗保活） |
-> | **卸载保护** | `SetUninstallProtection` | 防止学生把安装好的 ClassKeep **卸载**掉 |
+> | **卸载保护** | `SetUninstallProtection` | 防止学生把安装好的 ikeback **卸载**掉 |
 > | **UWF 还原** | `UwfSetFilter` / `UwfQuery` / `UwfRestart` | **系统级写过滤**，重启后还原；用于防学生机改动后掉线，以及**安装软件前先关闭** |
 >
 > 启用/关闭 UWF 只改过滤器状态（重启生效），工具面板**不会自动重启**，
@@ -223,7 +223,7 @@ Veyon 注册表段名固定为 `Classroom`（**不要改**，否则旧配置丢�
 | 键 | 类型 | 默认 |
 |---|---|---|
 | `enabled` | bool | `true` |
-| `dataDirectory` | QString | `%APPDATA%/ClassKeep` |
+| `dataDirectory` | QString | `%APPDATA%/ikeback` |
 | `sessionKey` | QString（加密落盘） | 空 |
 | `exitProtection` / `exitRequiresAdmin` | bool | `true` |
 | `exitAdminUsername` | QString | `Administrator` |
@@ -317,7 +317,7 @@ path     = 请求行里的完整路径（含查询串，例如 /api/classroom/wo
 token    = lowercase_hex( HMAC-SHA256( key = UTF8(sessionKey), msg = UTF8(message) ) )
 ```
 
-服务端 `ClassroomSecrets::requestToken()` / Android `ClassKeepCrypto.token()` 实现一致。基准向量（双端单元测试共用）：
+服务端 `ClassroomSecrets::requestToken()` / Android `IkebackCrypto.token()` 实现一致。基准向量（双端单元测试共用）：
 
 ```
 sessionKey = "ABC123", method = "GET", path = "/api/classroom/state"
@@ -343,24 +343,24 @@ token = bd41d1e94c8c04a9ae857dce47c9f1d6907b65cfcd5c1bcbd8d08711a7c14e50
 - 广播报文（教师机每 5 秒一次，UTF-8 明文）：
 
 ```
-CLASSKEEP:<port>:<teacherId>:<revision>:<nonce>
+IKEBACK:<port>:<teacherId>:<revision>:<nonce>
 ```
 
 - 主动探测（手机端发往 `255.255.255.255:<port>`，UTF-8 明文）：
 
 ```
-CLASSKEEP_DISCOVER
+IKEBACK_DISCOVER
 ```
 
 - 教师机收到探测后**单播回复同格式的广播报文**（不是 JSON），因此手机端只需一套解析器。
-- 常量：`announcementPrefix() = "CLASSKEEP:"`、`discoveryMagic() = "CLASSKEEP_DISCOVER"`。
+- 常量：`announcementPrefix() = "IKEBACK:"`、`discoveryMagic() = "IKEBACK_DISCOVER"`。
 - 手机端策略：**找到才同步，找不到不操作**；发现结果 30 秒节流；手动 IP + 手动同步始终可用。
 
 ---
 
 ## 9. 数据文件格式
 
-根目录为 `dataDirectory`（`%APPDATA%/ClassKeep`），按 `scope` 分 `teacher/`、`client/`。
+根目录为 `dataDirectory`（`%APPDATA%/ikeback`），按 `scope` 分 `teacher/`、`client/`。
 
 | 文件 | 格式 | 说明 |
 |---|---|---|
@@ -406,4 +406,4 @@ CLASSKEEP_DISCOVER
 
 1. 新增能力一律**追加** `Command` / `Argument` 枚举值与 HTTP 路由，不改已有序号。
 2. 若必须改变认证公式、广播格式或字段语义，提升协议版本，并让 Bridge 在 `/state` 返回 `protocol` 字段，双端按版本协商。
-3. 每次改动同步更新本文件、`ClassroomSelfTest.cpp` 与 `ClassKeepUnitTest.kt` 的常量断言。
+3. 每次改动同步更新本文件、`ClassroomSelfTest.cpp` 与 `IkebackUnitTest.kt` 的常量断言。

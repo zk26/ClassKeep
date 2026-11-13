@@ -465,23 +465,23 @@ void MainWindow::showAboutDialog()
 
 void MainWindow::addFeaturesToToolBar()
 {
-	// ClassKeep: put the everyday actions first. Everything else wraps onto a
+	// ikeback: put the everyday actions first. Everything else wraps onto a
 	// second row or goes into Qt's ">>" overflow menu. Names that are not in
 	// the list below simply land in the second group, so no feature is lost.
 	static const QStringList primaryNames{
 		QStringLiteral("monitoring"), QStringLiteral("demo"), QStringLiteral("lock"),
 		QStringLiteral("remoteview"), QStringLiteral("remoteaccess"),
 		QStringLiteral("textmessage"), QStringLiteral("screenshot"),
-		QStringLiteral("classroom"), QStringLiteral("classkeep"),
+		QStringLiteral("classroom"), QStringLiteral("ikeback"),
 		QStringLiteral("ClassroomConsole"), QStringLiteral("ClassroomSignIn"),
 		QStringLiteral("ClassroomSignOut"), QStringLiteral("ClassroomQuickTools"),
 		QStringLiteral("ClassroomCheckIn")
 	};
 
-	// ClassKeep 2.2.0: Veyon's native UserLogin/UserLogoff actions open a
-	// Windows username+password dialog. ClassKeep signs students in by NAME and
+	// ikeback 2.2.0: Veyon's native UserLogin/UserLogoff actions open a
+	// Windows username+password dialog. ikeback signs students in by NAME and
 	// SEAT instead, so those two upstream buttons must not be shown at all.
-	// 2.3.0: desktopservices' StartApp / OpenWebsite duplicated the ClassKeep
+	// 2.3.0: desktopservices' StartApp / OpenWebsite duplicated the ikeback
 	// console's "Open software" / "Open website" actions. They now live in the
 	// "Quick tools" menu only, so hide the upstream copies (no lost function).
 	static const QStringList supersededNames{

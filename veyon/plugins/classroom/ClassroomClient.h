@@ -50,7 +50,7 @@ public:
 	//! Only the teacher's StopClient command may hide the card.
 	void allowHide();
 	void reactivate();
-	//! Used by the ClassKeep tray icon context menu.
+	//! Used by the ikeback tray icon context menu.
 	void openAiAssistant();
 	void requestProtectedQuit();
 	void requestScore();
@@ -115,7 +115,7 @@ private:
 	bool m_exitRequiresAdmin = true;
 	QString m_exitAdminUsername;
 	QPoint m_dragPosition;
-	//! The card must stay on screen for as long as the ClassKeep service runs.
+	//! The card must stay on screen for as long as the ikeback service runs.
 	QTimer* m_guardTimer = nullptr;
 	bool m_hideAllowed = false;
 };

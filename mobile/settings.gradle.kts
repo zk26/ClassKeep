@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ClassKeep"
+rootProject.name = "ikeback"
 include(":app")

@@ -416,7 +416,7 @@ QString ClassroomScoreBook::inlineImages( const QString& html, const QString& da
 		{
 			// Rich text can arrive from the phone. Never inline an absolute
 			// Windows path, a file:// URL, a drive letter/UNC path or anything
-			// containing ".."; only small relative files inside the ClassKeep
+			// containing ".."; only small relative files inside the ikeback
 			// data directory are allowed.
 			const auto relative = source.trimmed();
 			const bool safe = relative.isEmpty() == false &&

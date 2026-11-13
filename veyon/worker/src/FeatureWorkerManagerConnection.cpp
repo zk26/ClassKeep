@@ -54,9 +54,9 @@ FeatureWorkerManagerConnection::FeatureWorkerManagerConnection(VeyonWorkerInterf
 	connect( &m_socket, &QTcpSocket::readyRead,
 			 this, &FeatureWorkerManagerConnection::receiveMessage );
 
-	// ClassKeep 2.3.0: without this bound, a worker whose service is gone (or
+	// ikeback 2.3.0: without this bound, a worker whose service is gone (or
 	// whose stdin token was lost) retries every 3 s forever. Dozens of idle
-	// ClassKeep-worker.exe processes then accumulate in Task Manager.
+	// ikeback-worker.exe processes then accumulate in Task Manager.
 	QTimer::singleShot( StartupTimeout, this, [this]() {
 		if( m_socket.state() != QAbstractSocket::ConnectedState || m_authToken.isEmpty() )
 		{

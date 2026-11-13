@@ -2,8 +2,8 @@
 Version=1.5
 Type=Application
 NoDisplay=true
-Exec=@CMAKE_INSTALL_PREFIX@/bin/ClassKeep-server
-Name=ClassKeep Server
-Comment=ClassKeep remote desktop server
+Exec=@CMAKE_INSTALL_PREFIX@/bin/ikeback-server
+Name=ikeback Server
+Comment=ikeback remote desktop server
 Icon=veyon
 Categories=Qt;Education;Network;RemoteAccess;

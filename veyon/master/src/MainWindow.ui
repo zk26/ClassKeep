@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string notr="true">ClassKeep Master</string>
+   <string notr="true">ikeback Master</string>
   </property>
   <property name="windowIcon">
    <iconset resource="../../core/resources/core.qrc">
@@ -110,7 +110,7 @@
         </rect>
        </property>
        <property name="toolTip">
-        <string>About ClassKeep</string>
+        <string>About ikeback</string>
        </property>
        <property name="text">
         <string>About</string>

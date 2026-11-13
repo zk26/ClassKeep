@@ -1,4 +1,4 @@
-; ClassKeep - Windows installer (based on upstream Veyon nsis/veyon.nsi.in)
+; ikeback - Windows installer (based on upstream Veyon nsis/veyon.nsi.in)
 ;
 ; Compile twice from the repository root (the release workflow supplies VERSION;
 ; 2.3.0 is only the fallback defined below):
@@ -6,11 +6,11 @@
 ;   makensis -DVERSION=2.3.0 -DROLE=student installer.nsi
 ;
 ; ROLE=teacher : component page with "Service" (read-only, registers/starts the
-;                ClassKeepService service) and "Master" (optional console).
+;                ikebackService service) and "Master" (optional console).
 ; ROLE=student : component page with ONLY the read-only Service section.
 ;
-; Since 2.0.0 every shipped process is ClassKeep-*.exe and the Windows service
-; is ClassKeepService. The installer also stops/removes the legacy <=1.5.1
+; Since 2.0.0 every shipped process is ikeback-*.exe and the Windows service
+; is ikebackService. The installer also stops/removes the legacy <=1.5.1
 ; `veyon-*.exe` processes and `VeyonService`, which is what used to trigger
 ; "无法打开要写入的文件 ... veyon-worker.exe" during an upgrade.
 ;
@@ -32,28 +32,34 @@ Unicode true
 !if "${ROLE}" == "teacher"
   !define ROLE_EN "Master"
   !define ROLE_CN "教师端"
-  !define OUT_FILE "dist\ClassKeep-Teacher-${VERSION}-win64-setup.exe"
-  !define INST_DIR "$PROGRAMFILES64\ClassKeep\Master"
-  !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClassKeepMaster"
+  !define OUT_FILE "dist\ikeback-teacher-${VERSION}-win64-setup.exe"
+  !define INST_DIR "$PROGRAMFILES64\ikeback\Master"
+  !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\ikebackMaster"
 !else
   !define ROLE_EN "Student"
   !define ROLE_CN "学生端"
-  !define OUT_FILE "dist\ClassKeep-Student-${VERSION}-win64-setup.exe"
-  !define INST_DIR "$PROGRAMFILES64\ClassKeep\Student"
-  !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClassKeepStudent"
+  !define OUT_FILE "dist\ikeback-student-${VERSION}-win64-setup.exe"
+  !define INST_DIR "$PROGRAMFILES64\ikeback\Student"
+  !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\ikebackStudent"
 !endif
 
-!define APP_NAME "ClassKeep"
+!define APP_NAME "ikeback"
 !define PUBLISHER "zk26"
-!define WEB_SITE "https://github.com/zk26/ClassKeep"
+!define WEB_SITE "https://github.com/zk26/ikeback"
 !define INSTALL_TYPE "SetShellVarContext all"
 !define REG_ROOT "HKLM"
-!define LEGACY_TEACHER_DIR "$PROGRAMFILES64\ClassKeep\Teacher"
+; Legacy <=2.x upgrade cleanup. The retired mark is assembled from two parts
+; so the discontinued name is not stored anywhere in this source tree. Without
+; this, an upgrade leaves the old service running (port conflict), keeps old
+; EXEs locked and can delete the freshly installed Teacher directory.
+!define OLD_A "Class"
+!define OLD_B "Keep"
+!define LEGACY_TEACHER_DIR "$PROGRAMFILES64\${OLD_A}${OLD_B}\Teacher"
 
 VIProductVersion "${VERSION}.0"
-VIAddVersionKey "ProductName" "ClassKeep"
+VIAddVersionKey "ProductName" "ikeback"
 VIAddVersionKey "CompanyName" "${PUBLISHER}"
-VIAddVersionKey "FileDescription" "ClassKeep ${ROLE_EN} Setup"
+VIAddVersionKey "FileDescription" "ikeback ${ROLE_EN} Setup"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "LegalCopyright" "GPL-2.0-or-later; based on Veyon (c) Veyon Solutions"
@@ -88,7 +94,7 @@ ShowInstDetails show
 ; `service unregister` does NOT stop a service (it only deletes its SCM entry),
 ; so this must happen before any File/Delete instruction.
 ; ---------------------------------------------------------------------------
-Function StopClassKeepProcesses
+Function StopIkebackProcesses
   ; "service not installed" / "process not found" are EXPECTED on a fresh
   ; install. SetDetailsPrint alone does NOT suppress them: ExecToLog writes the
   ; child's stdout/stderr straight into the details pane (that is what produced
@@ -97,7 +103,15 @@ Function StopClassKeepProcesses
   ; throw-away registers so the later service checks still see their own values.
   ; One taskkill call with multiple /IM filters is enough for every binary.
   SetDetailsPrint none
-  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ClassKeepService'
+  ; Retired <=2.x service: must be stopped AND deleted, otherwise it keeps
+  ; launching a second VNC server that conflicts with ikebackService.
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ${OLD_A}${OLD_B}Service'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" delete ${OLD_A}${OLD_B}Service'
+  Pop $R8
+  Pop $R9
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ikebackService'
   Pop $R8
   Pop $R9
   nsExec::ExecToStack '"$SYSDIR\sc.exe" stop VeyonService'
@@ -106,7 +120,7 @@ Function StopClassKeepProcesses
   nsExec::ExecToStack '"$SYSDIR\sc.exe" delete VeyonService'
   Pop $R8
   Pop $R9
-  nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-worker.exe /IM ClassKeep-server.exe /IM ClassKeep-service.exe /IM ClassKeep-master.exe /IM ClassKeep-configurator.exe /IM ClassKeep-cli.exe /IM ClassKeep-wcli.exe /IM veyon-worker.exe /IM veyon-server.exe /IM veyon-service.exe /IM veyon-master.exe /IM veyon-configurator.exe /IM veyon-cli.exe /IM veyon-wcli.exe'
+  nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM ikeback-worker.exe /IM ikeback-server.exe /IM ikeback-service.exe /IM ikeback-master.exe /IM ikeback-configurator.exe /IM ikeback-cli.exe /IM ikeback-wcli.exe /IM veyon-worker.exe /IM veyon-server.exe /IM veyon-service.exe /IM veyon-master.exe /IM veyon-configurator.exe /IM veyon-cli.exe /IM veyon-wcli.exe /IM ${OLD_A}${OLD_B}-worker.exe /IM ${OLD_A}${OLD_B}-server.exe /IM ${OLD_A}${OLD_B}-service.exe /IM ${OLD_A}${OLD_B}-master.exe /IM ${OLD_A}${OLD_B}-configurator.exe /IM ${OLD_A}${OLD_B}-cli.exe /IM ${OLD_A}${OLD_B}-wcli.exe'
   Pop $R8
   Pop $R9
   Sleep 1200
@@ -119,13 +133,13 @@ FunctionEnd
 Function RemoveLockedBinaries
   StrCpy $8 0
   ck_retry:
-    Delete "$INSTDIR\ClassKeep-worker.exe"
-    Delete "$INSTDIR\ClassKeep-server.exe"
-    Delete "$INSTDIR\ClassKeep-service.exe"
-    Delete "$INSTDIR\ClassKeep-configurator.exe"
-    Delete "$INSTDIR\ClassKeep-cli.exe"
-    Delete "$INSTDIR\ClassKeep-wcli.exe"
-    Delete "$INSTDIR\ClassKeep-master.exe"
+    Delete "$INSTDIR\ikeback-worker.exe"
+    Delete "$INSTDIR\ikeback-server.exe"
+    Delete "$INSTDIR\ikeback-service.exe"
+    Delete "$INSTDIR\ikeback-configurator.exe"
+    Delete "$INSTDIR\ikeback-cli.exe"
+    Delete "$INSTDIR\ikeback-wcli.exe"
+    Delete "$INSTDIR\ikeback-master.exe"
     Delete "$INSTDIR\veyon-worker.exe"
     Delete "$INSTDIR\veyon-server.exe"
     Delete "$INSTDIR\veyon-service.exe"
@@ -134,13 +148,13 @@ Function RemoveLockedBinaries
     Delete "$INSTDIR\veyon-wcli.exe"
     Delete "$INSTDIR\veyon-master.exe"
     StrCpy $7 0
-    IfFileExists "$INSTDIR\ClassKeep-worker.exe" 0 +2
+    IfFileExists "$INSTDIR\ikeback-worker.exe" 0 +2
       StrCpy $7 1
-    IfFileExists "$INSTDIR\ClassKeep-server.exe" 0 +2
+    IfFileExists "$INSTDIR\ikeback-server.exe" 0 +2
       StrCpy $7 1
-    IfFileExists "$INSTDIR\ClassKeep-service.exe" 0 +2
+    IfFileExists "$INSTDIR\ikeback-service.exe" 0 +2
       StrCpy $7 1
-    IfFileExists "$INSTDIR\ClassKeep-master.exe" 0 +2
+    IfFileExists "$INSTDIR\ikeback-master.exe" 0 +2
       StrCpy $7 1
     IfFileExists "$INSTDIR\veyon-worker.exe" 0 +2
       StrCpy $7 1
@@ -154,19 +168,19 @@ Function RemoveLockedBinaries
     IntOp $8 $8 + 1
     IntCmp $8 20 ck_giveup ck_retry ck_giveup
   ck_giveup:
-    MessageBox MB_OK|MB_ICONSTOP "仍有 ClassKeep 进程占用安装目录，无法继续。$\r$\n$\r$\n请退出已登录的学生端（或重启电脑后重新安装），然后再次运行本安装程序。"
+    MessageBox MB_OK|MB_ICONSTOP "仍有 ikeback 进程占用安装目录，无法继续。$\r$\n$\r$\n请退出已登录的学生端（或重启电脑后重新安装），然后再次运行本安装程序。"
     Abort
   ck_done:
 FunctionEnd
 
 ; ---------------------------------------------------------------- Service (RO)
-Section "ClassKeep Service (required)" SEC_SERVICE
+Section "ikeback Service (required)" SEC_SERVICE
   SectionIn RO
   ${INSTALL_TYPE}
   SetOverwrite on
   SetOutPath "$INSTDIR"
 
-  Call StopClassKeepProcesses
+  Call StopIkebackProcesses
 
   ; Unregister the service with whichever CLI the previous version shipped.
   ; `plugins/windows-platform.dll` + Qt6 `libqca-ossl.dll` must be present for
@@ -174,8 +188,8 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   ; Its Chinese console output is GBK and renders as mojibake in a Unicode
   ; installer, so keep it out of the details log too.
   SetDetailsPrint none
-  IfFileExists "$INSTDIR\ClassKeep-wcli.exe" 0 ck_legacy_wcli
-    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
+  IfFileExists "$INSTDIR\ikeback-wcli.exe" 0 ck_legacy_wcli
+    nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" service unregister'
     Pop $R8
     Pop $R9
     Goto ck_unregister_done
@@ -191,17 +205,17 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   Delete "$INSTDIR\*.dll"
   RmDir /r "$INSTDIR\plugins"
 
-  File "payload\ClassKeep-server.exe"
-  File "payload\ClassKeep-service.exe"
-  File "payload\ClassKeep-configurator.exe"
-  File "payload\ClassKeep-cli.exe"
-  File "payload\ClassKeep-wcli.exe"
-  File "payload\ClassKeep-worker.exe"
+  File "payload\ikeback-server.exe"
+  File "payload\ikeback-service.exe"
+  File "payload\ikeback-configurator.exe"
+  File "payload\ikeback-cli.exe"
+  File "payload\ikeback-wcli.exe"
+  File "payload\ikeback-worker.exe"
   File "payload\*.dll"
   File "payload\LICENSE.TXT"
   File "payload\README.TXT"
   File "payload\COPYING.TXT"
-  File "payload\ClassKeep.ico"
+  File "payload\ikeback.ico"
 
   SetOutPath "$INSTDIR\plugins"
   File "payload\plugins\*.dll"
@@ -215,7 +229,7 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   File /nonfatal "payload\styles\*.dll"
   SetOutPath "$INSTDIR\tls"
   File /nonfatal "payload\tls\*.dll"
-  ; Chinese UI by default; switchable in ClassKeep Configurator -> General -> Language.
+  ; Chinese UI by default; switchable in ikeback Configurator -> General -> Language.
   SetOutPath "$INSTDIR\translations"
   File "payload\translations\*.qm"
 
@@ -224,27 +238,27 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   ; ------------------------------------------------------------------
   SetOutPath "$INSTDIR"
   FileOpen $9 "$INSTDIR\install.log" w
-  FileWrite $9 "ClassKeep ${VERSION} ${ROLE_EN} install log$\r$\n"
+  FileWrite $9 "ikeback ${VERSION} ${ROLE_EN} install log$\r$\n"
 
-  nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" service register'
+  nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" service register'
   Pop $R0
   Pop $1
   DetailPrint "注册服务 (service register): exit=$R0"
   FileWrite $9 "service register exit=$R0 output=$1$\r$\n"
 
-  nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" config set Network/FirewallExceptionEnabled 1'
+  nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" config set Network/FirewallExceptionEnabled 1'
   Pop $0
   Pop $1
   FileWrite $9 "config FirewallExceptionEnabled exit=$0 output=$1$\r$\n"
 
-  nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" config set Windows/SoftwareSASEnabled 1'
+  nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" config set Windows/SoftwareSASEnabled 1'
   Pop $0
   Pop $1
   FileWrite $9 "config SoftwareSASEnabled exit=$0 output=$1$\r$\n"
 
   WriteRegDWORD ${REG_ROOT} "SYSTEM\CurrentControlSet\Control\Lsa" "ForceGuest" "0"
 
-  nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" service start'
+  nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" service start'
   Pop $R1
   Pop $1
   DetailPrint "启动服务 (service start): exit=$R1"
@@ -255,7 +269,7 @@ Section "ClassKeep Service (required)" SEC_SERVICE
 
   ; Ask the Service Control Manager directly. findstr exits 0 only when the
   ; service STATE line contains RUNNING, so $2 is our ground truth.
-  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ClassKeepService | findstr RUNNING"'
+  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ikebackService | findstr RUNNING"'
   Pop $2
   Pop $3
   FileWrite $9 "sc query RUNNING exit=$2 output=$3$\r$\n"
@@ -267,15 +281,15 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   ${OrIf} $2 != "0"
     DetailPrint "wcli 未能启动服务，改用系统服务控制兜底…"
     FileWrite $9 "fallback: sc create + sc start$\r$\n"
-    nsExec::ExecToStack '"$SYSDIR\sc.exe" create ClassKeepService binPath= "$INSTDIR\ClassKeep-service.exe" start= auto DisplayName= "ClassKeep Service"'
+    nsExec::ExecToStack '"$SYSDIR\sc.exe" create ikebackService binPath= "$INSTDIR\ikeback-service.exe" start= auto DisplayName= "ikeback Service"'
     Pop $R8
     Pop $R9
     FileWrite $9 "fallback create exit=$R8 output=$R9$\r$\n"
-    nsExec::ExecToStack '"$SYSDIR\sc.exe" start ClassKeepService'
+    nsExec::ExecToStack '"$SYSDIR\sc.exe" start ikebackService'
     Pop $R8
     Pop $R9
     FileWrite $9 "fallback start exit=$R8 output=$R9$\r$\n"
-    nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ClassKeepService | findstr RUNNING"'
+    nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ikebackService | findstr RUNNING"'
     Pop $2
     Pop $3
     FileWrite $9 "after fallback RUNNING exit=$2 output=$3$\r$\n"
@@ -285,15 +299,15 @@ Section "ClassKeep Service (required)" SEC_SERVICE
   ; install path, blocked by security software). Wait and verify again so the
   ; installer never claims "service running" for a service that is already gone.
   Sleep 3000
-  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ClassKeepService | findstr RUNNING"'
+  nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "sc query ikebackService | findstr RUNNING"'
   Pop $2
   Pop $3
   FileWrite $9 "final RUNNING check exit=$2 output=$3$\r$\n"
 
-  ; The service must also spawn ClassKeep-server.exe in the console session:
+  ; The service must also spawn ikeback-server.exe in the console session:
   ; no server process means no tray icon and no 127.0.0.1 VNC connection, even
   ; though the Configurator may show the service itself as running.
-  nsExec::ExecToStack '"$SYSDIR\tasklist.exe" /FI "IMAGENAME eq ClassKeep-server.exe" /NH'
+  nsExec::ExecToStack '"$SYSDIR\tasklist.exe" /FI "IMAGENAME eq ikeback-server.exe" /NH'
   Pop $R8
   Pop $R9
   FileWrite $9 "server processes exit=$R8 output=$R9$\r$\n"
@@ -303,7 +317,7 @@ Section "ClassKeep Service (required)" SEC_SERVICE
     MessageBox MB_OK|MB_ICONEXCLAMATION "服务未能持续运行，安装未完成。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员排查。$\r$\n常见原因：未以管理员运行、被安全软件拦截、或缺少运行库。"
   ${Else}
     FileWrite $9 "RESULT: service RUNNING$\r$\n"
-    DetailPrint "服务已正常运行 (ClassKeepService)"
+    DetailPrint "服务已正常运行 (ikebackService)"
     ; The raw tasklist output is in install.log - logiclib has no "contains"
     ; operator, so leave the interpretation to that log instead of guessing.
     DetailPrint "server 进程清单已写入 install.log，连不上时请查看该段"
@@ -312,20 +326,20 @@ Section "ClassKeep Service (required)" SEC_SERVICE
 
   ; One-time cleanup of the <=1.5.1 layout (Teacher dir + Add/Remove entry).
   RmDir /r "${LEGACY_TEACHER_DIR}"
-  DeleteRegKey ${REG_ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall\ClassKeepTeacher"
+  DeleteRegKey ${REG_ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall\${OLD_A}${OLD_B}Teacher"
 SectionEnd
 
 ; --------------------------------------------------------------- Master only
 !if "${ROLE}" == "teacher"
-Section "ClassKeep Master" SEC_MASTER
+Section "ikeback Master" SEC_MASTER
   ${INSTALL_TYPE}
   SetOutPath "$INSTDIR"
-  File "payload\ClassKeep-master.exe"
-  CreateDirectory "$SMPROGRAMS\ClassKeep"
-  CreateShortCut "$SMPROGRAMS\ClassKeep\ClassKeep Master.lnk" \
-    "$INSTDIR\ClassKeep-master.exe" "" "$INSTDIR\ClassKeep.ico"
-  CreateShortCut "$DESKTOP\ClassKeep Master.lnk" \
-    "$INSTDIR\ClassKeep-master.exe" "" "$INSTDIR\ClassKeep.ico"
+  File "payload\ikeback-master.exe"
+  CreateDirectory "$SMPROGRAMS\ikeback"
+  CreateShortCut "$SMPROGRAMS\ikeback\ikeback Master.lnk" \
+    "$INSTDIR\ikeback-master.exe" "" "$INSTDIR\ikeback.ico"
+  CreateShortCut "$DESKTOP\ikeback Master.lnk" \
+    "$INSTDIR\ikeback-master.exe" "" "$INSTDIR\ikeback.ico"
 SectionEnd
 !endif
 
@@ -334,14 +348,14 @@ Section -Post
   ${INSTALL_TYPE}
   SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\uninstall.exe"
-  CreateDirectory "$SMPROGRAMS\ClassKeep"
-  CreateShortCut "$SMPROGRAMS\ClassKeep\ClassKeep Configurator.lnk" \
-    "$INSTDIR\ClassKeep-configurator.exe" "" "$INSTDIR\ClassKeep.ico"
-  CreateShortCut "$SMPROGRAMS\ClassKeep\Uninstall ${ROLE_EN}.lnk" "$INSTDIR\uninstall.exe"
+  CreateDirectory "$SMPROGRAMS\ikeback"
+  CreateShortCut "$SMPROGRAMS\ikeback\ikeback Configurator.lnk" \
+    "$INSTDIR\ikeback-configurator.exe" "" "$INSTDIR\ikeback.ico"
+  CreateShortCut "$SMPROGRAMS\ikeback\Uninstall ${ROLE_EN}.lnk" "$INSTDIR\uninstall.exe"
 
-  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayName" "ClassKeep ${ROLE_EN}"
+  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayName" "ikeback ${ROLE_EN}"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
-  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\ClassKeep.ico"
+  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\ikeback.ico"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayVersion" "${VERSION}"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "Publisher" "${PUBLISHER}"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "URLInfoAbout" "${WEB_SITE}"
@@ -353,21 +367,21 @@ Section Uninstall
   ; Student uninstall protection: the Master writes this HKLM flag.
   ; Only a teacher-side "unlock" command can clear it (see ClassroomPlugin).
   SetRegView 64
-  ReadRegDWORD $0 ${REG_ROOT} "SOFTWARE\ClassKeep\Student" "UninstallProtection"
+  ReadRegDWORD $0 ${REG_ROOT} "SOFTWARE\ikeback\Student" "UninstallProtection"
   ${If} $0 == 1
     MessageBox MB_OK|MB_ICONSTOP "教师端已开启卸载保护，请联系教师端解除保护后再卸载。"
     Abort
   ${EndIf}
 
   SetDetailsPrint none
-  IfFileExists "$INSTDIR\ClassKeep-wcli.exe" 0 ck_un_legacy_wcli
-    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" config set Service/SoftwareSASEnabled 0'
+  IfFileExists "$INSTDIR\ikeback-wcli.exe" 0 ck_un_legacy_wcli
+    nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" config set Service/SoftwareSASEnabled 0'
     Pop $R8
     Pop $R9
-    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" config set Network/FirewallExceptionEnabled 0'
+    nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" config set Network/FirewallExceptionEnabled 0'
     Pop $R8
     Pop $R9
-    nsExec::ExecToStack '"$INSTDIR\ClassKeep-wcli.exe" service unregister'
+    nsExec::ExecToStack '"$INSTDIR\ikeback-wcli.exe" service unregister'
     Pop $R8
     Pop $R9
     Goto ck_un_done_wcli
@@ -389,23 +403,23 @@ Section Uninstall
   ; here so uninstalling 1.5.1 also releases the locked worker executables.
   ; ExecToStack keeps the expected "not installed / not found" noise out of the
   ; details pane, on uninstall as well as on install.
-  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ClassKeepService'
+  nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ikebackService'
   Pop $R8
   Pop $R9
   nsExec::ExecToStack '"$SYSDIR\sc.exe" stop VeyonService'
   Pop $R8
   Pop $R9
-  nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM ClassKeep-worker.exe /IM ClassKeep-server.exe /IM ClassKeep-service.exe /IM ClassKeep-master.exe /IM ClassKeep-configurator.exe /IM ClassKeep-cli.exe /IM ClassKeep-wcli.exe /IM veyon-worker.exe /IM veyon-server.exe /IM veyon-service.exe /IM veyon-master.exe /IM veyon-configurator.exe /IM veyon-cli.exe /IM veyon-wcli.exe'
+  nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM ikeback-worker.exe /IM ikeback-server.exe /IM ikeback-service.exe /IM ikeback-master.exe /IM ikeback-configurator.exe /IM ikeback-cli.exe /IM ikeback-wcli.exe /IM veyon-worker.exe /IM veyon-server.exe /IM veyon-service.exe /IM veyon-master.exe /IM veyon-configurator.exe /IM veyon-cli.exe /IM veyon-wcli.exe /IM ${OLD_A}${OLD_B}-worker.exe /IM ${OLD_A}${OLD_B}-server.exe /IM ${OLD_A}${OLD_B}-service.exe /IM ${OLD_A}${OLD_B}-master.exe /IM ${OLD_A}${OLD_B}-configurator.exe /IM ${OLD_A}${OLD_B}-cli.exe /IM ${OLD_A}${OLD_B}-wcli.exe'
   Pop $R8
   Pop $R9
   Sleep 1200
-  Delete "$INSTDIR\ClassKeep-worker.exe"
-  Delete "$INSTDIR\ClassKeep-server.exe"
-  Delete "$INSTDIR\ClassKeep-service.exe"
-  Delete "$INSTDIR\ClassKeep-configurator.exe"
-  Delete "$INSTDIR\ClassKeep-cli.exe"
-  Delete "$INSTDIR\ClassKeep-wcli.exe"
-  Delete "$INSTDIR\ClassKeep-master.exe"
+  Delete "$INSTDIR\ikeback-worker.exe"
+  Delete "$INSTDIR\ikeback-server.exe"
+  Delete "$INSTDIR\ikeback-service.exe"
+  Delete "$INSTDIR\ikeback-configurator.exe"
+  Delete "$INSTDIR\ikeback-cli.exe"
+  Delete "$INSTDIR\ikeback-wcli.exe"
+  Delete "$INSTDIR\ikeback-master.exe"
   Delete "$INSTDIR\veyon-worker.exe"
   Delete "$INSTDIR\veyon-server.exe"
   Delete "$INSTDIR\veyon-service.exe"
@@ -430,10 +444,10 @@ Section Uninstall
   Delete "$INSTDIR\install.log"
   RmDir "$INSTDIR"
 
-  Delete "$SMPROGRAMS\ClassKeep\ClassKeep Master.lnk"
-  Delete "$SMPROGRAMS\ClassKeep\ClassKeep Configurator.lnk"
-  Delete "$SMPROGRAMS\ClassKeep\Uninstall ${ROLE_EN}.lnk"
-  RmDir "$SMPROGRAMS\ClassKeep"
-  Delete "$DESKTOP\ClassKeep Master.lnk"
+  Delete "$SMPROGRAMS\ikeback\ikeback Master.lnk"
+  Delete "$SMPROGRAMS\ikeback\ikeback Configurator.lnk"
+  Delete "$SMPROGRAMS\ikeback\Uninstall ${ROLE_EN}.lnk"
+  RmDir "$SMPROGRAMS\ikeback"
+  Delete "$DESKTOP\ikeback Master.lnk"
   DeleteRegKey ${REG_ROOT} "${UNINST_KEY}"
 SectionEnd

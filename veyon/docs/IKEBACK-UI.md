@@ -1,10 +1,10 @@
-# 课守 ClassKeep · APP 交互与视觉规范
+# ikeback · APP 交互与视觉规范
 
 本文件是项目 UI 规范（技术栈无关的《UI 交互与动效通用规范》）在
 Android 教室端上的**落地约定**，供后续改 UI 时对照，避免「加个阴影 / 加个动画」
 这类模糊描述重新引入问题。规范原文由项目所有者提供，本文件只记录采纳的条目与实现位置。
 
-实现位置：`mobile/app/src/main/java/top/ikee002/classkeep/UiKit.kt`、
+实现位置：`mobile/app/src/main/java/top/ikee002/ikeback/UiKit.kt`、
 `BottomBar.kt`、`TimetableStore.kt`、`MainActivity.kt`。
 
 ---
