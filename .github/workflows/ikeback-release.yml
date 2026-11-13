@@ -139,9 +139,13 @@ jobs:
         shell: bash
         run: |
           set -e
-          f=desktop/3rdparty/ultravnc/winvnc/winvnc/stdhdrs.h
-          sed -i 's/#define VNCLOG(s)[[:space:]]*(__FUNCTION__ " : " s)/#define VNCLOG(s) (s)/' "$f"
-          grep -n 'define VNCLOG' "$f"
+          # VNCLOG() concatenates __FUNCTION__ (a pointer with current GCC) and
+          # several UltraVNC files define it, so patch every occurrence.
+          grep -rl 'VNCLOG' --include='*.cpp' --include='*.h' --include='*.c' \
+            desktop/3rdparty/ultravnc/winvnc/ | while IFS= read -r f; do
+            sed -i 's/#define VNCLOG(s)[[:space:]]*(__FUNCTION__ " : " s)/#define VNCLOG(s) (s)/' "$f"
+          done
+          grep -rn 'define VNCLOG' desktop/3rdparty/ultravnc/winvnc/ | head -6
           k=desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp
           sed -i '1i #undef UNICODE\n#undef _UNICODE' "$k"
           perl -0pi -e 's/vnclog\.Print\([^;]*\);/(void)0;/gs' "$k"
