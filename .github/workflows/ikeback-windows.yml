@@ -106,8 +106,11 @@ jobs:
           # calls into void expressions keeps the surrounding statements (and
           # any if/else) syntactically intact while dropping the dependency.
           perl -0pi -e 's/vnclog\.Print\([^;]*\);/(void)0;/gs' "$k"
-          perl -0pi -e 's/vncCad::Cadthread\([^;]*\);/(void)0;/gs' "$k"
-          grep -c 'vnclog\.Print\|vncCad::Cadthread' "$k" || true
+          # The global SettingsManager pointer is only defined by translators we
+          # do not build; vnckeymap.cpp only asks whether we run inside the
+          # external service, and ikeback's worker always does not.
+          perl -0pi -e 's/settings->RunningFromExternalService\(\)/false/gs' "$k"
+          grep -c 'vnclog\.Print\|RunningFromExternalService' "$k" || true
 
       - name: Configure
         shell: msys2 {0}
@@ -166,15 +169,7 @@ jobs:
           cat windows-platform.log
           # Surface the real compiler errors as annotations: the job log itself
           # is not retrievable without authentication.
-          {
-            echo "== vnckeymap.cpp refs =="
-            grep -n "settings\|Cadthread" desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp | head -6
-            echo "== settings declaration =="
-            grep -rn "settings;" desktop/3rdparty/ultravnc/winvnc/winvnc/*.h | head -4
-            echo "== Cadthread declaration =="
-            grep -rn "Cadthread" desktop/3rdparty/ultravnc/winvnc/winvnc/*.h | head -3
-          } | while IFS= read -r line; do echo "::notice::${line}"; done
-          errs=$(grep -E "error:|undefined reference" windows-platform.log | head -7)
+          errs=$(grep -E "error:|undefined reference" windows-platform.log | head -9)
           if [ -n "$errs" ]; then
             printf '%s\n' "$errs" | while IFS= read -r line; do echo "::error::${line}"; done
           else

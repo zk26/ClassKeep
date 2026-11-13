@@ -27,6 +27,7 @@ build_ikeback_plugin(windows-platform
 	SasEventListener.cpp
 	XEventLog.cpp
 	${ultravnc_DIR}/winvnc/winvnc/vnckeymap.cpp
+	cadthread-stub.cpp
 	authSSP.cpp
 
 	WindowsPlatformConfiguration.h
