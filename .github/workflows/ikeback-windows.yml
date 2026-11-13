@@ -232,7 +232,13 @@ jobs:
             [0-9]*) : ;;
             *) VERSION=5.2.0 ;;
           esac
-          makensis -DVERSION="$VERSION" -DROLE=teacher installer.nsi
+          if ! makensis -DVERSION="$VERSION" -DROLE=teacher installer.nsi > nsis.log 2>&1; then
+            cat nsis.log
+            tail -n 10 nsis.log | while IFS= read -r line; do echo "::error::nsis|$line"; done
+            ls -1 payload | head -30
+            exit 1
+          fi
+          cat nsis.log
           makensis -DVERSION="$VERSION" -DROLE=student installer.nsi
           ls -lh dist
 
