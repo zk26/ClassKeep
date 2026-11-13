@@ -109,7 +109,12 @@ endif()
 
 qt6_disable_unicode_defines(builtin-ultravnc-server)
 
-set(ULTRAVNC_COMPILER_FLAGS "-Wno-comments -Wno-attributes -Wno-write-strings -Wno-parentheses -Wno-misleading-indentation -Wno-unused-result -Wno-unused-label -Wno-unknown-pragmas -Wno-unused-variable -Wno-unused-value -Wno-unused-but-set-variable -Wno-deprecated-declarations -Wno-format-zero-length -Wno-sign-compare -Wno-int-to-pointer-cast -fexceptions")
+# Third-party C/C++ from the pinned UltraVNC tree: keep the project-wide
+# warnings, but never let them abort the build. Without this, a single legacy
+# construct (e.g. d3des.c's K&R style definition) stops the VNC server plugin
+# from being produced, and ikeback-server then exits with
+# "no VNC server plugins found" - i.e. nothing can connect at all.
+set(ULTRAVNC_COMPILER_FLAGS "-Wno-comments -Wno-attributes -Wno-write-strings -Wno-parentheses -Wno-misleading-indentation -Wno-unused-result -Wno-unused-label -Wno-unknown-pragmas -Wno-unused-variable -Wno-unused-value -Wno-unused-but-set-variable -Wno-deprecated-declarations -Wno-format-zero-length -Wno-sign-compare -Wno-int-to-pointer-cast -Wno-old-style-definition -Wno-implicit-int -Wno-implicit-function-declaration -Wno-error -fexceptions")
 
 set_source_files_properties(${ultravnc_C_SOURCES} PROPERTIES COMPILE_FLAGS "${ULTRAVNC_COMPILER_FLAGS}")
 set_source_files_properties(${ultravnc_CXX_SOURCES} PROPERTIES COMPILE_FLAGS "${ULTRAVNC_COMPILER_FLAGS} -Wno-terminate -Wno-conversion-null")
