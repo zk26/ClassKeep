@@ -2116,9 +2116,9 @@ void ClassroomMasterDialog::setupToolsTab()
 	scopeRow->addWidget( m_toolsStatus, 1 );
 	layout->addLayout( scopeRow );
 
-	auto* note = new QLabel( tr( "Client protection = students cannot quit the ikeback card. "
-								 "UWF = Windows write filter / restore on reboot, disabled before installing software. "
-								 "They are independent switches." ), page );
+	auto* note = new QLabel( tr( "客户端保护：学生无法退出 iKeback 卡片。"
+								 "UWF：Windows 写保护，重启即还原，装软件前请先关闭。"
+								 "两者是彼此独立的开关。" ), page );
 	note->setWordWrap( true );
 	note->setStyleSheet( QStringLiteral("color:#546e7a; font-size:11px;") );
 	layout->addWidget( note );
@@ -2308,8 +2308,8 @@ void ClassroomMasterDialog::setupToolsTab()
 		  [this]() { refreshStatus(); refreshMachines(); } } } );
 
 	auto* toolbarHint = new QLabel(
-		tr( "All actions are available from the ikeback tool bar: open the \"Quick tools\" menu, "
-			"or press the \"Check-in\" button. This page only holds their parameters." ), page );
+		tr( "所有动作都可直接在 iKeback 主工具栏上点击（图标下方有名称）。"
+			"本页只保存这些动作的参数：肃静文案、禁用规则、软件路径与网址。" ), page );
 	toolbarHint->setWordWrap( true );
 	toolbarHint->setStyleSheet( QStringLiteral("color:#546e7a; font-size:11px;") );
 	layout->addWidget( toolbarHint );

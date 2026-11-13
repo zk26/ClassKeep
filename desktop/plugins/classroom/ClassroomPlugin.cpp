@@ -69,7 +69,7 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 							   Feature::Flag::Action | Feature::Flag::Master,
 							   consoleFeatureUid(), Feature::Uid(),
 							   Classroom::productName(), {},
-							   tr( "ikeback - classes, sign-in by IP, logs, scoring and control" ),
+							   tr( "iKeback - 班级、按 IP 登录、日志、积分与控制" ),
 							   QStringLiteral(":/core/icon22.png") ) ),
 	m_clientFeature( Feature( QStringLiteral("ClassroomClient"),
 							  Feature::Flag::Session | Feature::Flag::Service | Feature::Flag::Worker,
@@ -96,15 +96,15 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 	m_quickToolsFeature( Feature( QStringLiteral("ClassroomQuickTools"),
 								  Feature::Flag::Action | Feature::Flag::Master,
 								  quickToolsFeatureUid(), Feature::Uid(),
-								  tr( "Quick tools" ), {},
-								  tr( "Broadcast, UWF, gateway, silence, blocking, scoring and more" ),
+								  tr( "常用工具" ), {},
+								  tr( "广播、UWF、网关、肃静、禁用与评分等参数设置" ),
 								  QStringLiteral(":/core/icon22.png") ) ),
-	m_checkInFeature( Feature( QStringLiteral("ClassroomCheckIn"),
-							   Feature::Flag::Action | Feature::Flag::Master,
-							   checkInFeatureUid(), Feature::Uid(),
-							   tr( "Check-in" ), {},
-							   tr( "Start attendance check-in on all student machines" ),
-							   QStringLiteral(":/core/user-group-new.png") ) ),
+								  m_checkInFeature( Feature( QStringLiteral("ClassroomCheckIn"),
+								   Feature::Flag::Action | Feature::Flag::Master,
+								   checkInFeatureUid(), Feature::Uid(),
+								   tr( "签到" ), {},
+								   tr( "在所有学生机上开始签到" ),
+								   QStringLiteral(":/core/user-group-new.png") ) ),
 	m_features( { m_consoleFeature, m_clientFeature, m_signInFeature, m_signOutFeature,
 				  m_quickToolsFeature, m_checkInFeature } ),
 	m_hostName( QHostInfo::localHostName() )
@@ -137,43 +137,43 @@ void ClassroomPlugin::buildQuickActionFeatures()
 	};
 
 	static const QuickButton buttons[] = {
-		{ "broadcast.all", "Broadcast", "Show the teacher screen on every student display",
+		{ "broadcast.all", "全班广播", "把教师机屏幕显示到所有学生机",
 		  ":/core/media-playback-start.png" },
-		{ "broadcast.watch", "Watch & do", "Window demo: students keep keyboard and mouse",
+		{ "broadcast.watch", "边看边做", "窗口演示，学生仍可操作键鼠",
 		  ":/core/view-fullscreen.png" },
-		{ "broadcast.stop", "Stop broadcast", "Stop the demo and restore USB input",
+		{ "broadcast.stop", "停止广播", "结束演示并恢复 USB 输入",
 		  ":/core/media-playback-stop.png" },
-		{ "protection.on", "Protect on", "Students cannot quit the ikeback card",
+		{ "protection.on", "保护开", "学生无法退出 iKeback 卡片",
 		  ":/core/icon22.png" },
-		{ "protection.off", "Protect off", "Allow students to quit the ikeback card",
+		{ "protection.off", "保护关", "允许学生退出 iKeback 卡片",
 		  ":/core/icon22.png" },
-		{ "uwf.on", "UWF on", "Enable the Windows write filter / restore on reboot",
+		{ "uwf.on", "UWF 开", "开启写保护，重启后还原",
 		  ":/core/document-save.png" },
-		{ "uwf.off", "UWF off", "Disable the write filter before installing software",
+		{ "uwf.off", "UWF 关", "装软件前关闭写保护",
 		  ":/core/document-save.png" },
-		{ "gateway.block", "Block net", "Block Internet access but keep the teacher machine reachable",
+		{ "gateway.block", "断外网", "禁止上网但保持教师机可达",
 		  ":/core/go-next.png" },
-		{ "gateway.allow", "Allow net", "Restore Internet access",
+		{ "gateway.allow", "通外网", "恢复上网",
 		  ":/core/go-next.png" },
-		{ "silence.show", "Silence", "Show the silence page on every student screen",
+		{ "silence.show", "肃静页", "在所有学生机显示肃静页面",
 		  ":/core/document-edit.png" },
-		{ "silence.hide", "Unsilence", "Hide the silence page",
+		{ "silence.hide", "收起肃静", "隐藏肃静页面",
 		  ":/core/document-edit.png" },
-		{ "appblock.apply", "Block apps", "Apply the fuzzy application rules from the Quick tools tab",
+		{ "appblock.apply", "禁用应用", "按「常用工具」页的规则禁用程序",
 		  ":/core/edit-delete.png" },
-		{ "appblock.clear", "Allow apps", "Clear all application rules",
+		{ "appblock.clear", "解除禁应用", "清空全部应用规则",
 		  ":/core/edit-delete.png" },
-		{ "webblock.apply", "Block sites", "Apply the fuzzy website rules from the Quick tools tab",
+		{ "webblock.apply", "禁用网址", "按「常用工具」页的规则禁用网址",
 		  ":/core/edit-delete.png" },
-		{ "webblock.clear", "Allow sites", "Clear all website rules",
+		{ "webblock.clear", "解除禁网址", "清空全部网址规则",
 		  ":/core/edit-delete.png" },
-		{ "score.p1", "+1 class", "Add one point to every student",
+		{ "score.p1", "全班 +1", "给全班每人加 1 分",
 		  ":/core/list-add.png" },
-		{ "score.m1", "-1 class", "Subtract one point from every student",
+		{ "score.m1", "全班 -1", "给全班每人减 1 分",
 		  ":/core/list-add.png" },
-		{ "other.mute", "Mute all", "Mute the audio output of every student machine",
+		{ "other.mute", "全部静音", "静音所有学生机",
 		  ":/core/media-playback-pause.png" },
-		{ "other.unmute", "Unmute all", "Restore audio output",
+		{ "other.unmute", "取消静音", "恢复学生机声音",
 		  ":/core/media-playback-start.png" },
 	};
 
@@ -182,12 +182,14 @@ void ClassroomPlugin::buildQuickActionFeatures()
 	{
 		const auto uid = quickActionUid( index );
 		m_quickActionIds.append( QString::fromLatin1( button.id ) );
-		// displayName stays empty on purpose: the tool bar then shows name()
-		// ("Broadcast", "Protect on", ...) instead of one repeated product name.
-		m_features.append( Feature( QCoreApplication::translate( "ClassroomPlugin", button.name ),
+		// displayName is what the tool bar prints below the icon, so every quick
+		// action needs its own label here (an empty displayName renders an
+		// unlabelled button).
+		const auto label = QCoreApplication::translate( "ClassroomPlugin", button.name );
+		m_features.append( Feature( label,
 									Feature::Flag::Action | Feature::Flag::Master,
 									uid, Feature::Uid(),
-									{}, {},
+									label, {},
 									QCoreApplication::translate( "ClassroomPlugin", button.tooltip ),
 									QString::fromLatin1( button.icon ) ) );
 		++index;
@@ -441,46 +443,21 @@ bool ClassroomPlugin::startFeature( IkebackMasterInterface& master, const Featur
 
 	if( feature.uid() != consoleFeatureUid() ) { return false; }
 
-	// ikeback 5.2.0: the console is no longer a floating QDialog. It lives in
-	// a docked panel inside the Ikeback Master main window so the monitoring view
-	// and the classroom tools are visible at the same time. Fall back to a
-	// standalone widget only when there is no QMainWindow (e.g. headless tests).
-	auto* mainWindow = qobject_cast<QMainWindow*>( master.mainWindow() );
-	if( mainWindow )
+	// The console always opens as its own window (a pop-up) instead of being
+	// docked into the Master window: the monitoring view must stay usable while
+	// the console is open, and teachers expect a dialog they can move/close.
+	if( m_dialog.isNull() )
 	{
-		if( m_consoleDock.isNull() )
-		{
-			m_dialog = new ClassroomMasterDialog( master, m_configuration, *roster(), *store(), *settings() );
-			auto* dock = new QDockWidget( Classroom::productName(), mainWindow );
-			dock->setObjectName( QStringLiteral("IkebackConsoleDock") );
-			dock->setAllowedAreas( Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea | Qt::BottomDockWidgetArea );
-			dock->setFeatures( QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable |
-							   QDockWidget::DockWidgetFloatable );
-			dock->setMinimumWidth( 900 );
-			dock->setWidget( m_dialog.data() );
-			mainWindow->addDockWidget( Qt::RightDockWidgetArea, dock );
-			m_consoleDock = dock;
-			connect( m_dialog.data(), &ClassroomMasterDialog::hideRequested, dock, [dock]() {
-				dock->hide();
-			} );
-		}
-		m_consoleDock->show();
-		m_consoleDock->raise();
+		m_dialog = new ClassroomMasterDialog( master, m_configuration, *roster(), *store(), *settings() );
+		m_dialog->setWindowFlag( Qt::Window );
+		m_dialog->setWindowTitle( Classroom::productName() );
+		connect( m_dialog.data(), &ClassroomMasterDialog::hideRequested, m_dialog.data(), [this]() {
+			if( m_dialog ) { m_dialog->hide(); }
+		} );
 	}
-	else
-	{
-		if( m_dialog.isNull() )
-		{
-			m_dialog = new ClassroomMasterDialog( master, m_configuration, *roster(), *store(), *settings() );
-			m_dialog->setWindowFlag( Qt::Window );
-			connect( m_dialog.data(), &ClassroomMasterDialog::hideRequested, m_dialog.data(), [this]() {
-				if( m_dialog ) { m_dialog->hide(); }
-			} );
-		}
-		m_dialog->show();
-		m_dialog->raise();
-		m_dialog->activateWindow();
-	}
+	m_dialog->show();
+	m_dialog->raise();
+	m_dialog->activateWindow();
 
 	// One message, one session-worker wake-up. The old three-message burst
 	// re-armed the watchdog and repeatedly called startUnmanagedSessionWorker()

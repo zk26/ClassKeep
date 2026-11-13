@@ -3,7 +3,7 @@
     <name>AboutDialog</name>
     <message>
         <source>About ikeback</source>
-        <translation>关于 ikeback</translation>
+        <translation>关于 iKeback</translation>
     </message>
     <message>
         <source>About</source>
@@ -19,7 +19,7 @@
     </message>
     <message>
         <source>Visit the ikeback project</source>
-        <translation>捐赠 ikeback 项目</translation>
+        <translation>捐赠 iKeback 项目</translation>
     </message>
     <message>
         <source>Contributors</source>
@@ -43,7 +43,7 @@ If you&apos;re interested in translating Ikeback into your local or another lang
     </message>
     <message>
         <source>About ikeback %1</source>
-        <translation>关于 ikeback %1</translation>
+        <translation>关于 iKeback %1</translation>
     </message>
 </context>
 <context>
@@ -74,7 +74,7 @@ If you&apos;re interested in translating Ikeback into your local or another lang
     </message>
     <message>
         <source>Please add the groups whose members should be authorized to access computers in your Ikeback network.</source>
-        <translation>请将允许访问计算机的成员所在的组，添加到 ikeback 网络中</translation>
+        <translation>请将允许访问计算机的成员所在的组，添加到 iKeback 网络中</translation>
     </message>
     <message>
         <source>Authorized user groups</source>
@@ -1053,7 +1053,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>ikeback Server unreachable or not running</source>
-        <translation>ikeback 服务器无法连接或未在运行</translation>
+        <translation>iKeback 服务器无法连接或未在运行</translation>
     </message>
     <message>
         <source>Authentication failed or access denied</source>
@@ -1120,7 +1120,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>ikeback Service %1 at %2:%3</source>
-        <translation>ikeback 服务 %1 于 %2:%3</translation>
+        <translation>iKeback 服务 %1 于 %2:%3</translation>
     </message>
     <message>
         <source>Active connections:</source>
@@ -1143,7 +1143,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>No default network object directory plugin was found. Please check your installation or configure a different network object directory backend via Ikeback Configurator.</source>
-        <translation>未找到默认网络对象目录插件。请检查您的安装或通过 ikeback 配置器配置其他网络对象目录后端。</translation>
+        <translation>未找到默认网络对象目录插件。请检查您的安装或通过 iKeback 配置器配置其他网络对象目录后端。</translation>
     </message>
     <message>
         <source>Computer name;Hostname;User</source>
@@ -1205,7 +1205,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     <name>ConfigCommands</name>
     <message>
         <source>Clear system-wide Ikeback configuration</source>
-        <translation>清除系统级别 ikeback 配置</translation>
+        <translation>清除系统级别 iKeback 配置</translation>
     </message>
     <message>
         <source>List all configuration keys and values</source>
@@ -1273,22 +1273,22 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>Commands for managing the configuration of Ikeback</source>
-        <translation>管理 ikeback 配置的命令</translation>
+        <translation>管理 iKeback 配置的命令</translation>
     </message>
 </context>
 <context>
     <name>ConfigurationManager</name>
     <message>
         <source>Could not modify the autostart property for the Ikeback Service.</source>
-        <translation>无法修改 ikeback 服务的自动启动属性。</translation>
+        <translation>无法修改 iKeback 服务的自动启动属性。</translation>
     </message>
     <message>
         <source>Could not configure the firewall configuration for the Ikeback Server.</source>
-        <translation>无法为 ikeback 服务器配置防火墙。</translation>
+        <translation>无法为 iKeback 服务器配置防火墙。</translation>
     </message>
     <message>
         <source>Could not configure the firewall configuration for the Ikeback Worker.</source>
-        <translation>无法为 ikeback Worker 配置防火墙。</translation>
+        <translation>无法为 iKeback Worker 配置防火墙。</translation>
     </message>
     <message>
         <source>Could not apply platform-specific configuration settings.</source>
@@ -1303,7 +1303,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     <name>DemoClient</name>
     <message>
         <source>Ikeback Demo</source>
-        <translation>ikeback 演示</translation>
+        <translation>iKeback 演示</translation>
     </message>
 </context>
 <context>
@@ -1650,7 +1650,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>Starts the specified feature on the specified host by connecting to the Ikeback Server running remotely. The feature can be specified by name or UID. Use the ``show`` command to see all available features. Depending on the feature, additional arguments (such as the text message to display) encoded as a single JSON string have to be specified. Please refer to the developer documentation for more information</source>
-        <translation>通过连接到远程运行的 ikeback 服务器，在指定主机上启动指定功能。功能可以通过名称或 UID 指定。使用 ``show`` 命令查看所有可用功能。根据功能的不同，可能需要指定其他参数（例如要显示的文本消息），这些参数以单个 JSON 字符串的形式编码。请参阅开发者文档了解更多信息。</translation>
+        <translation>通过连接到远程运行的 iKeback 服务器，在指定主机上启动指定功能。功能可以通过名称或 UID 指定。使用 ``show`` 命令查看所有可用功能。根据功能的不同，可能需要指定其他参数（例如要显示的文本消息），这些参数以单个 JSON 字符串的形式编码。请参阅开发者文档了解更多信息。</translation>
     </message>
     <message>
         <source>Lock the screen</source>
@@ -1670,7 +1670,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>Stops the specified feature on the specified host by connecting to the Ikeback Server running remotely. The feature can be specified by name or UID. Use the ``show`` command to see all available features.</source>
-        <translation>通过连接到远程运行的 ikeback 服务器，停止指定主机上的指定功能。功能可以通过名称或 UID 指定。使用 ``show`` 命令查看所有可用功能。</translation>
+        <translation>通过连接到远程运行的 iKeback 服务器，停止指定主机上的指定功能。功能可以通过名称或 UID 指定。使用 ``show`` 命令查看所有可用功能。</translation>
     </message>
     <message>
         <source>Unlock the screen</source>
@@ -2215,11 +2215,11 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>Ikeback service</source>
-        <translation>ikeback 服务</translation>
+        <translation>iKeback 服务</translation>
     </message>
     <message>
         <source>The Ikeback service needs to be stopped temporarily in order to remove the log files. Continue?</source>
-        <translation>需要暂时停止 ikeback 服务以删除日志文件。是否继续？</translation>
+        <translation>需要暂时停止 iKeback 服务以删除日志文件。是否继续？</translation>
     </message>
     <message>
         <source>Log files cleared</source>
@@ -3020,7 +3020,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>LDAP/AD support for Ikeback</source>
-        <translation>ikeback 的 LDAP/AD 支持</translation>
+        <translation>iKeback 的 LDAP/AD 支持</translation>
     </message>
 </context>
 <context>
@@ -3103,7 +3103,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     <name>MainWindow</name>
     <message>
         <source>ikeback Configurator</source>
-        <translation>ikeback 配置器</translation>
+        <translation>iKeback 配置器</translation>
     </message>
     <message>
         <source>General</source>
@@ -3163,7 +3163,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>About ikeback</source>
-        <translation>关于 ikeback</translation>
+        <translation>关于 iKeback</translation>
     </message>
     <message>
         <source>About Qt</source>
@@ -3227,7 +3227,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>ikeback Configurator %1</source>
-        <translation>ikeback 配置器 %1</translation>
+        <translation>iKeback 配置器 %1</translation>
     </message>
     <message>
         <source>Load settings from file</source>
@@ -3263,7 +3263,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>The local configuration backend reported that the configuration is not writable! Please run Ikeback Configurator with higher privileges.</source>
-        <translation>本地配置后端报告配置不可写入！请以更高权限运行 ikeback Configurator。</translation>
+        <translation>本地配置后端报告配置不可写入！请以更高权限运行 iKeback Configurator。</translation>
     </message>
     <message>
         <source>Authentication impossible</source>
@@ -3271,7 +3271,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>No authentication key files were found or your current ones are outdated. Please create new key files using Ikeback Configurator. Alternatively set up logon authentication using Ikeback Configurator. Otherwise you won&apos;t be able to access computers using Ikeback.</source>
-        <translation>未找到身份验证密钥文件，或者您现有的密钥文件已过期。请使用 ikeback Configurator 创建新的密钥文件，或者通过 ikeback Configurator 设置登录身份验证。否则，您将无法使用 ikeback 访问计算机。</translation>
+        <translation>未找到身份验证密钥文件，或者您现有的密钥文件已过期。请使用 iKeback Configurator 创建新的密钥文件，或者通过 iKeback Configurator 设置登录身份验证。否则，您将无法使用 iKeback 访问计算机。</translation>
     </message>
     <message>
         <source>Access denied</source>
@@ -3287,7 +3287,7 @@ Make sure that the names of the keys belonging to each other are identical on al
     </message>
     <message>
         <source>The feature &quot;%1&quot; is still active. Please stop it before closing Ikeback.</source>
-        <translation>功能“%1”当前处于活动状态。请在关闭 ikeback 之前将其停止。</translation>
+        <translation>功能“%1”当前处于活动状态。请在关闭 iKeback 之前将其停止。</translation>
     </message>
     <message>
         <source>Use custom computer arrangement.
@@ -3687,7 +3687,7 @@ Press and hold to load arrangement from a file or save current arrangement to a 
     </message>
     <message>
         <source>e.g. Ikeback</source>
-        <translation>例如 ikeback</translation>
+        <translation>例如 iKeback</translation>
     </message>
     <message>
         <source>Remember and add to website menu</source>
@@ -3695,7 +3695,7 @@ Press and hold to load arrangement from a file or save current arrangement to a 
     </message>
     <message>
         <source>e.g. www.ikeback.io</source>
-        <translation>例如 www.ikeback.io</translation>
+        <translation>例如 www.iKeback.io</translation>
     </message>
     <message>
         <source>Please enter the URL of the website to open:</source>
@@ -3710,7 +3710,7 @@ Press and hold to load arrangement from a file or save current arrangement to a 
     <name>PasswordDialog</name>
     <message>
         <source>ikeback Logon</source>
-        <translation>ikeback 登录</translation>
+        <translation>iKeback 登录</translation>
     </message>
     <message>
         <source>Please enter your username and password in order to access computers.</source>
@@ -3955,11 +3955,11 @@ Please save your work and close all programs.</source>
     <name>RemoteAccessWidget</name>
     <message>
         <source>%1 - Ikeback Remote Access</source>
-        <translation>%1 - ikeback 远程访问</translation>
+        <translation>%1 - iKeback 远程访问</translation>
     </message>
     <message>
         <source>%1 - %2 - Ikeback Remote Access</source>
-        <translation>%1 - %2 - ikeback 远程访问</translation>
+        <translation>%1 - %2 - iKeback 远程访问</translation>
     </message>
 </context>
 <context>
@@ -4262,7 +4262,7 @@ Typically this is required to support terminal servers.</source>
     </message>
     <message>
         <source>ikeback server</source>
-        <translation>ikeback 服务器</translation>
+        <translation>iKeback 服务器</translation>
     </message>
     <message>
         <source>Internal VNC server</source>
@@ -4302,11 +4302,11 @@ Typically this is required to support terminal servers.</source>
     </message>
     <message>
         <source>Restart ikeback Service</source>
-        <translation>重启 ikeback 服务</translation>
+        <translation>重启 iKeback 服务</translation>
     </message>
     <message>
         <source>All settings were saved successfully. In order to take effect the Ikeback service needs to be restarted. Restart it now?</source>
-        <translation>所有设置已成功保存。要使设置生效，需要重启 ikeback 服务。现在重启吗？</translation>
+        <translation>所有设置已成功保存。要使设置生效，需要重启 iKeback 服务。现在重启吗？</translation>
     </message>
     <message>
         <source>Running</source>
@@ -4342,7 +4342,7 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Enable if a single ikeback Server instance should be launched for the currently active session, no matter if local or remote.</source>
-        <translation>启用此选项后，无论本地会话还是远程会话，都应为当前活动会话启动单个 ikeback Server 实例。</translation>
+        <translation>启用此选项后，无论本地会话还是远程会话，都应为当前活动会话启动单个 iKeback Server 实例。</translation>
     </message>
     <message>
         <source>Environment variable name</source>
@@ -4384,27 +4384,27 @@ Example: [^-]*-(PC[0-9]*)</source>
     <name>ServiceControlCommands</name>
     <message>
         <source>Register ikeback Service</source>
-        <translation>注册 ikeback 服务</translation>
+        <translation>注册 iKeback 服务</translation>
     </message>
     <message>
         <source>Unregister ikeback Service</source>
-        <translation>反注册 ikeback 服务</translation>
+        <translation>反注册 iKeback 服务</translation>
     </message>
     <message>
         <source>Start ikeback Service</source>
-        <translation>启动 ikeback 服务</translation>
+        <translation>启动 iKeback 服务</translation>
     </message>
     <message>
         <source>Stop ikeback Service</source>
-        <translation>停止 ikeback 服务</translation>
+        <translation>停止 iKeback 服务</translation>
     </message>
     <message>
         <source>Restart ikeback Service</source>
-        <translation>重启 ikeback 服务</translation>
+        <translation>重启 iKeback 服务</translation>
     </message>
     <message>
         <source>Query status of ikeback Service</source>
-        <translation>查询 ikeback 服务状态</translation>
+        <translation>查询 iKeback 服务状态</translation>
     </message>
     <message>
         <source>Service is running</source>
@@ -4416,11 +4416,11 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Configure and control ikeback service</source>
-        <translation>配置和控制 ikeback 服务</translation>
+        <translation>配置和控制 iKeback 服务</translation>
     </message>
     <message>
         <source>Commands for configuring and controlling ikeback Service</source>
-        <translation>用于配置和控制ikeback服务的命令</translation>
+        <translation>用于配置和控制iKeback服务的命令</translation>
     </message>
 </context>
 <context>
@@ -4435,7 +4435,7 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Interactive shell and script execution for Ikeback CLI</source>
-        <translation>ikeback CLI 的交互式 shell 和脚本执行</translation>
+        <translation>iKeback CLI 的交互式 shell 和脚本执行</translation>
     </message>
     <message>
         <source>Commands for shell functionalities</source>
@@ -4466,7 +4466,7 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>ikeback – Slideshow</source>
-        <translation>ikeback Master – 幻灯片</translation>
+        <translation>iKeback Master – 幻灯片</translation>
     </message>
 </context>
 <context>
@@ -4549,11 +4549,11 @@ Example: [^-]*-(PC[0-9]*)</source>
     <name>TestingCommandLinePlugin</name>
     <message>
         <source>Test internal Ikeback components and functions</source>
-        <translation>测试ikeback内部组件和功能</translation>
+        <translation>测试iKeback内部组件和功能</translation>
     </message>
     <message>
         <source>Commands for testing internal components and functions of Ikeback</source>
-        <translation>测试ikeback内部组件和功能的命令</translation>
+        <translation>测试iKeback内部组件和功能的命令</translation>
     </message>
 </context>
 <context>
@@ -4774,14 +4774,14 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Could not save your personal settings! Please check the user configuration file path using Ikeback Configurator.</source>
-        <translation>无法保存您的个人设置！请使用 ikeback 配置器检查用户配置文件路径。</translation>
+        <translation>无法保存您的个人设置！请使用 iKeback 配置器检查用户配置文件路径。</translation>
     </message>
 </context>
 <context>
     <name>IkebackServiceControl</name>
     <message>
         <source>ikeback Service</source>
-        <translation>ikeback 服务</translation>
+        <translation>iKeback 服务</translation>
     </message>
 </context>
 <context>
@@ -5605,7 +5605,7 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Client protection = students cannot quit the ikeback card. </source>
-        <translation>客户端保护 = 学生无法退出 ikeback 卡片。 </translation>
+        <translation>客户端保护 = 学生无法退出 iKeback 卡片。 </translation>
     </message>
     <message>
         <source>Client protection OFF: the card may now be closed (use only for maintenance).</source>
@@ -5613,7 +5613,7 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Client protection ON: students can no longer quit the ikeback card.</source>
-        <translation>客户端保护已开启：学生无法再退出 ikeback 卡片。</translation>
+        <translation>客户端保护已开启：学生无法再退出 iKeback 卡片。</translation>
     </message>
     <message>
         <source>Client protection:</source>
@@ -6313,7 +6313,7 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Ikeback Master cannot write the global computer directory. </source>
-        <translation>ikeback 控制台无法写入全局计算机目录。 </translation>
+        <translation>iKeback 控制台无法写入全局计算机目录。 </translation>
     </message>
     <message>
         <source>Watch &amp; do</source>
@@ -6552,11 +6552,11 @@ Example: [^-]*-(PC[0-9]*)</source>
     <name>ClassroomPlugin</name>
     <message>
         <source>ikeback - classes, sign-in by IP, logs, scoring and control</source>
-        <translation>ikeback - 班级、按 IP 签到、日志、积分与课堂控制</translation>
+        <translation>iKeback - 班级、按 IP 签到、日志、积分与课堂控制</translation>
     </message>
     <message>
         <source>Classroom client</source>
-        <translation>ikeback 课堂客户端</translation>
+        <translation>iKeback 课堂客户端</translation>
     </message>
     <message>
         <source>Student is calling the teacher</source>
@@ -6584,7 +6584,7 @@ Example: [^-]*-(PC[0-9]*)</source>
     </message>
     <message>
         <source>Show ikeback card</source>
-        <translation>显示 ikeback 卡片</translation>
+        <translation>显示 iKeback 卡片</translation>
     </message>
     <message>
         <source>My score</source>

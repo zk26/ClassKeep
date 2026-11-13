@@ -387,7 +387,7 @@ class MainActivity : AppCompatActivity() {
 
             val about = Ui.card(this)
             about.addView(Ui.section(this, "关于"))
-            about.addView(Ui.body(this, "ikeback · 教师机移动伴侣\n基于 Ikeback 4.x 的教学管理定制分支\n许可：GPL-2.0-or-later"))
+            about.addView(Ui.body(this, "点可课堂 · 教师机移动伴侣\n基于 Veyon 4.x 的教学管理定制分支\n许可：GPL-2.0-or-later"))
             about.addView(Ui.helper(this, "本软件采集学生行为数据，部署前请阅读 IKEBACK-PRIVACY.md"))
             column.addView(about)
         }
@@ -417,7 +417,7 @@ class MainActivity : AppCompatActivity() {
         header.addView(mark, LinearLayout.LayoutParams(Ui.dp(this, 52), Ui.dp(this, 52)))
         val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val name = TextView(this).apply {
-            this.text = "ikeback"
+            this.text = getString(R.string.app_name)
             textSize = 22f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(R.color.white))

@@ -35,7 +35,7 @@
 	OP( ClassroomConfiguration, m_configuration, int, bridgePort, setBridgePort, "BridgePort", "Classroom", 11880, Configuration::Property::Flag::Standard ) \
 	OP( ClassroomConfiguration, m_configuration, bool, bridgeEnabled, setBridgeEnabled, "BridgeEnabled", "Classroom", false, Configuration::Property::Flag::Standard ) \
 	OP( ClassroomConfiguration, m_configuration, bool, syncEnabled, setSyncEnabled, "SyncEnabled", "Classroom", true, Configuration::Property::Flag::Standard ) \
-	OP( ClassroomConfiguration, m_configuration, QString, silencePageText, setSilencePageText, "SilencePageText", "Classroom", QStringLiteral("Please keep quiet"), Configuration::Property::Flag::Standard ) \
+	OP( ClassroomConfiguration, m_configuration, QString, silencePageText, setSilencePageText, "SilencePageText", "Classroom", QStringLiteral("请保持安静"), Configuration::Property::Flag::Standard ) \
 	OP( ClassroomConfiguration, m_configuration, QString, wordCloudStopWords, setWordCloudStopWords, "WordCloudStopWords", "Classroom", QString(), Configuration::Property::Flag::Advanced ) \
 	OP( ClassroomConfiguration, m_configuration, int, retentionDays, setRetentionDays, "RetentionDays", "Classroom", 180, Configuration::Property::Flag::Advanced )
 

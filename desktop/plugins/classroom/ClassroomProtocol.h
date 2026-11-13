@@ -17,14 +17,16 @@
 namespace Classroom
 {
 
+// Visible product name. Internal identifiers (config keys, service names, data
+// directories, wire protocol) intentionally stay lowercase "ikeback".
 inline QString productName()
 {
-	return QStringLiteral("ikeback");
+	return QStringLiteral("iKeback");
 }
 
 inline QString productNameEn()
 {
-	return QStringLiteral("ikeback");
+	return QStringLiteral("iKeback");
 }
 
 /** UDP announcement shared with the ikeback mobile app. The lesson key is NEVER included. */

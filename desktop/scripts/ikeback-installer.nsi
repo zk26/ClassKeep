@@ -43,7 +43,9 @@ Unicode true
   !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\ikebackStudent"
 !endif
 
-!define APP_NAME "ikeback"
+; Visible product name. Install paths, service names and registry keys keep the
+; lowercase "ikeback" identifier so upgrades and the CLI stay compatible.
+!define APP_NAME "iKeback"
 !define PUBLISHER "zk26"
 !define WEB_SITE "https://github.com/zk26/ikeback"
 !define INSTALL_TYPE "SetShellVarContext all"
@@ -57,9 +59,9 @@ Unicode true
 !define LEGACY_TEACHER_DIR "$PROGRAMFILES64\${OLD_A}${OLD_B}\Teacher"
 
 VIProductVersion "${VERSION}.0"
-VIAddVersionKey "ProductName" "ikeback"
+VIAddVersionKey "ProductName" "${APP_NAME}"
 VIAddVersionKey "CompanyName" "${PUBLISHER}"
-VIAddVersionKey "FileDescription" "ikeback ${ROLE_EN} Setup"
+VIAddVersionKey "FileDescription" "${APP_NAME} ${ROLE_EN} Setup"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "LegalCopyright" "GPL-2.0-or-later; based on Veyon (c) Veyon Solutions"
@@ -73,6 +75,7 @@ BrandingText "${APP_NAME} ${VERSION}"
 InstallDir "${INST_DIR}"
 RequestExecutionLevel admin
 ShowInstDetails show
+ShowUninstDetails show
 
 !define MUI_ABORTWARNING
 !define MUI_UNABORTWARNING
@@ -342,7 +345,7 @@ Section "ikeback Service (required)" SEC_SERVICE
     nsExec::ExecToStack '"$SYSDIR\sc.exe" start ikebackService'
     Pop $R8
     Pop $R9
-    Sleep 6000
+    Sleep 10000
     nsExec::ExecToStack '"$SYSDIR\cmd.exe" /C "tasklist /NH | findstr /I ikeback-server.exe"'
     Pop $R2
     Pop $3
@@ -354,7 +357,15 @@ Section "ikeback Service (required)" SEC_SERVICE
     MessageBox MB_OK|MB_ICONEXCLAMATION "服务未能持续运行，安装未完成。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员排查。$\r$\n常见原因：未以管理员运行、被安全软件拦截、或缺少运行库。"
   ${ElseIf} $R2 != "0"
     FileWrite $9 "RESULT: service RUNNING but server process missing$\r$\n"
-    MessageBox MB_OK|MB_ICONEXCLAMATION "服务已注册，但 ikeback-server 进程没有起来，本机与学生机都会显示红色/无法连接。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员。$\r$\n可以尝试：以管理员身份运行 $INSTDIR\ikeback-wcli.exe service restart。"
+    ; Run the server once in the foreground with a timeout so its own error
+    ; output (missing DLL / platform plugin / config) ends up in install.log
+    ; instead of leaving only a red icon behind.
+    DetailPrint "尝试直接运行 ikeback-server 以获取失败原因…"
+    nsExec::ExecToStack /TIMEOUT=5000 '"$INSTDIR\ikeback-server.exe"'
+    Pop $R8
+    Pop $R9
+    FileWrite $9 "server direct run exit=$R8 output=$R9$\r$\n"
+    MessageBox MB_OK|MB_ICONEXCLAMATION "服务已注册，但 ikeback-server 进程没有起来，本机与学生机都会显示红色/无法连接。$\r$\n$\r$\n请把 $INSTDIR\install.log 发给管理员（其中已记录 server 的直接运行输出）。$\r$\n可以尝试：以管理员身份运行 $INSTDIR\ikeback-wcli.exe service restart。"
   ${Else}
     FileWrite $9 "RESULT: service RUNNING and server process present$\r$\n"
     DetailPrint "服务已正常运行 (ikebackService + ikeback-server)"
@@ -369,14 +380,14 @@ SectionEnd
 
 ; --------------------------------------------------------------- Master only
 !if "${ROLE}" == "teacher"
-Section "ikeback Master" SEC_MASTER
+Section "${APP_NAME} Master" SEC_MASTER
   ${INSTALL_TYPE}
   SetOutPath "$INSTDIR"
   File "payload\ikeback-master.exe"
-  CreateDirectory "$SMPROGRAMS\ikeback"
-  CreateShortCut "$SMPROGRAMS\ikeback\ikeback Master.lnk" \
+  CreateDirectory "$SMPROGRAMS\${APP_NAME}"
+  CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME} Master.lnk" \
     "$INSTDIR\ikeback-master.exe" "" "$INSTDIR\ikeback.ico"
-  CreateShortCut "$DESKTOP\ikeback Master.lnk" \
+  CreateShortCut "$DESKTOP\${APP_NAME} Master.lnk" \
     "$INSTDIR\ikeback-master.exe" "" "$INSTDIR\ikeback.ico"
 SectionEnd
 !endif
@@ -386,12 +397,12 @@ Section -Post
   ${INSTALL_TYPE}
   SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\uninstall.exe"
-  CreateDirectory "$SMPROGRAMS\ikeback"
-  CreateShortCut "$SMPROGRAMS\ikeback\ikeback Configurator.lnk" \
+  CreateDirectory "$SMPROGRAMS\${APP_NAME}"
+  CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME} Configurator.lnk" \
     "$INSTDIR\ikeback-configurator.exe" "" "$INSTDIR\ikeback.ico"
-  CreateShortCut "$SMPROGRAMS\ikeback\Uninstall ${ROLE_EN}.lnk" "$INSTDIR\uninstall.exe"
+  CreateShortCut "$SMPROGRAMS\${APP_NAME}\Uninstall ${ROLE_EN}.lnk" "$INSTDIR\uninstall.exe"
 
-  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayName" "ikeback ${ROLE_EN}"
+  WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayName" "${APP_NAME} ${ROLE_EN}"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\ikeback.ico"
   WriteRegStr ${REG_ROOT} "${UNINST_KEY}" "DisplayVersion" "${VERSION}"
@@ -411,6 +422,10 @@ Section Uninstall
     Abort
   ${EndIf}
 
+  ; The removal itself runs with details suppressed (sc/taskkill would print
+  ; harmless "not found" noise), but the pane must not stay blank: print the
+  ; progress lines ourselves so the user always sees what is happening.
+  DetailPrint "正在停止 iKeback 服务与相关进程…"
   SetDetailsPrint none
   nsExec::ExecToStack '"$SYSDIR\netsh.exe" advfirewall firewall delete rule name="ikeback mobile bridge"'
   Pop $R8
