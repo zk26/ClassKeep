@@ -76,8 +76,8 @@ ShowInstDetails show
 
 !define MUI_ABORTWARNING
 !define MUI_UNABORTWARNING
-!define MUI_ICON "ikeback\nsis\installer.ico"
-!define MUI_UNICON "ikeback\nsis\uninstaller.ico"
+!define MUI_ICON "desktop\nsis\installer.ico"
+!define MUI_UNICON "desktop\nsis\uninstaller.ico"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "LICENSE"
