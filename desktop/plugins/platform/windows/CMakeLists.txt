@@ -88,3 +88,15 @@ target_compile_options(windows-platform PRIVATE
 	"-Wno-unknown-pragmas;-flarge-source-files;-Wno-misleading-indentation;-Wno-unused-but-set-variable;-Wno-unused-variable;-Wno-deprecated-declarations;-Wno-sign-compare;-Wno-unused-result;-Wno-error=cpp"
 )
 set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE SKIP_PRECOMPILE_HEADERS TRUE)
+
+# The pinned UltraVNC sources are ANSI-only. Built with the global UNICODE /
+# _UNICODE definitions, TCHAR expands to wchar_t and the legacy char*/strcpy_s
+# code no longer compiles (newer GCC rejects it outright instead of warning).
+# Compile only these third-party units without UNICODE and without -Werror;
+# ikeback's own code keeps the strict settings.
+set_source_files_properties(
+	${ultravnc_DIR}/winvnc/winvnc/vnckeymap.cpp
+	${ultravnc_DIR}/addon/ms-logon/authSSP/authSSP.cpp
+	${ultravnc_DIR}/addon/ms-logon/authSSP/GenClientServerContext.cpp
+	PROPERTIES COMPILE_OPTIONS "-UUNICODE;-U_UNICODE;-Wno-error"
+)
