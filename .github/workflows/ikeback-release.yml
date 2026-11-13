@@ -129,15 +129,25 @@ jobs:
           fetch qthttpserver https://github.com/veyon/qthttpserver.git  f80feff79a3d698ca3f23cfa240bd763d87cf0ba
           fetch libfakekey   https://github.com/veyon/libfakekey.git    7ad885912efb2131e80914e964d5e635b0d07b40
 
-      # Current GCC makes __FUNCTION__ a pointer, so UltraVNC's VNCLOG() macro no
-      # longer compiles; the mandatory windows-platform plugin needs this patch.
-      - name: Patch pinned UltraVNC logging macro
+      # The pinned UltraVNC tree no longer compiles with a current GCC/MinGW
+      # toolchain: VNCLOG() concatenates __FUNCTION__ (now a pointer), the TCHAR
+      # based accessors break under UNICODE, and two helpers live in translators
+      # that are not part of the windows-platform target. Patch the tree once,
+      # here, instead of forking the third-party sources. Keep this step in sync
+      # with ikeback-windows.yml.
+      - name: Patch pinned UltraVNC sources for the current toolchain
         shell: bash
         run: |
           set -e
           f=desktop/3rdparty/ultravnc/winvnc/winvnc/stdhdrs.h
           sed -i 's/#define VNCLOG(s)[[:space:]]*(__FUNCTION__ " : " s)/#define VNCLOG(s) (s)/' "$f"
           grep -n 'define VNCLOG' "$f"
+          k=desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp
+          sed -i '1i #undef UNICODE\n#undef _UNICODE' "$k"
+          perl -0pi -e 's/vnclog\.Print\([^;]*\);/(void)0;/gs' "$k"
+          perl -0pi -e 's/settings->RunningFromExternalService\(\)/false/gs' "$k"
+          grep -c 'vnclog\.Print\|RunningFromExternalService' "$k" || true
+          head -3 "$k"
 
       - name: Configure
         shell: msys2 {0}
@@ -168,7 +178,15 @@ jobs:
         shell: msys2 {0}
         run: |
           set -o pipefail
-          cmake --build build --parallel 4 --target windows-platform 2>&1 | tee windows-platform.log
+          if cmake --build build --parallel 4 --target windows-platform > windows-platform.log 2>&1; then
+            cat windows-platform.log
+            exit 0
+          fi
+          cat windows-platform.log
+          grep -E "error:|undefined reference" windows-platform.log | head -9 | while IFS= read -r line; do
+            echo "::error::${line}"
+          done
+          exit 1
 
       - name: Build other upstream plugins (best effort)
         shell: msys2 {0}
