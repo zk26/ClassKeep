@@ -109,6 +109,13 @@ target_compile_definitions(builtin-ultravnc-server PRIVATE
 	GWL_HINSTANCE=GWLP_HINSTANCE
 	GWL_ID=GWLP_ID
 	GWL_USERDATA=GWLP_USERDATA
+	# SettingsManager.cpp uses these members unconditionally while its header
+	# only declares them behind feature guards. Define the guards so the class
+	# matches its implementation (Veyon's own Windows build does the same).
+	DSM_SUPPORT
+	FILETRANSFER_SUPPORT
+	KEEP_ALIVE_SUPPORT
+	_CLOUD
 )
 
 if(IKEBACK_BUILD_WIN64)
