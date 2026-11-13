@@ -30,7 +30,7 @@
 #define FOREACH_WINDOWS_PLATFORM_CONFIG_PROPERTY(OP) \
 	OP( WindowsPlatformConfiguration, m_configuration, bool, isSoftwareSASEnabled, setSoftwareSASEnabled, "SoftwareSASEnabled", "Windows", true, Configuration::Property::Flag::Advanced ) \
 	OP( WindowsPlatformConfiguration, m_configuration, WindowsSessionFunctions::InterferingWindowHandling, interferingWindowsHandling, setInterferingWindowsHandling, "InterferingWindowsHandling", "Windows", QVariant::fromValue(WindowsSessionFunctions::InterferingWindowHandling::None), Configuration::Property::Flag::Advanced ) \
-	OP( WindowsPlatformConfiguration, m_configuration, bool, disableSSPIBasedUserAuthentication, setDisableSSPIBasedUserAuthentication, "DisableSSPIBasedUserAuthentication", "Windows", false, Configuration::Property::Flag::Advanced ) \
+	OP( WindowsPlatformConfiguration, m_configuration, bool, disableSSPIBasedUserAuthentication, setDisableSSPIBasedUserAuthentication, "DisableSSPIBasedUserAuthentication", "Windows", true, Configuration::Property::Flag::Advanced ) \
 	OP( WindowsPlatformConfiguration, m_configuration, bool, hideDesktopForScreenLock, setHideDesktopForScreenLock, "HideDesktopForScreenLock", "Windows", true, Configuration::Property::Flag::Advanced ) \
 	OP( WindowsPlatformConfiguration, m_configuration, bool, hideTaskbarForScreenLock, setHideTaskbarForScreenLock, "HideTaskbarForScreenLock", "Windows", true, Configuration::Property::Flag::Advanced ) \
 	OP( WindowsPlatformConfiguration, m_configuration, bool, hideStartMenuForScreenLock, setHideStartMenuForScreenLock, "HideStartMenuForScreenLock", "Windows", true, Configuration::Property::Flag::Advanced ) \

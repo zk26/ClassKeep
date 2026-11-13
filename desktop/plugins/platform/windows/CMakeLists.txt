@@ -27,8 +27,7 @@ build_ikeback_plugin(windows-platform
 	SasEventListener.cpp
 	XEventLog.cpp
 	${ultravnc_DIR}/winvnc/winvnc/vnckeymap.cpp
-	${ultravnc_DIR}/addon/ms-logon/authSSP/authSSP.cpp
-	${ultravnc_DIR}/addon/ms-logon/authSSP/GenClientServerContext.cpp
+	authSSP.cpp
 
 	WindowsPlatformConfiguration.h
 	WindowsPlatformPlugin.h
@@ -63,10 +62,9 @@ build_ikeback_plugin(windows-platform
 target_include_directories(windows-platform PRIVATE
 	../common
 	${CMAKE_SOURCE_DIR}/3rdparty/interception/include
-	${ultravnc_DIR}/addon/ms-logon/authSSP
 	${ultravnc_DIR}/winvnc/winvnc
 	${ultravnc_DIR}
-	)
+)
 
 # ikeback: upstream links -linterception, which only exists in Ikeback's private
 # cross-build image (not in MSYS2, not in 3rdparty/interception/). The optional
@@ -89,14 +87,11 @@ target_compile_options(windows-platform PRIVATE
 )
 set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE SKIP_PRECOMPILE_HEADERS TRUE)
 
-# The pinned UltraVNC sources are ANSI-only. Built with the global UNICODE /
-# _UNICODE definitions, TCHAR expands to wchar_t and the legacy char*/strcpy_s
-# code no longer compiles (newer GCC rejects it outright instead of warning).
-# Compile only these third-party units without UNICODE and without -Werror;
-# ikeback's own code keeps the strict settings.
+# The pinned UltraVNC vnckeymap.cpp is ANSI-only: under the project-wide
+# UNICODE/_UNICODE defines its legacy helpers expand to wide strings and no
+# longer compile with recent GCC ("expected ')' before string constant").
+# Compile only that third-party unit without UNICODE and without -Werror;
+# ikeback's own code in this target keeps the strict settings.
 set_source_files_properties(
 	${ultravnc_DIR}/winvnc/winvnc/vnckeymap.cpp
-	${ultravnc_DIR}/addon/ms-logon/authSSP/authSSP.cpp
-	${ultravnc_DIR}/addon/ms-logon/authSSP/GenClientServerContext.cpp
-	PROPERTIES COMPILE_OPTIONS "-UUNICODE;-U_UNICODE;-Wno-error"
-)
+	PROPERTIES COMPILE_FLAGS "-UUNICODE -U_UNICODE -Wno-error")
