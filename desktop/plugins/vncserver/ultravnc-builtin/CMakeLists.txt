@@ -101,6 +101,14 @@ target_compile_definitions(builtin-ultravnc-server PRIVATE
 	_VCPKG
 	_INTERNALLIB
 	_USE_DESKTOPDUPLICATION
+	# Windows headers only expose the legacy GWL_* accessors when WINVER is
+	# below 0x0500; the project targets 0x0602, so map them to the modern ones.
+	GWL_WNDPROC=GWLP_WNDPROC
+	GWL_HINSTANCE=GWLP_HINSTANCE
+	GWL_ID=GWLP_ID
+	GWL_STYLE=GWLP_STYLE
+	GWL_EXSTYLE=GWLP_EXSTYLE
+	GWL_USERDATA=GWLP_USERDATA
 )
 
 if(IKEBACK_BUILD_WIN64)
