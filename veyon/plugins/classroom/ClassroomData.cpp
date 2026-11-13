@@ -466,7 +466,7 @@ QChar detectSeparator( const QString& text )
 		}
 	}
 
-	auto best = QLatin1Char(';');
+	QChar best = QLatin1Char(';');
 	int bestCount = 0;
 	for( auto it = counts.constBegin(); it != counts.constEnd(); ++it )
 	{
