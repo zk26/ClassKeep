@@ -142,15 +142,11 @@ jobs:
           # VNCLOG() concatenates __FUNCTION__ (a pointer with current GCC) and
           # several UltraVNC files define their own copy, so rewrite them all.
           find desktop/3rdparty/ultravnc/winvnc -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.c' \) \
-            | while IFS= read -r f; do
-              perl -0pi -e 's/#define\s+VNCLOG\(s\)[^\n]*/#define VNCLOG(s) (s)/g' "$f"
-            done
-          grep -rn 'define VNCLOG' desktop/3rdparty/ultravnc/winvnc/ | head -8
+            -exec perl -0pi -e 's/#define\s+VNCLOG\(s\)[^\n]*/#define VNCLOG(s) (s)/g' {} + || true
+          grep -rn 'define VNCLOG' desktop/3rdparty/ultravnc/winvnc/ | head -8 || true
           # GWL_* accessors are only declared for WINVER < 0x0500; rewrite them.
           find desktop/3rdparty/ultravnc -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.c' \) \
-            | while IFS= read -r f; do
-              perl -pi -e 's/\bGWL_WNDPROC\b/GWLP_WNDPROC/g; s/\bGWL_HINSTANCE\b/GWLP_HINSTANCE/g; s/\bGWL_ID\b/GWLP_ID/g; s/\bGWL_STYLE\b/GWLP_STYLE/g; s/\bGWL_EXSTYLE\b/GWLP_EXSTYLE/g; s/\bGWL_USERDATA\b/GWLP_USERDATA/g' "$f"
-            done
+            -exec perl -pi -e 's/\bGWL_WNDPROC\b/GWLP_WNDPROC/g; s/\bGWL_HINSTANCE\b/GWLP_HINSTANCE/g; s/\bGWL_ID\b/GWLP_ID/g; s/\bGWL_STYLE\b/GWLP_STYLE/g; s/\bGWL_EXSTYLE\b/GWLP_EXSTYLE/g; s/\bGWL_USERDATA\b/GWLP_USERDATA/g' {} + || true
           k=desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp
           sed -i '1i #undef UNICODE\n#undef _UNICODE' "$k"
           perl -0pi -e 's/vnclog\.Print\([^;]*\);/(void)0;/gs' "$k"
