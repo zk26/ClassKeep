@@ -80,7 +80,7 @@ inline Feature::Uid clientFeatureUid()
 	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000002") };
 }
 
-//! 2.2.0: ikeback's own name+seat sign-in replaces Veyon's username/password
+//! 5.2.0: ikeback's own name+seat sign-in replaces Veyon's username/password
 //! logon in the Master tool bar. These are Action|Master features; the messages
 //! they send still travel over clientFeatureUid() so the wire format is unchanged.
 inline Feature::Uid signInFeatureUid()
@@ -93,7 +93,7 @@ inline Feature::Uid signOutFeatureUid()
 	return Feature::Uid{ QStringLiteral("d3f1c0de-7a41-4b8e-9c12-000000000004") };
 }
 
-//! 2.3.0: quick tools live on the Veyon Master tool bar (drop-down menu) and
+//! 5.2.0: quick tools live on the Veyon Master tool bar (drop-down menu) and
 //! attendance check-in gets its own button. These are Action|Master features:
 //! they only open UI, so they never start another session worker.
 inline Feature::Uid quickToolsFeatureUid()
@@ -163,7 +163,7 @@ enum class Command
 	// Argument::Enabled carries on/off.
 	SetUninstallProtection,
 
-	// 2.0.0 teacher quick tools. ALWAYS append: numeric values are the wire
+	// 5.2.0 teacher quick tools. ALWAYS append: numeric values are the wire
 	// protocol and must stay compatible with already deployed 1.x workers.
 	// "Protection" and "UWF" are TWO INDEPENDENT switches:
 	//   SetExitProtection = client process protection (student cannot quit the
@@ -177,13 +177,13 @@ enum class Command
 	SetWebBlockRules,
 	ProtectionStateReport,
 
-	// 2.2.0 worker consolidation. ALWAYS append (numeric values are the wire
+	// 5.2.0 worker consolidation. ALWAYS append (numeric values are the wire
 	// protocol). One ApplySession message replaces the old SetSettings +
 	// SetRoster + SetSessionKey burst, which used to re-arm the session worker
 	// restart logic three times every time the teacher opened the console.
 	ApplySession,
 
-	// 2.3.0: students no longer hold the AI API key. They submit a prompt and
+	// 5.2.0: students no longer hold the AI API key. They submit a prompt and
 	// the teacher machine calls the model provider on their behalf.
 	AiPrompt,
 	AiReply
@@ -252,7 +252,7 @@ enum class Argument
 	// attendance check-in
 	CheckInName,
 
-	// 2.3.0: student machines receive only this boolean, never the key itself.
+	// 5.2.0: student machines receive only this boolean, never the key itself.
 	// SetSessionKey / StartClient / ApplySession use it in place of SessionKey.
 	KeyConfigured,
 

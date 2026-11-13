@@ -15,9 +15,14 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version without the v prefix (e.g. 2.2.0)'
+        description: 'Version without the v prefix (e.g. 5.2.0)'
         required: true
         default: '5.2.0'
+      purge_old_releases:
+        description: 'After publishing, delete every GitHub release older than 5.2.0'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -326,3 +331,29 @@ jobs:
             dist/SHA256SUMS.txt
             dist/RELEASE-NOTES.md
           fail_on_unmatched_files: true
+
+      # 5.2.0 is the first official ikeback release. Opt-in so a normal publish
+      # never deletes anything by accident - tick "purge_old_releases" when
+      # dispatching the workflow.
+      - name: Purge releases older than 5.2.0
+        if: github.event.inputs.purge_old_releases == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $cutoff = [version]'5.2.0'
+          $tags = gh release list --limit 200 --json tagName --jq '.[].tagName'
+          foreach ($tag in $tags) {
+            if ([string]::IsNullOrWhiteSpace($tag)) { continue }
+            $clean = ($tag -replace '^v', '') -replace '[-+].*$', ''
+            if ($clean -notmatch '^\d+(\.\d+){1,3}$') {
+              Write-Host "skip $tag (not a numeric version)"
+              continue
+            }
+            if ([version]$clean -lt $cutoff) {
+              Write-Host "deleting release $tag"
+              gh release delete $tag --cleanup-tag --yes
+            } else {
+              Write-Host "keep $tag"
+            }
+          }

@@ -17,7 +17,7 @@ rm -rf "$PAYLOAD"
 mkdir -p "$PAYLOAD/plugins" "$PAYLOAD/platforms" "$PAYLOAD/styles" \
          "$PAYLOAD/tls" "$PAYLOAD/imageformats" "$PAYLOAD/crypto"
 
-echo "== built executables (ikeback-* since 2.0.0) =="
+echo "== built executables (ikeback-* since 5.2.0) =="
 find "$BUILD" -type f -name 'ikeback-*.exe' ! -path '*CMakeFiles*' \
   -exec cp '{}' "$PAYLOAD/" \;
 

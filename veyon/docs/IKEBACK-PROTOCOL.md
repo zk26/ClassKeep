@@ -45,9 +45,9 @@
 | `StartApp` | `da9ca56a-b2ad-4fff-8f8a-929b2927b442` |
 | `DistributeFiles` | `4a70bd5a-fab2-4a4b-a92a-a1e81d2b75ed` |
 
-> **2.0.0 修正**：旧版「广播」按钮对 `DemoAllScreens` 调 `controlFeature()`，
-> 该 UID 只是多屏选项、`DemoFeaturePlugin::controlFeature()` 并不处理，实际什么也没发生。
-> 现在通过 `FeatureManager::startFeature()` 启动 `ShareOwnScreenFullScreen` /
+> **广播实现**：`DemoAllScreens` 只是多屏选项，`DemoFeaturePlugin::controlFeature()`
+> 并不处理它，直接调用它什么也不会发生。ikeback 通过
+> `FeatureManager::startFeature()` 启动 `ShareOwnScreenFullScreen` /
 > `ShareOwnScreenWindow`，再叠加 `InputDevicesLock`（**桌面仍可见**，只禁键鼠输入）。
 
 ---
@@ -62,7 +62,7 @@
 | 2 | `StopClient` | M→S→W | 停止 worker（同时暂停看门狗） | — |
 | 3 | `SetSettings` | M→S→W | 下发全部设置 JSON | `SettingsJson` |
 | 4 | `SetRoster` | M→S→W | 下发班级名单 JSON | `RosterJson` |
-| 5 | `SetSessionKey` | M→S→W | 会话心跳（**2.3.0 起只传布尔，不再下发密钥**；枚举号保持不变） | `KeyConfigured`、`SessionId` |
+| 5 | `SetSessionKey` | M→S→W | 会话心跳（**5.2.0 起只传布尔，不再下发密钥**；枚举号保持不变） | `KeyConfigured`、`SessionId` |
 | 6 | `SetIdentity` | M→S→W | 教师按 IP 直接登录学生 | `ClassName`、`Seat`、`Student`、`SessionId` |
 | 7 | `ClearIdentity` | M→S→W | 清除学生身份 | — |
 | 8 | `ForceLogout` | M→S→W | 强制退出并解除客户端锁定 | `Reason` |
@@ -108,7 +108,7 @@
 > 新增命令一律追加在枚举末尾，因为枚举数值就是线上协议；旧版 worker 收到
 > 未知命令时走 `default: return false`，不会崩溃。
 
-### 2.2.0 新增 Feature（工具栏）
+### 5.2.0 新增 Feature（工具栏）
 
 | Feature | UID 末段 | Flag | 行为 |
 |---|---|---|---|
@@ -119,7 +119,7 @@
 因此教师端只暴露 ikeback 的姓名+座位号登录入口。上游 `usersessioncontrol` 插件
 仍参与编译，但其 `prepareLogon()` / 密码加密路径不再被调用。
 
-### 手机端 ↔ 教师机 HTTP 路由（2.1.0 新增）
+### 手机端 ↔ 教师机 HTTP 路由（5.2.0 新增）
 
 | 路径 | 方法 | 鉴权 | 用途 |
 |---|---|---|---|

@@ -104,12 +104,12 @@ private:
 	void setupSeatTab();
 	void refreshSeatGrid();
 	void refreshUwfStatus();
-	//! 2.1.0 teacher-side parity with the phone: timetable + per-lesson scoring.
+	//! 5.2.0 teacher-side parity with the phone: timetable + per-lesson scoring.
 	void setupTimetableTab();
 	void refreshLessonRecords();
 	QString timetableFilePath() const;
 
-	//! 2.0.0 quick tools. "Client protection" and "UWF" are separate switches.
+	//! 5.2.0 quick tools. "Client protection" and "UWF" are separate switches.
 	void setupToolsTab();
 	QStringList toolTargets() const;
 	void sendToTargets( const FeatureMessage& message );

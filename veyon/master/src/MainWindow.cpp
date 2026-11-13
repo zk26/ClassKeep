@@ -478,10 +478,10 @@ void MainWindow::addFeaturesToToolBar()
 		QStringLiteral("ClassroomCheckIn")
 	};
 
-	// ikeback 2.2.0: Veyon's native UserLogin/UserLogoff actions open a
+	// ikeback 5.2.0: Veyon's native UserLogin/UserLogoff actions open a
 	// Windows username+password dialog. ikeback signs students in by NAME and
 	// SEAT instead, so those two upstream buttons must not be shown at all.
-	// 2.3.0: desktopservices' StartApp / OpenWebsite duplicated the ikeback
+	// 5.2.0: desktopservices' StartApp / OpenWebsite duplicated the ikeback
 	// console's "Open software" / "Open website" actions. They now live in the
 	// "Quick tools" menu only, so hide the upstream copies (no lost function).
 	static const QStringList supersededNames{

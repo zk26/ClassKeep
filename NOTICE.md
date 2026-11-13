@@ -53,13 +53,13 @@ SPDX-License-Identifier: GPL-2.0-or-later
 - 修改内容总览：[`veyon/docs/IKEBACK.md`](veyon/docs/IKEBACK.md)。
 - 通信协议（命令字、路由、认证、数据格式）：[`veyon/docs/IKEBACK-PROTOCOL.md`](veyon/docs/IKEBACK-PROTOCOL.md)。
 
-### 4.1 名称与标识变更声明（自 2.0.0 起）
+### 4.1 名称与标识变更声明
 
 依 GPL 第 2(a) 条，此处明确列出本分支对上游 **Veyon** 名称所做的全部改变。
 改名只涉及**用户可感知的名称与标识**，不改变软件来源、版权归属或许可；
 上游 Veyon 的版权与 GPL 声明在所有文件中均予保留。
 
-| 类别 | 上游名称（≤ 1.5.1） | 当前 ikeback |
+| 类别 | 上游名称 | 当前 ikeback |
 |---|---|---|
 | 产品 / 应用名 | Veyon | `ikeback`（仅英文小写） |
 | 教师控制台进程 | `veyon-master.exe` | `ikeback-master.exe` |
@@ -81,10 +81,10 @@ C++ 类/命名空间 `VeyonCore`、`VeyonServiceControl` 等，`VEYON_*` 编译�
 CMake 构建目标 `veyon-master` …（仅编译期标识，实际产物名见上表），
 核心库 `veyon-core.dll`、插件 DLL 名、翻译目录 `veyon_zh_CN.qm`，
 配置与密钥数据目录 `%APPDATA%\Veyon` / `%PROGRAMDATA%\Veyon`
-（**保留是为了 2.0.0 升级时不丢失既有认证密钥与课堂数据**），
+（**保留是为了升级时不丢失既有认证密钥与课堂数据**），
 以及 D-Bus 总线名 `io.veyon.*` 与上游 Linux 桌面项文件名。
 
-**升级提示**：2.0.0 安装程序会自动停止并清理旧 `veyon-*.exe` 进程、
+**安装提示**：安装程序会自动停止并清理可能残留的 `veyon-*.exe` 进程、
 `VeyonService` 服务注册、旧的 `Teacher` 安装目录与旧卸载注册表项；
 `QCoreApplication` 组织名/应用名改为 `ikeback`，因此部分界面偏好设置会回到默认值，
 需要在 `ikeback Configurator` 中重新确认一次。

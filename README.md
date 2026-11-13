@@ -35,15 +35,14 @@ G:\veyon\  (= 仓库根)
 
 `ikeback_logo.png` 是唯一的品牌图标来源，桌面端 `.ico` 与 Android `mipmap` 图标均由它生成。
 
-**2.0.0 命名**：所有进程均为 `ikeback-master.exe` / `ikeback-server.exe` /
+**进程与命名**：所有进程均为 `ikeback-master.exe` / `ikeback-server.exe` /
 `ikeback-worker.exe` / `ikeback-service.exe` / `ikeback-configurator.exe` /
 `ikeback-cli.exe` / `ikeback-wcli.exe`，Windows 服务名为 `ikebackService`，
 安装目录为 `%PROGRAMFILES64%\ikeback\Master`（教师机）与 `...\Student`（学生机）。
-CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目录仍沿用上游标识，
+CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目录沿用上游标识，
 详见 `NOTICE.md` §4.1。
 
-本仓库保留了上游 Veyon 的完整提交历史（详见 `git log`）；早期留下的
-`veyon/mobile/` 历史副本与废弃的 ZIP 打包脚本已清理。
+本仓库保留上游 Veyon 的完整提交历史（详见 `git log`）。
 
 ---
 
@@ -68,8 +67,7 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 > | `package` | Windows | 组装三类产物 + `SHA256SUMS.txt` + 发布说明 |
 >
 > 三类产物全部真实编译，不含占位包或伪造二进制。
-> **当前版本 5.2.0（首个 ikeback 正式版）**：改名后的全部旧构建（ClassKeep 时代）
-> 一律作废，请只使用 5.2.0 及以后的产物。
+> **5.2.0 是经过 7 个内部测试版本打磨后的最终节点，也是 ikeback 的第一个正式版本。**
 > **教师端工具栏**：常用工具（广播 / 边看边做 / 停止广播、客户端保护开关、
 > UWF 开关、网关开关、肃静页、禁用应用/网址、全班加减分、静音）不再是下拉菜单里的
 > 二级项，而是与「屏幕演示」「远程控制」同级的一级按钮，放不下时自动换行成两列。
@@ -87,7 +85,6 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 > APP 为 **5 个底部标签（课堂 / 班级 / 课表 / 配置 / 更多）**：真实应用图标、
 > 未配置时收缩提示、ClassBoard 样式双作息课表（彩色跨节卡片 + 今天高亮）、
 > 按班级自然展示课堂记录、导入导出收进设置、课表本地 + 教师机双写同步。
-> 旧版 ZIP / preset 包与有缺陷的 Release 已删除。
 > Windows 编译路线见 [`IKEBACK-BUILD.md` 路线 D](veyon/docs/IKEBACK-BUILD.md)。
 
 ---
@@ -122,8 +119,8 @@ cd mobile
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
-makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
+makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
 ```
 
 详见 [`veyon/scripts/README.md`](veyon/scripts/README.md)。

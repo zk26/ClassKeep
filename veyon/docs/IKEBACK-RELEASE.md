@@ -16,6 +16,8 @@
 
 版本格式 `vMAJOR.MINOR.PATCH`，与 `mobile/app/build.gradle.kts` 的 `versionName` 一致。
 
+> **5.2.0 是经过 7 个内部测试版本打磨后的最终节点，也是 ikeback 的第一个正式版本。**
+
 | 产物 | 文件名 | 格式 |
 |---|---|---|
 | 教师端安装程序 | `ikeback-teacher-<ver>-win64-setup.exe` | NSIS 安装器（单文件 EXE） |
@@ -26,10 +28,7 @@
 
 **三类产物都是真实编译的**，不含占位包、空包或伪造二进制。
 仓库内不提交预编译二进制（`dist/`、`*.apk`、`*.exe` 安装包均由根 `.gitignore` 排除）。
-
-> 历史：`v1.0.0` 曾发布 `-preset` 配置包，`v1.1.0`～`v1.2.0` 发布 ZIP 绿色包。
-> 这些旧包因运行时 DLL 不全而无法正常启动，**已删除**。
-> 自 `v1.3.0` 起改为 NSIS 安装 EXE，并用 `ntldd` 递归收集完整依赖闭包。
+安装包统一采用 NSIS 单文件 EXE，运行时依赖由 `ntldd` 递归收集完整闭包。
 
 ---
 
@@ -64,13 +63,13 @@ LICENSE.TXT / COPYING.TXT / README.TXT / ikeback.ico
 ```
 
 > 运行时 DLL 由 `scripts/collect_mingw_deps.py` 用 `ntldd` 递归解析 PE 导入闭包收集，
-> **不再使用文件名白名单**——白名单曾漏掉 `libbz2-1.dll`、`libmd4c.dll`、
-> `libbrotli*.dll` 等，导致安装后所有 EXE 报「找不到 DLL」。
+> **不使用文件名白名单**——手工白名单容易漏掉 `libbz2-1.dll`、`libmd4c.dll`、
+> `libbrotli*.dll` 等，安装后所有 EXE 会报「找不到 DLL」。
 >
 > `collect-windows-runtime.sh` 还会**硬校验** `plugins/windows-platform.dll`、
 > `crypto/libqca-ossl.dll`（Qt6 版）、`libqca-qt6.dll`、`platforms/qwindows.dll`。
 > 前两者是 VeyonCore 启动必需件：缺失时 `PlatformPluginManager` / `CryptoCore`
-> 会 `qFatal`，表现为所有程序 `__fastfail` 崩溃（`v1.3.0` 的安装弹窗即由此引起）。
+> 会 `qFatal`，表现为所有程序 `__fastfail` 崩溃并弹出「快速异常检测失败」对话框。
 
 ---
 
@@ -101,8 +100,8 @@ Windows 依赖、3rdparty 锁定 SHA 与编译目标详见
 bash veyon/scripts/collect-windows-runtime.sh
 mkdir -p dist
 { printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
-makensis -DVERSION=2.2.0 -DROLE=teacher installer.nsi
-makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
+makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
+makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
 ```
 
 `payload/` 由第一条命令从 `build/` 组装；图标 `.ico` 已提交进仓库，CI 不重新生成。
@@ -114,9 +113,9 @@ makensis -DVERSION=2.2.0 -DROLE=student installer.nsi
 `SHA256SUMS.txt` 由 `package` job 自动生成，覆盖三类产物：
 
 ```
-<sha256小写>  ikeback-Mobile-1.3.0.apk
-<sha256小写>  ikeback-student-1.3.0-win64-setup.exe
-<sha256小写>  ikeback-teacher-1.3.0-win64-setup.exe
+<sha256小写>  ikeback-Mobile-5.2.0.apk
+<sha256小写>  ikeback-student-5.2.0-win64-setup.exe
+<sha256小写>  ikeback-teacher-5.2.0-win64-setup.exe
 ```
 
 ```powershell

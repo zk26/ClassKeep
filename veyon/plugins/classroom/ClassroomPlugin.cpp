@@ -90,7 +90,7 @@ ClassroomPlugin::ClassroomPlugin( QObject* parent ) :
 							   tr( "Sign out" ), {},
 							   tr( "Sign out the current student" ),
 							   QStringLiteral(":/core/edit-delete.png") ) ),
-	// 2.3.0: the quick tools and check-in actions are first-class tool-bar
+	// 5.2.0: the quick tools and check-in actions are first-class tool-bar
 	// buttons. They only open UI in the Master process - no Worker flag, so no
 	// extra ikeback Worker process is created.
 	m_quickToolsFeature( Feature( QStringLiteral("ClassroomQuickTools"),
@@ -441,7 +441,7 @@ bool ClassroomPlugin::startFeature( VeyonMasterInterface& master, const Feature&
 
 	if( feature.uid() != consoleFeatureUid() ) { return false; }
 
-	// ikeback 2.2.0: the console is no longer a floating QDialog. It lives in
+	// ikeback 5.2.0: the console is no longer a floating QDialog. It lives in
 	// a docked panel inside the Veyon Master main window so the monitoring view
 	// and the classroom tools are visible at the same time. Fall back to a
 	// standalone widget only when there is no QMainWindow (e.g. headless tests).
@@ -1148,7 +1148,7 @@ bool ClassroomPlugin::handleFeatureMessage( VeyonWorkerInterface& worker, const 
 		ClassroomSystem::restartSystem();
 		break;
 
-	// ---------------------------------------------------------- 2.0.0 quick tools
+	// ---------------------------------------------------------- 5.2.0 quick tools
 	case Command::SetExitProtection:
 	{
 		// "Protection" is CLIENT protection (the student cannot quit the worker).

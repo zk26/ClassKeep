@@ -444,7 +444,7 @@ void ClassroomClientWidget::requestQuit()
 
 	if( dialog.exec() != QDialog::Accepted ) { return; }
 
-	// From 2.3.0 Windows administrator credentials are the ONLY exit
+	// From 5.2.0 Windows administrator credentials are the ONLY exit
 	// credential. The bridge key is never present in this process, so the old
 	// "connection key" fallback is gone; exitRequiresAdmin is kept in the
 	// configuration for backwards compatibility but no longer weakens this.

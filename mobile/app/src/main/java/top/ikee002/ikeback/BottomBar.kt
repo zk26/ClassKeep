@@ -16,7 +16,7 @@ import android.widget.TextView
 /**
  * Bottom tab bar with REAL vector icons + a permanently visible name.
  *
- * 2.0.0: the old bar used a single Chinese character as a fake icon and only
+ * 5.2.0: the old bar used a single Chinese character as a fake icon and only
  * revealed the label for the selected tab, which read as "ugly text-only".
  * Every tab now shows [icon + label] at all times; the white capsule still
  * slides to the selected item and that icon bounces once.

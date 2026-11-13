@@ -9,10 +9,10 @@
 ;                ikebackService service) and "Master" (optional console).
 ; ROLE=student : component page with ONLY the read-only Service section.
 ;
-; Since 2.0.0 every shipped process is ikeback-*.exe and the Windows service
-; is ikebackService. The installer also stops/removes the legacy <=1.5.1
-; `veyon-*.exe` processes and `VeyonService`, which is what used to trigger
-; "无法打开要写入的文件 ... veyon-worker.exe" during an upgrade.
+; Every shipped process is ikeback-*.exe and the Windows service is
+; ikebackService. The installer also stops/removes upstream `veyon-*.exe`
+; processes and `VeyonService`, which would otherwise keep file handles open
+; and trigger "无法打开要写入的文件 ... veyon-worker.exe".
 ;
 ; CI copies this file to the repository root with a UTF-8 BOM (Unicode true).
 
@@ -48,10 +48,10 @@ Unicode true
 !define WEB_SITE "https://github.com/zk26/ikeback"
 !define INSTALL_TYPE "SetShellVarContext all"
 !define REG_ROOT "HKLM"
-; Legacy <=2.x upgrade cleanup. The retired mark is assembled from two parts
-; so the discontinued name is not stored anywhere in this source tree. Without
-; this, an upgrade leaves the old service running (port conflict), keeps old
-; EXEs locked and can delete the freshly installed Teacher directory.
+; Upgrade cleanup for the retired product name, assembled from two parts so the
+; discontinued name is not stored anywhere in this source tree. Without this,
+; an upgrade leaves the old service running (port conflict), keeps old EXEs
+; locked and can delete the freshly installed Teacher directory.
 !define OLD_A "Class"
 !define OLD_B "Keep"
 !define LEGACY_TEACHER_DIR "$PROGRAMFILES64\${OLD_A}${OLD_B}\Teacher"
@@ -90,7 +90,7 @@ ShowInstDetails show
 !insertmacro MUI_LANGUAGE "English"
 
 ; ---------------------------------------------------------------------------
-; Stop both the current and the legacy (<= 1.5.1) service + processes.
+; Stop both the current and the upstream (veyon) service + processes.
 ; `service unregister` does NOT stop a service (it only deletes its SCM entry),
 ; so this must happen before any File/Delete instruction.
 ; ---------------------------------------------------------------------------
@@ -362,7 +362,7 @@ Section "ikeback Service (required)" SEC_SERVICE
   ${EndIf}
   FileClose $9
 
-  ; One-time cleanup of the <=1.5.1 layout (Teacher dir + Add/Remove entry).
+  ; One-time cleanup of the upstream layout (Teacher dir + Add/Remove entry).
   RmDir /r "${LEGACY_TEACHER_DIR}"
   DeleteRegKey ${REG_ROOT} "Software\Microsoft\Windows\CurrentVersion\Uninstall\${OLD_A}${OLD_B}Teacher"
 SectionEnd
@@ -444,7 +444,7 @@ Section Uninstall
 
   ; NSIS does NOT allow an uninstall section to Call a plain function (it
   ; requires an "un." prefixed function). Inline the same stop/cleanup logic
-  ; here so uninstalling 1.5.1 also releases the locked worker executables.
+  ; here so uninstalling an upstream build also releases locked executables.
   ; ExecToStack keeps the expected "not installed / not found" noise out of the
   ; details pane, on uninstall as well as on install.
   nsExec::ExecToStack '"$SYSDIR\sc.exe" stop ikebackService'
