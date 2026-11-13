@@ -114,10 +114,15 @@ jobs:
         shell: msys2 {0}
         run: |
           set -o pipefail
-          cmake --build build --parallel 4 --target \
+          if ! cmake --build build --parallel 4 --target \
             classroom \
             ikeback-master ikeback-configurator ikeback-cli ikeback-wcli \
-            ikeback-service ikeback-server ikeback-worker 2>&1 | tee build.log
+            ikeback-service ikeback-server ikeback-worker > build.log 2>&1; then
+            cat build.log
+            tail -n 12 build.log | while IFS= read -r line; do echo "::error::core|${line}"; done
+            exit 1
+          fi
+          cat build.log
 
       # Build every usable upstream plugin so the installed Master/Service keep
       # demo, remote control, screen lock, VNC, etc. A full `cmake --build`
@@ -137,12 +142,11 @@ jobs:
           cat windows-platform.log
           # Surface the real compiler errors as annotations: the job log itself
           # is not retrievable without authentication.
-          grep -E "error:" windows-platform.log | head -9 | while IFS= read -r line; do
+          grep -E "error:|Error " windows-platform.log | head -6 | while IFS= read -r line; do
             echo "::error::${line}"
           done
-          echo "compiler: $(c++ -dumpversion)"
-          sed -n '120,128p' desktop/3rdparty/ultravnc/winvnc/winvnc/stdhdrs.h 2>/dev/null | head -8 | while IFS= read -r line; do
-            echo "::warning::stdhdrs|${line}"
+          tail -n 8 windows-platform.log | while IFS= read -r line; do
+            echo "::error::wp|${line}"
           done
           exit 1
 
