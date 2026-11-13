@@ -160,8 +160,7 @@ jobs:
           cat windows-platform.log
           # Surface the real compiler errors as annotations: the job log itself
           # is not retrievable without authentication.
-          echo "::error::flags=$(grep -m1 'vnckeymap.cpp.obj' windows-platform.log | grep -o -- '-DUNICODE\|-D_UNICODE\|-UUNICODE\|-U_UNICODE' | tr '\n' ' ')"
-          errs=$(grep -E "error:" windows-platform.log | head -8)
+          errs=$(grep -E "error:|undefined reference" windows-platform.log | head -9)
           if [ -n "$errs" ]; then
             printf '%s\n' "$errs" | while IFS= read -r line; do echo "::error::${line}"; done
           else
