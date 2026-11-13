@@ -1,7 +1,7 @@
 # ikeback — 版权、许可与声明 / NOTICE
 
 本文件用于明确本仓库的权利归属、授权范围与责任边界，避免任何归属或授权上的歧义。
-若本文件与其他说明有冲突，**以 `LICENSE`（GPL v2 全文）与 `veyon/docs/IKEBACK-LICENSE.md` 为准**。
+若本文件与其他说明有冲突，**以 `LICENSE`（GPL v2 全文）与 `desktop/docs/IKEBACK-LICENSE.md` 为准**。
 
 ---
 
@@ -18,9 +18,9 @@
 
 | 部分 | 版权 |
 |---|---|
-| Veyon 上游源码（`veyon/` 中除本分支新增/修改文件外的全部内容） | Copyright (c) 2017-2026 Tobias Junghans 及 Veyon 贡献者，按各文件头声明 |
-| 本分支新增与修改内容（`veyon/plugins/classroom/`、`mobile/`、`docs/`、`scripts/`、根级文件、核心扩展点改动） | Copyright (c) 2026 zk26 |
-| 上游许可证全文 | `LICENSE` / `veyon/COPYING`（GNU GPL v2） |
+| Veyon 上游源码（`desktop/` 中除本分支新增/修改文件外的全部内容） | Copyright (c) 2017-2026 Tobias Junghans 及 Veyon 贡献者，按各文件头声明 |
+| 本分支新增与修改内容（`desktop/plugins/classroom/`、`mobile/`、`docs/`、`scripts/`、根级文件、核心扩展点改动） | Copyright (c) 2026 zk26 |
+| 上游许可证全文 | `LICENSE` / `desktop/COPYING`（GNU GPL v2） |
 
 「本分支新增与修改内容」的版权声明**不削弱也不替换**上游权利人的权利；
 两部分的权利均受 GPL 约束，且**整体作为一个程序**按 GPL-2.0-or-later 授权。
@@ -39,8 +39,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 
 完整的分发义务、修改声明与第三方清单见：
 
-- [`veyon/docs/IKEBACK-LICENSE.md`](veyon/docs/IKEBACK-LICENSE.md)
-- [`veyon/docs/IKEBACK-THIRD-PARTY.md`](veyon/docs/IKEBACK-THIRD-PARTY.md)
+- [`desktop/docs/IKEBACK-LICENSE.md`](desktop/docs/IKEBACK-LICENSE.md)
+- [`desktop/docs/IKEBACK-THIRD-PARTY.md`](desktop/docs/IKEBACK-THIRD-PARTY.md)
 
 ## 4. 修改声明（GPL 第 2(a) 条）
 
@@ -50,8 +50,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 `server/src/ComputerControlServer.cpp`、`master/src/ComputerMonitoringWidget.cpp` 的扩展。
 
 - 修改日期与逐次变更：**本仓库 git 提交历史**（含作者、时间、diff）。
-- 修改内容总览：[`veyon/docs/IKEBACK.md`](veyon/docs/IKEBACK.md)。
-- 通信协议（命令字、路由、认证、数据格式）：[`veyon/docs/IKEBACK-PROTOCOL.md`](veyon/docs/IKEBACK-PROTOCOL.md)。
+- 修改内容总览：[`desktop/docs/IKEBACK.md`](desktop/docs/IKEBACK.md)。
+- 通信协议（命令字、路由、认证、数据格式）：[`desktop/docs/IKEBACK-PROTOCOL.md`](desktop/docs/IKEBACK-PROTOCOL.md)。
 
 ### 4.1 名称与标识变更声明
 
@@ -104,12 +104,12 @@ CMake 构建目标 `veyon-master` …（仅编译期标识，实际产物名见�
 桌面端图标沿用 Veyon 自带资源（现已替换为 `ikeback_logo.png` 生成的图标）；
 Android Studio 模板生成的默认图标资源已被移除。
 
-`veyon/3rdparty/interception/include/interception.h` 是本分支**自行编写的最小兼容头**，
+`desktop/3rdparty/interception/include/interception.h` 是本分支**自行编写的最小兼容头**，
 仅用于替代上游私有 Windows 构建镜像里才存在的 `libinterception.a`，使必需的
 `windows-platform` 插件能在 MSYS2 下编译。它不包含 Interception 项目的任何代码、
 二进制或驱动；Interception 驱动本身为可选组件，默认不启用。
 随安装包分发的 Qt6 / QCA / OpenSSL / MinGW 运行时 DLL 的许可与分发义务见
-[`veyon/docs/IKEBACK-THIRD-PARTY.md`](veyon/docs/IKEBACK-THIRD-PARTY.md)。
+[`desktop/docs/IKEBACK-THIRD-PARTY.md`](desktop/docs/IKEBACK-THIRD-PARTY.md)。
 
 Android 启动图标由仓库根的 `ikeback_logo.png` 经 `mobile/tools/generate_icons.py` 生成。
 该图由**本仓库所有者提供**，作为「ikeback」定制分支的视觉标识，权利归提供者所有；
@@ -130,7 +130,7 @@ Android 启动图标由仓库根的 `ikeback_logo.png` 经 `mobile/tools/generat
 访问授权、保存期限与删除要求），并承担相应责任。
 
 具体范围、默认配置、日志保留与访问控制见
-[`veyon/docs/IKEBACK-PRIVACY.md`](veyon/docs/IKEBACK-PRIVACY.md)。
+[`desktop/docs/IKEBACK-PRIVACY.md`](desktop/docs/IKEBACK-PRIVACY.md)。
 **项目作者不对使用者的部署方式、数据处理行为或由此产生的任何纠纷承担责任。**
 
 ## 8. 无担保与责任限制
@@ -140,7 +140,7 @@ Android 启动图标由仓库根的 `ikeback_logo.png` 经 `mobile/tools/generat
 作者/贡献者不对任何直接、间接、附带或后果性损失承担责任。
 
 UWF 还原、断网、远程安装、锁定输入等操作存在**数据丢失或设备不可用风险**，
-部署前请备份并阅读 [`veyon/docs/IKEBACK-DEPLOY.md`](veyon/docs/IKEBACK-DEPLOY.md)。
+部署前请备份并阅读 [`desktop/docs/IKEBACK-DEPLOY.md`](desktop/docs/IKEBACK-DEPLOY.md)。
 
 ## 9. 联系
 

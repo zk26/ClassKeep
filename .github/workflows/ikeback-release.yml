@@ -112,7 +112,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          base=veyon/3rdparty
+          base=desktop/3rdparty
           mkdir -p "$base"
           fetch() {
             name=$1; url=$2; sha=$3
@@ -133,7 +133,7 @@ jobs:
         shell: msys2 {0}
         run: |
           set -o pipefail
-          cmake -S veyon -B build -G Ninja \
+          cmake -S desktop -B build -G Ninja \
             -DCMAKE_PREFIX_PATH=/ucrt64 \
             -DCMAKE_BUILD_TYPE=Release \
             -DWITH_QT6=ON -DWITH_BUNDLED_LIBVNC=ON \
@@ -143,17 +143,17 @@ jobs:
             -DCMAKE_SKIP_INSTALL_RULES=ON \
             -DCMAKE_CXX_FLAGS="-include cmath" 2>&1 | tee configure.log
 
-      - name: Build plugin and Veyon executables
+      - name: Build plugin and Ikeback executables
         shell: msys2 {0}
         run: |
           set -o pipefail
           cmake --build build --parallel 4 --target \
             classroom \
-            veyon-master veyon-configurator veyon-cli veyon-wcli \
-            veyon-service veyon-server veyon-worker 2>&1 | tee build.log
+            ikeback-master ikeback-configurator ikeback-cli ikeback-wcli \
+            ikeback-service ikeback-server ikeback-worker 2>&1 | tee build.log
 
-      # MANDATORY: without `windows-platform.dll` VeyonCore qFatal()s and every
-      # Veyon executable dies with __fastfail at startup.
+      # MANDATORY: without `windows-platform.dll` IkebackCore qFatal()s and every
+      # Ikeback executable dies with __fastfail at startup.
       - name: Build mandatory Windows platform plugin
         shell: msys2 {0}
         run: |
@@ -201,20 +201,20 @@ jobs:
             LRELEASE="$(find /ucrt64/bin -maxdepth 1 -name 'lrelease*' -type f 2>/dev/null | head -n 1)"
           fi
           if [ -z "$LRELEASE" ]; then echo 'lrelease not found' >&2; exit 1; fi
-          "$LRELEASE" veyon/translations/veyon_zh_CN.ts -qm translations/veyon_zh_CN.qm
+          "$LRELEASE" desktop/translations/ikeback_zh_CN.ts -qm translations/ikeback_zh_CN.qm
           find /ucrt64/share/qt6/translations -maxdepth 1 -name 'qt*_zh_CN.qm' -exec cp '{}' translations/ \; 2>/dev/null || true
           ls -lh translations
 
       - name: Assemble self-contained runtime payload
         shell: msys2 {0}
-        run: bash veyon/scripts/collect-windows-runtime.sh
+        run: bash desktop/scripts/collect-windows-runtime.sh
 
       - name: Build teacher and student setup EXEs
         shell: msys2 {0}
         run: |
           set -e
           mkdir -p dist
-          { printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
+          { printf '\xEF\xBB\xBF'; cat desktop/scripts/ikeback-installer.nsi; } > installer.nsi
           makensis -DVERSION='${{ steps.ver.outputs.value }}' -DROLE=teacher installer.nsi
           makensis -DVERSION='${{ steps.ver.outputs.value }}' -DROLE=student installer.nsi
           ls -lh dist
@@ -284,7 +284,7 @@ jobs:
         shell: pwsh
         run: |
           $v = '${{ steps.ver.outputs.value }}'
-          $template = [IO.File]::ReadAllText('veyon/scripts/release-notes-template.md', [Text.Encoding]::UTF8)
+          $template = [IO.File]::ReadAllText('desktop/scripts/release-notes-template.md', [Text.Encoding]::UTF8)
           $notes = $template.Replace('{VER}', $v)
           [IO.File]::WriteAllText('dist/RELEASE-NOTES.md', $notes, (New-Object Text.UTF8Encoding($false)))
 

@@ -4,7 +4,7 @@ name: ikeback Build Check
 # See docs/IKEBACK-BUILD.md for the rationale and the Windows (MinGW) route.
 #
 # IMPORTANT: workflows must live at the REPOSITORY ROOT .github/workflows/.
-# Files under veyon/.github/workflows/ are inert and never triggered.
+# Files under desktop/.github/workflows/ are inert and never triggered.
 
 on:
   push:
@@ -44,15 +44,15 @@ jobs:
             libpipewire-0.3-dev libspa-0.2-dev \
             libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
 
-      # The repository root has no .gitmodules (the Veyon tree is a subdirectory),
+      # The repository root has no .gitmodules (the desktop tree is a subdirectory),
       # so actions/checkout with submodules:recursive cannot fetch these.
       # Pin every 3rdparty checkout to the exact gitlink recorded in upstream
-      # veyon/veyon v4.11.4. Cloning HEAD pulls a different kldap revision and
+      # desktop/ikeback v4.11.4. Cloning HEAD pulls a different kldap revision and
       # breaks the build. Qt6 builds use `kldap`, Qt5 builds `kldap-qt5`.
       - name: Fetch Veyon 3rdparty sources (pinned to v4.11.4)
         run: |
           set -e
-          base=veyon/3rdparty
+          base=desktop/3rdparty
           mkdir -p "$base"
           fetch() {
             name=$1; url=$2; sha=$3
@@ -71,7 +71,7 @@ jobs:
       - name: Configure
         run: |
           set -o pipefail
-          cmake -S veyon -B build -G Ninja \
+          cmake -S desktop -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DWITH_QT6=ON \
             -DWITH_BUNDLED_LIBVNC=ON \
@@ -87,7 +87,7 @@ jobs:
             -DCMAKE_CXX_FLAGS="-Wno-deprecated-enum-enum-conversion -include cmath" 2>&1 | tee configure.log
 
       # Build only the ikeback plugin target (plus everything it depends on:
-      # veyon-core, Qt, etc.). Upstream plugins/filetransfer is broken in this
+      # ikeback-core, Qt, etc.). Upstream plugins/filetransfer is broken in this
       # 4.11.4 snapshot under BOTH Qt5 and Qt6 (missing <QUuid> include,
       # qApp->setQuitOnLastWindowClosed on QCoreApplication); it is unrelated to
       # ikeback and would make every full-project build fail.

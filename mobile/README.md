@@ -5,8 +5,8 @@
 
 - 仓库：<https://github.com/zk26/ikeback>
 - 许可：**GPL-2.0-or-later**（见 [`../LICENSE`](../LICENSE)、[`../NOTICE.md`](../NOTICE.md)）
-- 协议：[`../veyon/docs/IKEBACK-PROTOCOL.md`](../veyon/docs/IKEBACK-PROTOCOL.md)
-- 数据合规：[`../veyon/docs/IKEBACK-PRIVACY.md`](../veyon/docs/IKEBACK-PRIVACY.md)
+- 协议：[`../desktop/docs/IKEBACK-PROTOCOL.md`](../desktop/docs/IKEBACK-PROTOCOL.md)
+- 数据合规：[`../desktop/docs/IKEBACK-PRIVACY.md`](../desktop/docs/IKEBACK-PRIVACY.md)
 
 ## 构建
 
@@ -38,7 +38,7 @@ $env:ANDROID_HOME = 'G:\Andorid'
 | 配置 | IP / 密钥 / 端口、显示或导入 `.key`、同步测试；课表相关设置已移出本页 |
 | 更多 | 导入导出与工具**收进一个设置弹窗**（密钥、作息 JSON、课表 JSON、本地缓存、期末表、词云、刷新班级记录）、从教师机同步课表、关于 |
 
-设计遵循[交互与动效规范](../veyon/docs/IKEBACK-UI.md)的要点：
+设计遵循[交互与动效规范](../desktop/docs/IKEBACK-UI.md)的要点：
 卡片**不使用投影阴影**、只用一层细描边；外圆角 20dp / 内圆角 14dp 的同心圆角；
 浮动标签常驻框上方、帮助文字常驻框下方，不依赖会消失的 placeholder；
 底部胶囊指示随选中项平滑移动、图标回弹、**所有标签始终显示名称**；按钮全部显式尺寸，消除重叠；
@@ -84,7 +84,7 @@ app/src/main/java/top/ikee002/ikeback/
 ```
 
 **零第三方网络/JSON/加密库**：全部使用 Android / JDK 平台内置 API。
-第三方构建依赖与许可见 [`../veyon/docs/IKEBACK-THIRD-PARTY.md`](../veyon/docs/IKEBACK-THIRD-PARTY.md)。
+第三方构建依赖与许可见 [`../desktop/docs/IKEBACK-THIRD-PARTY.md`](../desktop/docs/IKEBACK-THIRD-PARTY.md)。
 
 ## 图标与界面
 

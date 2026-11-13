@@ -1,0 +1,535 @@
+/*
+ * FeatureWorkerManager.cpp - class for managing feature worker instances
+ *
+ * Copyright (c) 2017-2026 Tobias Junghans <tobydox@veyon.io>
+ *
+ * This file is part of Ikeback - https://github.com/zk26/ikeback
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this program (see COPYING); if not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ *
+ */
+
+#include <QCoreApplication>
+#include <QDateTime>
+#include <QDir>
+#include <QThread>
+#include <QTimer>
+
+#include "FeatureManager.h"
+#include "FeatureWorkerManager.h"
+#include "Filesystem.h"
+#include "IkebackConfiguration.h"
+#include "IkebackCore.h"
+#include "PlatformCoreFunctions.h"
+#include "PlatformUserFunctions.h"
+
+// clazy:excludeall=detaching-member
+
+FeatureWorkerManager::FeatureWorkerManager( IkebackServerInterface& server, QObject* parent ) :
+	QObject( parent ),
+	m_server( server ),
+	m_tcpServer( this )
+{
+	connect( &m_tcpServer, &QTcpServer::newConnection,
+			 this, &FeatureWorkerManager::acceptConnection );
+
+	const auto port = IkebackCore::config().featureWorkerManagerPort() + IkebackCore::sessionId();
+
+	if (!m_tcpServer.listen( QHostAddress::LocalHost, static_cast<quint16>(port)))
+	{
+		vCritical() << "can't listen at port" << port;
+		qFatal("listen error");
+	}
+
+	auto pendingMessagesTimer = new QTimer( this );
+	connect( pendingMessagesTimer, &QTimer::timeout, this, &FeatureWorkerManager::sendPendingMessages );
+
+	pendingMessagesTimer->start( 100 );
+
+	m_sessionWorkerRetryTimer.setInterval(UnmanagedSessionProcessRetryInterval);
+	connect (&m_sessionWorkerRetryTimer, &QTimer::timeout,
+			 this, &FeatureWorkerManager::retryPendingSessionWorkerMessages);
+}
+
+
+
+FeatureWorkerManager::~FeatureWorkerManager()
+{
+	m_tcpServer.close();
+
+	// properly shutdown all worker processes
+	while( m_workers.isEmpty() == false )
+	{
+		stopWorker( m_workers.firstKey() );
+	}
+}
+
+
+
+bool FeatureWorkerManager::startManagedSystemWorker( Feature::Uid featureUid )
+{
+	if( thread() != QThread::currentThread() )
+	{
+		vCritical() << "thread mismatch for feature" << featureUid;
+		return false;
+	}
+
+	stopWorker( featureUid );
+
+	Worker worker;
+
+	worker.process = new QProcess;
+	worker.process->setProcessChannelMode( QProcess::ForwardedChannels );
+
+	// a worker that terminates before connecting should not remain registered;
+	// otherwise, `isWorkerRunning()` remains true and the feature appears active
+	// until the server is restarted
+	const auto token = worker.token;
+
+	connect (worker.process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+			 this, [=, this]() { removeStaleWorker(featureUid, token); });
+
+	connect (worker.process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+			 worker.process, &QProcess::deleteLater);
+
+	vDebug() << "Starting managed system worker for feature" << IkebackCore::featureManager().feature(featureUid).name();
+	if( qEnvironmentVariableIsSet("IKEBACK_VALGRIND_WORKERS") )
+	{
+		worker.process->start( QStringLiteral("valgrind"),
+							   { QStringLiteral("--error-limit=no"),
+								 QStringLiteral("--leak-check=full"),
+								 QStringLiteral("--show-leak-kinds=all"),
+								 QStringLiteral("--log-file=valgrind-%1.log").arg(featureUid.toString(QUuid::WithoutBraces)),
+								 IkebackCore::filesystem().workerFilePath(), featureUid.toString() } );
+	}
+	else
+	{
+		worker.process->start( IkebackCore::filesystem().workerFilePath(), { featureUid.toString() } );
+	}
+
+	worker.process->write(worker.token + '\n');
+
+	m_workersMutex.lock();
+	m_workers[featureUid] = worker;
+	m_workersMutex.unlock();
+
+	watchWorkerAuthentication(featureUid, token);
+
+	return true;
+}
+
+
+
+bool FeatureWorkerManager::startUnmanagedSessionWorker( Feature::Uid featureUid )
+{
+	if( thread() != QThread::currentThread() )
+	{
+		vCritical() << "thread mismatch for feature" << featureUid;
+		return false;
+	}
+
+	// ikeback 5.2.0: starting a session worker must be idempotent. The old
+	// unconditional stopWorker() tore down a worker that had only just been
+	// launched (its authentication takes up to 30s) and started a brand new OS
+	// process on every queued message, leaving the previous processes behind.
+	if( isWorkerRunning( featureUid ) )
+	{
+		return true;
+	}
+
+	// Hard cooldown: a worker that failed to authenticate is removed after
+	// 30s, and the 5s message-retry timer used to spawn yet another OS process
+	// on every retry. Never launch the same feature more than once per
+	// WorkerAuthenticationTimeout window; queued messages are delivered as soon
+	// as the pending worker authenticates.
+	const auto now = QDateTime::currentMSecsSinceEpoch();
+	const auto lastStart = m_lastUnmanagedStart.value( featureUid );
+	if( lastStart > 0 && now - lastStart < WorkerStartCooldown )
+	{
+		vDebug() << "worker for feature" << featureUid << "is within its start cooldown";
+		return false;
+	}
+	m_lastUnmanagedStart[featureUid] = now;
+
+	Worker worker{};
+
+	vDebug() << "Starting worker (unmanaged session process) for feature" << featureUid;
+
+	const auto currentUser = IkebackCore::platform().userFunctions().queryCurrentUserProperty(PlatformUserFunctions::UserProperty::LoginName);
+	if( currentUser.isEmpty() )
+	{
+		vDebug() << "could not determine current user - probably a console session with logon screen";
+		return false;
+	}
+
+	const auto ret = IkebackCore::platform().coreFunctions().
+					 runProgramAsUser(IkebackCore::filesystem().workerFilePath(), { featureUid.toString() },
+									  currentUser,
+									  IkebackCore::platform().coreFunctions().activeDesktopName(),
+									  worker.token + '\n');
+	if( ret == false )
+	{
+		vWarning() << "failed to start worker for feature" << featureUid;
+		return false;
+	}
+
+	m_workersMutex.lock();
+	m_workers[featureUid] = worker;
+	m_workersMutex.unlock();
+
+	watchWorkerAuthentication(featureUid, worker.token);
+
+	return true;
+}
+
+
+
+bool FeatureWorkerManager::stopWorker( Feature::Uid featureUid )
+{
+	if( thread() != QThread::currentThread() )
+	{
+		vCritical() << "thread mismatch for feature" << featureUid;
+		return false;
+	}
+
+	QMutexLocker locker( &m_workersMutex );
+
+	if( m_workers.contains( featureUid ) )
+	{
+		vDebug() << "Stopping worker for feature" << featureUid;
+
+		auto& worker = m_workers[featureUid];
+
+		if( worker.socket )
+		{
+			worker.socket->disconnect( this );
+			disconnect( worker.socket );
+
+			worker.socket->close();
+			worker.socket->deleteLater();
+		}
+
+		if( worker.process )
+		{
+			// Terminate immediately. Waiting 5s while a replacement is already
+			// being started is what left several ikeback-worker.exe instances
+			// alive at the same time (visible as ~10 entries in Task Manager).
+			worker.process->terminate();
+			auto killTimer = new QTimer;
+			connect( killTimer, &QTimer::timeout, worker.process, &QProcess::kill );
+			connect( killTimer, &QTimer::timeout, killTimer, &QTimer::deleteLater );
+			killTimer->start( 1000 );
+		}
+
+		m_workers.remove( featureUid );
+		// An explicit stop (StopClient / RequestQuit) must allow the teacher to
+		// start the client again immediately - the cooldown only guards against
+		// automatic retry storms, not deliberate restarts.
+		m_lastUnmanagedStart.remove( featureUid );
+	}
+
+	return false;
+}
+
+
+
+void FeatureWorkerManager::sendMessageToManagedSystemWorker( const FeatureMessage& message )
+{
+	if( isWorkerRunning( message.featureUid() ) == false &&
+		startManagedSystemWorker( message.featureUid() ) == false )
+	{
+		vCritical() << "could not start managed system worker";
+		return;
+	}
+
+	sendMessage( message );
+
+}
+
+
+
+void FeatureWorkerManager::sendMessageToUnmanagedSessionWorker( const FeatureMessage& message )
+{
+	// maintain the order: as long as there are older messages waiting, add them to the list
+	if (m_pendingSessionWorkerMessages.contains(message.featureUid()) ||
+		(isWorkerRunning(message.featureUid()) == false &&
+		  startUnmanagedSessionWorker(message.featureUid()) == false))
+	{
+		enqueueSessionWorkerMessage(message);
+		return;
+	}
+
+	sendMessage( message );
+}
+
+
+
+void FeatureWorkerManager::enqueueSessionWorkerMessage(const FeatureMessage& message)
+{
+	// ikeback 5.2.0: the map operator[] below IS the creation. Upstream
+	// bailed out here whenever the queue did not exist yet - and nothing ever
+	// created it - so every message sent before a session worker was ready was
+	// silently dropped. Keep the queue instead so retryPendingSessionWorker-
+	// Messages() can deliver it once the worker authenticates.
+	auto& queue = m_pendingSessionWorkerMessages[message.featureUid()];
+	if (queue.size() >= MaximumPendingSessionWorkerMessages)
+	{
+		// keep the most recent state (e.g. the last tooltip/mode) rather than the oldest messages
+		vWarning() << "too many messages pending for session worker of feature" << message.featureUid()
+				   << "- discarding the oldest one";
+		queue.removeFirst();
+	}
+
+	if (queue.isEmpty())
+	{
+		vDebug() << "User session likely not yet available - retrying worker start";
+	}
+
+	queue.append(message);
+
+	if (m_sessionWorkerRetryTimer.isActive() == false)
+	{
+		m_sessionWorkerRetryTimer.start();
+	}
+}
+
+
+
+void FeatureWorkerManager::retryPendingSessionWorkerMessages()
+{
+	for (auto it = m_pendingSessionWorkerMessages.begin(); it != m_pendingSessionWorkerMessages.end();)
+	{
+		const auto featureUid = it.key();
+		if (isWorkerRunning(featureUid) || startUnmanagedSessionWorker(featureUid))
+		{
+			for (const auto& message : std::as_const(it.value()))
+			{
+				sendMessage(message);
+			}
+			it = m_pendingSessionWorkerMessages.erase(it);
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	if (m_pendingSessionWorkerMessages.isEmpty())
+	{
+		m_sessionWorkerRetryTimer.stop();
+	}
+}
+
+
+
+void FeatureWorkerManager::watchWorkerAuthentication(Feature::Uid featureUid, const QByteArray& token)
+{
+	// a worker that was launched but never authenticated (token not read, process terminated, etc.) would block
+	// the feature indefinitely: we remove it so that a subsequent message can restart it
+	QTimer::singleShot(WorkerAuthenticationTimeout, this, [=, this]() {
+		QMutexLocker locker(&m_workersMutex);
+		const auto it = m_workers.constFind(featureUid);
+		if (it != m_workers.constEnd() && it->token == token && it->authenticated == false)
+		{
+			locker.unlock();
+			vWarning() << "worker for feature" << featureUid << "did not authenticate in time - stopping it";
+			stopWorker(featureUid);
+		}
+	});
+}
+
+
+
+void FeatureWorkerManager::removeStaleWorker(Feature::Uid featureUid, const QByteArray& token)
+{
+	QMutexLocker locker(&m_workersMutex);
+	const auto it = m_workers.find(featureUid);
+	if (it != m_workers.end() && it->token == token && it->socket.isNull())
+	{
+		vDebug() << "removing stale worker for feature" << featureUid;
+		m_workers.erase(it);
+	}
+}
+
+
+
+bool FeatureWorkerManager::isWorkerRunning( Feature::Uid featureUid )
+{
+	QMutexLocker locker( &m_workersMutex );
+	return m_workers.contains( featureUid );
+}
+
+
+
+void FeatureWorkerManager::acceptConnection()
+{
+	auto socket = m_tcpServer.nextPendingConnection();
+	vDebug() << "new connection from worker at" << socket->peerPort();
+
+	// connect to readyRead() signal of new connection
+	connect(socket, &QTcpSocket::readyRead,
+			this, [=, this] () { processConnection(socket); });
+
+	connect(socket, &QTcpSocket::disconnected,
+			this, [=, this] () { closeConnection(socket); });
+
+	// a connection which is not associated with an authenticated worker in time is closed: the
+	// worker process then quits on its own (it can't be killed when not started by us, e.g.
+	// unmanaged session workers) and no stale worker accumulates in the user session
+	QTimer::singleShot(WorkerAuthenticationTimeout, socket, [=, this]() {
+		QMutexLocker locker(&m_workersMutex);
+		for (const auto& worker : std::as_const(m_workers))
+		{
+			if (worker.socket == socket && worker.authenticated)
+			{
+				return;
+			}
+		}
+		locker.unlock();
+		vWarning() << "closing unauthenticated worker connection from port" << socket->peerPort();
+		socket->close();
+	});
+}
+
+
+
+void FeatureWorkerManager::processConnection( QTcpSocket* socket )
+{
+	FeatureMessage message;
+	while (message.isReadyForReceive(socket))
+	{
+		message.receive(socket);
+
+		m_workersMutex.lock();
+
+		if (m_workers.contains(message.featureUid()))
+		{
+			Worker& worker = m_workers[message.featureUid()];
+
+			bool authorized = false;
+
+			// authenticate and set socket information
+			if (worker.socket.isNull())
+			{
+				if (message.command() == FeatureMessage::Command::Init &&
+					message.argument(MessageArgument::AuthToken).toByteArray() == worker.token)
+				{
+					vDebug() << "worker at" << socket->peerPort() << "authenticated successfully";
+					worker.socket = socket;
+					worker.authenticated = true;
+					authorized = true;
+					sendPendingMessages();
+				}
+				else
+				{
+					vCritical() << "worker at" << socket->peerPort() << "failed to authenticate - closing connection";
+					closeConnection(socket);
+					m_workersMutex.unlock();
+					return;
+				}
+			}
+			else
+			{
+				authorized = worker.authenticated && worker.socket == socket;
+			}
+
+			m_workersMutex.unlock();
+
+			if (authorized == false)
+			{
+				vCritical() << "rejecting message from unauthenticated socket for" << message.featureUid();
+				closeConnection(socket);
+				return;
+			}
+
+			if (message.command<FeatureMessage::CommandType>() >= 0)
+			{
+				IkebackCore::featureManager().handleFeatureMessageFromWorker(m_server, message);
+			}
+		}
+		else
+		{
+			m_workersMutex.unlock();
+
+			vCritical() << "got data from non-existing worker!" << message.featureUid();
+			// make the orphaned worker quit instead of lingering with an open connection
+			socket->close();
+			return;
+		}
+	}
+}
+
+
+
+void FeatureWorkerManager::closeConnection( QTcpSocket* socket )
+{
+	m_workersMutex.lock();
+
+	for( auto it = m_workers.begin(); it != m_workers.end(); )
+	{
+		if( it.value().socket == socket )
+		{
+			vDebug() << "removing worker after socket has been closed";
+			it = m_workers.erase( it );
+		}
+		else
+		{
+			++it;
+		}
+	}
+
+	m_workersMutex.unlock();
+
+	socket->deleteLater();
+}
+
+
+
+void FeatureWorkerManager::sendMessage( const FeatureMessage& message )
+{
+	m_workersMutex.lock();
+
+	if( m_workers.contains( message.featureUid() ) )
+	{
+		m_workers[message.featureUid()].pendingMessages.append( message );
+	}
+	else
+	{
+		vWarning() << "worker does not exist for feature" << message.featureUid();
+	}
+
+	m_workersMutex.unlock();
+}
+
+
+
+void FeatureWorkerManager::sendPendingMessages()
+{
+	m_workersMutex.lock();
+
+	for( auto it = m_workers.begin(); it != m_workers.end(); ++it )
+	{
+		auto& worker = it.value();
+
+		while( worker.socket && worker.pendingMessages.isEmpty() == false )
+		{
+			worker.pendingMessages.first().sendPlain(worker.socket);
+			worker.pendingMessages.removeFirst();
+		}
+	}
+
+	m_workersMutex.unlock();
+}

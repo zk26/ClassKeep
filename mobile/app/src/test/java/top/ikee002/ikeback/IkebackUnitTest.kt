@@ -41,7 +41,7 @@ class IkebackUnitTest {
 
     @Test
     fun foreignPayloadIsRejected() {
-        assertNull(Announcement.parse("VEYON_CLASSROOM:11880:abc:1:n"))
+        assertNull(Announcement.parse("IKEBACK_CLASSROOM:11880:abc:1:n"))
         assertNull(Announcement.parse("IKEBACK:bad:abc:1:n"))
         assertNull(Announcement.parse("IKEBACK:11880::1:n"))
     }

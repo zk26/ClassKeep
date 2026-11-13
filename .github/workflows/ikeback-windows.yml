@@ -17,7 +17,7 @@ on:
       - '.github/workflows/ikeback-windows.yml'
       # Windows-only code paths (DPAPI, registry, WTS sessions, Logger) are not
       # compiled by the Linux job, so any tree change needs this build as well.
-      - 'veyon/**'
+      - 'desktop/**'
       - 'mobile/**'
 
 permissions:
@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          base=veyon/3rdparty
+          base=desktop/3rdparty
           mkdir -p "$base"
           fetch() {
             name=$1; url=$2; sha=$3
@@ -89,7 +89,7 @@ jobs:
         shell: msys2 {0}
         run: |
           set -o pipefail
-          cmake -S veyon -B build -G Ninja \
+          cmake -S desktop -B build -G Ninja \
             -DCMAKE_PREFIX_PATH=/ucrt64 \
             -DCMAKE_BUILD_TYPE=Release \
             -DWITH_QT6=ON \
@@ -105,26 +105,26 @@ jobs:
             -DCMAKE_SKIP_INSTALL_RULES=ON \
             -DCMAKE_CXX_FLAGS="-include cmath" 2>&1 | tee configure.log
 
-      # Build exactly what we ship. classroom pulls in veyon-core, so all
+      # Build exactly what we ship. classroom pulls in ikeback-core, so all
       # Windows-only code (UWF / Core Audio / WFP / SetupAPI) is compiled here.
-      # All Veyon executables only link veyon-core; plugins are loaded at
+      # All Ikeback executables only link ikeback-core; plugins are loaded at
       # runtime, so we do NOT need a full build (which would hit the broken
       # upstream filetransfer plugin).
-      - name: Build classroom plugin + Veyon executables
+      - name: Build classroom plugin + Ikeback executables
         shell: msys2 {0}
         run: |
           set -o pipefail
           cmake --build build --parallel 4 --target \
             classroom \
-            veyon-master veyon-configurator veyon-cli veyon-wcli \
-            veyon-service veyon-server veyon-worker 2>&1 | tee build.log
+            ikeback-master ikeback-configurator ikeback-cli ikeback-wcli \
+            ikeback-service ikeback-server ikeback-worker 2>&1 | tee build.log
 
       # Build every usable upstream plugin so the installed Master/Service keep
       # demo, remote control, screen lock, VNC, etc. A full `cmake --build`
       # would hit the broken upstream filetransfer plugin, so compile targets
       # individually and skip only the ones that genuinely fail.
-      # MANDATORY. VeyonCore::initPlatformPlugin() qFatal()s when no
-      # `*-platform.dll` exists, which makes EVERY Veyon executable die with
+      # MANDATORY. IkebackCore::initPlatformPlugin() qFatal()s when no
+      # `*-platform.dll` exists, which makes EVERY Ikeback executable die with
       # __fastfail at startup. Never allow this target to be silently skipped.
       - name: Build mandatory Windows platform plugin
         shell: msys2 {0}
@@ -164,14 +164,14 @@ jobs:
             LRELEASE="$(find /ucrt64/bin -maxdepth 1 -name 'lrelease*' -type f 2>/dev/null | head -n 1)"
           fi
           if [ -z "$LRELEASE" ]; then echo 'lrelease not found' >&2; exit 1; fi
-          "$LRELEASE" veyon/translations/veyon_zh_CN.ts -qm translations/veyon_zh_CN.qm
+          "$LRELEASE" desktop/translations/ikeback_zh_CN.ts -qm translations/ikeback_zh_CN.qm
           # Qt's own widgets (File / View / Help ...) need their zh_CN catalog too.
           find /ucrt64/share/qt6/translations -maxdepth 1 -name 'qt*_zh_CN.qm' -exec cp '{}' translations/ \; 2>/dev/null || true
           ls -lh translations
 
       - name: Assemble self-contained runtime payload
         shell: msys2 {0}
-        run: bash veyon/scripts/collect-windows-runtime.sh
+        run: bash desktop/scripts/collect-windows-runtime.sh
 
       - name: Build teacher and student setup EXEs
         shell: msys2 {0}
@@ -179,7 +179,7 @@ jobs:
           set -e
           mkdir -p dist
           # Unicode true requires a UTF-8 BOM for the Chinese UI strings.
-          { printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
+          { printf '\xEF\xBB\xBF'; cat desktop/scripts/ikeback-installer.nsi; } > installer.nsi
           # Version comes from the pushed tag (v5.2.0). Do NOT use `git describe`:
           # this repository still contains the inherited upstream Veyon tags.
           VERSION="${GITHUB_REF_NAME#v}"

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.5
+Type=Application
+NoDisplay=true
+Exec=@CMAKE_INSTALL_PREFIX@/bin/ikeback-server
+Name=ikeback Server
+Comment=ikeback remote desktop server
+Icon=ikeback
+Categories=Qt;Education;Network;RemoteAccess;

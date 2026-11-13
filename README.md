@@ -1,6 +1,6 @@
 # ikeback
 
-> 基于 [Veyon](https://veyon.io/) 4.x 的教学管理定制分支。**产品名统一为英文小写 `ikeback`**。
+> 基于 [Veyon](https://github.com/veyon/veyon) 4.x 的教学管理定制分支。**产品名统一为英文小写 `ikeback`**。
 > 仓库：<https://github.com/zk26/ikeback> · 许可：**GPL-2.0-or-later**
 > 本分支不是 Veyon 官方版本，与上游项目无隶属关系。
 > 全部进程名 / 服务名 / 窗口名的改名清单与 GPL 修改声明见 [`NOTICE.md` §4.1](NOTICE.md)。
@@ -12,17 +12,17 @@
 
 ## 1. 仓库目录
 
-本仓库根就是整个 `G:\veyon`，全部项目都在同一个仓库里：
+本仓库根就是整个 `G:\ikeback`，全部项目都在同一个仓库里：
 
 ```
-G:\veyon\  (= 仓库根)
+G:\ikeback\  (= 仓库根)
 ├── README.md            ← 本文件：项目总入口
-├── LICENSE              GNU GPL v2 全文（与 veyon/COPYING 相同）
+├── LICENSE              GNU GPL v2 全文（与 desktop/COPYING 相同）
 ├── NOTICE.md            版权、许可、修改声明、商标、隐私与无担保声明
 ├── .gitignore           排除生成物 / 本机配置 / 发布产物
 │
 ├── .github\workflows\   三条 GitHub Actions 流水线（编译验证 / Windows 构建 / 发布）
-├── veyon\               桌面端（上游 Veyon 源码 + ikeback 插件）
+├── ikeback\               桌面端（上游 Veyon 源码 + ikeback 插件）
 │   ├── README.md         桌面端视角的总入口
 │   ├── COPYING           上游 GPL v2 全文
 │   ├── plugins\classroom\ ikeback 插件源码及说明
@@ -39,7 +39,7 @@ G:\veyon\  (= 仓库根)
 `ikeback-worker.exe` / `ikeback-service.exe` / `ikeback-configurator.exe` /
 `ikeback-cli.exe` / `ikeback-wcli.exe`，Windows 服务名为 `ikebackService`，
 安装目录为 `%PROGRAMFILES64%\ikeback\Master`（教师机）与 `...\Student`（学生机）。
-CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目录沿用上游标识，
+CMake 构建目标、核心库 `ikeback-core.dll`、插件 DLL 与配置数据目录沿用上游标识，
 详见 `NOTICE.md` §4.1。
 
 本仓库保留上游 Veyon 的完整提交历史（详见 `git log`）。
@@ -55,7 +55,7 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 | **APP** | `ikeback-Mobile-<ver>.apk` | Android 11+ 教室端（网段发现、密钥同步、班级数据、控制指令、期末表、词云） |
 
 产物命名、内容清单、校验与安装步骤见
-[`veyon/docs/IKEBACK-RELEASE.md`](veyon/docs/IKEBACK-RELEASE.md)。
+[`desktop/docs/IKEBACK-RELEASE.md`](desktop/docs/IKEBACK-RELEASE.md)。
 
 > 仓库内**不提交预编译二进制**。三类产物由
 > [发布工作流](.github/workflows/ikeback-release.yml) 在推送 `v*` tag 或手动触发时于云端**真实编译并发布**：
@@ -81,11 +81,11 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 > 同时放行手机桥接端口 11880（TCP+UDP）。
 > **手机端**：所有指令/同步/读取名单按钮点击即有 Toast 反馈（处理中、成功、失败、
 > 未配置时直接跳到配置页），不再出现“点了没反应”。
-> 桌面端**默认简体中文**（ikeback 插件界面串全部补齐 `veyon_zh_CN.ts`）。
+> 桌面端**默认简体中文**（ikeback 插件界面串全部补齐 `ikeback_zh_CN.ts`）。
 > APP 为 **5 个底部标签（课堂 / 班级 / 课表 / 配置 / 更多）**：真实应用图标、
 > 未配置时收缩提示、ClassBoard 样式双作息课表（彩色跨节卡片 + 今天高亮）、
 > 按班级自然展示课堂记录、导入导出收进设置、课表本地 + 教师机双写同步。
-> Windows 编译路线见 [`IKEBACK-BUILD.md` 路线 D](veyon/docs/IKEBACK-BUILD.md)。
+> Windows 编译路线见 [`IKEBACK-BUILD.md` 路线 D](desktop/docs/IKEBACK-BUILD.md)。
 
 ---
 
@@ -93,14 +93,14 @@ CMake 构建目标、核心库 `veyon-core.dll`、插件 DLL 与配置数据目�
 
 ### 桌面端（**只能 MinGW-w64/GCC**，MSVC 不可行）
 
-完整方案见 [`veyon/docs/IKEBACK-BUILD.md`](veyon/docs/IKEBACK-BUILD.md)。
+完整方案见 [`desktop/docs/IKEBACK-BUILD.md`](desktop/docs/IKEBACK-BUILD.md)。
 本机装 Qt6-MinGW + 自编 QCA-Qt6 + LibVNC 等依赖较重；**推荐先推代码到 `main`，
 由 [GitHub Actions 编译工作流](.github/workflows/ikeback-build.yml) 做真实编译验证**
 （<https://github.com/zk26/ikeback/actions> → ikeback Build Check → Run workflow）。
 
 ```powershell
 # 有完整 MinGW 工具链时（简写，详见 IKEBACK-BUILD.md）
-cmake -S veyon -B build -G Ninja -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
+cmake -S ikeback -B build -G Ninja -DWITH_QT6=ON -DWITH_WEBAPI=OFF -DWITH_CORE_ONLY=OFF
 cmake --build build
 ```
 
@@ -116,14 +116,14 @@ cd mobile
 ### 打安装程序（有 MSYS2 UCRT64 工具链时）
 
 ```bash
-bash veyon/scripts/collect-windows-runtime.sh
+bash desktop/scripts/collect-windows-runtime.sh
 mkdir -p dist
-{ printf '\xEF\xBB\xBF'; cat veyon/scripts/ikeback-installer.nsi; } > installer.nsi
+{ printf '\xEF\xBB\xBF'; cat desktop/scripts/ikeback-installer.nsi; } > installer.nsi
 makensis -DVERSION=5.2.0 -DROLE=teacher installer.nsi
 makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
 ```
 
-详见 [`veyon/scripts/README.md`](veyon/scripts/README.md)。
+详见 [`desktop/scripts/README.md`](desktop/scripts/README.md)。
 
 ---
 
@@ -135,25 +135,25 @@ makensis -DVERSION=5.2.0 -DROLE=student installer.nsi
 |---|---|
 | [`LICENSE`](LICENSE) | GNU GPL v2 全文 |
 | [`NOTICE.md`](NOTICE.md) | 版权归属、许可、修改声明、商标、隐私与无担保声明 |
-| [`veyon/docs/IKEBACK-LICENSE.md`](veyon/docs/IKEBACK-LICENSE.md) | 衍生作品与分发义务详解 |
-| [`veyon/docs/IKEBACK-THIRD-PARTY.md`](veyon/docs/IKEBACK-THIRD-PARTY.md) | 第三方组件与许可清单、分发核对清单 |
-| [`veyon/docs/IKEBACK-PRIVACY.md`](veyon/docs/IKEBACK-PRIVACY.md) | **数据采集范围与合规义务**（监控类软件必读） |
+| [`desktop/docs/IKEBACK-LICENSE.md`](desktop/docs/IKEBACK-LICENSE.md) | 衍生作品与分发义务详解 |
+| [`desktop/docs/IKEBACK-THIRD-PARTY.md`](desktop/docs/IKEBACK-THIRD-PARTY.md) | 第三方组件与许可清单、分发核对清单 |
+| [`desktop/docs/IKEBACK-PRIVACY.md`](desktop/docs/IKEBACK-PRIVACY.md) | **数据采集范围与合规义务**（监控类软件必读） |
 
 ### 技术与使用
 
 | 文档 | 内容 |
 |---|---|
-| [`veyon/README.md`](veyon/README.md) | 桌面端仓库首页总入口 |
-| [`veyon/docs/IKEBACK-FEATURES.md`](veyon/docs/IKEBACK-FEATURES.md) | **全部功能验收总表**：两轮需求逐条对照、实现位置、使用入口、未完成项 |
-| [`veyon/docs/IKEBACK.md`](veyon/docs/IKEBACK.md) | 功能总览、架构通道图、目录结构、构建、数据流 |
-| [`veyon/docs/IKEBACK-BUILD.md`](veyon/docs/IKEBACK-BUILD.md) | **真实编译方案**：GitHub Actions 编译验证、本机 MinGW 编译、CI 出 Windows 产物、排错表 |
-| [`veyon/docs/IKEBACK-PROTOCOL.md`](veyon/docs/IKEBACK-PROTOCOL.md) | **协议规范**：命令/参数全量数值表、HTTP 路由、认证算法、UDP 发现、数据格式、兼容性铁律 |
-| [`veyon/docs/IKEBACK-DEPLOY.md`](veyon/docs/IKEBACK-DEPLOY.md) | 部署、每堂课流程、UWF 与 Defender 注意、数据迁移、排障 |
-| [`veyon/docs/IKEBACK-RELEASE.md`](veyon/docs/IKEBACK-RELEASE.md) | 发布产物清单、命名、校验、安装 |
-| [`veyon/docs/IKEBACK-UI.md`](veyon/docs/IKEBACK-UI.md) | APP 交互与视觉规范（去阴影、同心圆角、动效顺序、平板适配验收清单） |
+| [`desktop/README.md`](desktop/README.md) | 桌面端仓库首页总入口 |
+| [`desktop/docs/IKEBACK-FEATURES.md`](desktop/docs/IKEBACK-FEATURES.md) | **全部功能验收总表**：两轮需求逐条对照、实现位置、使用入口、未完成项 |
+| [`desktop/docs/IKEBACK.md`](desktop/docs/IKEBACK.md) | 功能总览、架构通道图、目录结构、构建、数据流 |
+| [`desktop/docs/IKEBACK-BUILD.md`](desktop/docs/IKEBACK-BUILD.md) | **真实编译方案**：GitHub Actions 编译验证、本机 MinGW 编译、CI 出 Windows 产物、排错表 |
+| [`desktop/docs/IKEBACK-PROTOCOL.md`](desktop/docs/IKEBACK-PROTOCOL.md) | **协议规范**：命令/参数全量数值表、HTTP 路由、认证算法、UDP 发现、数据格式、兼容性铁律 |
+| [`desktop/docs/IKEBACK-DEPLOY.md`](desktop/docs/IKEBACK-DEPLOY.md) | 部署、每堂课流程、UWF 与 Defender 注意、数据迁移、排障 |
+| [`desktop/docs/IKEBACK-RELEASE.md`](desktop/docs/IKEBACK-RELEASE.md) | 发布产物清单、命名、校验、安装 |
+| [`desktop/docs/IKEBACK-UI.md`](desktop/docs/IKEBACK-UI.md) | APP 交互与视觉规范（去阴影、同心圆角、动效顺序、平板适配验收清单） |
 | [`mobile/README.md`](mobile/README.md) | Android 教室端工程说明 |
-| [`veyon/plugins/classroom/README.md`](veyon/plugins/classroom/README.md) | ikeback 插件源码结构 |
-| [`veyon/scripts/README.md`](veyon/scripts/README.md) | 依赖闭包收集、NSIS 安装器与图标生成脚本 |
+| [`desktop/plugins/classroom/README.md`](desktop/plugins/classroom/README.md) | ikeback 插件源码结构 |
+| [`desktop/scripts/README.md`](desktop/scripts/README.md) | 依赖闭包收集、NSIS 安装器与图标生成脚本 |
 
 ---
 

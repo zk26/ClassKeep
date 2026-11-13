@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate ikeback launcher icons from the project logo.
 
-Source: G:/veyon/ikeback_logo.png (repository root, provided by the owner).
+Source: G:/desktop/ikeback_logo.png (repository root, provided by the owner).
 Run from anywhere:  python mobile/tools/generate_icons.py
 
 Produces ic_launcher.png (rounded-square logo) and ic_launcher_round.png

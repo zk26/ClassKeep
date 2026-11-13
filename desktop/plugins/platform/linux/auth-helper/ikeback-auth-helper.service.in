@@ -1,0 +1,16 @@
+[Unit]
+Description=Ikeback Authentication Helper
+Requires=dbus.service
+After=dbus.service
+
+[Service]
+Type=dbus
+BusName=io.ikeback.AuthHelper
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/ikeback-auth-helper
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
