@@ -2,7 +2,9 @@ name: Purge releases older than 5.2.0
 
 # 5.2.0 is the first official ikeback release. Everything published before it
 # carries the retired product name and the packages that could not connect, so
-# it must not stay downloadable. Runs on demand or when this file changes.
+# neither the release nor its tag should stay around.
+#
+# Talks to the REST API directly (the bundled gh CLI failed silently here).
 
 on:
   workflow_dispatch:
@@ -23,24 +25,46 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -eu
-          gh release list --limit 200 --json tagName --jq '.[].tagName' > /tmp/releases.txt
-          while read -r tag; do
-            [ -n "$tag" ] || continue
-            version="${tag#v}"
-            major="${version%%.*}"
-            case "$major" in
-              ''|*[!0-9]*)
-                echo "skip   $tag (not a numeric version)"
-                continue
-                ;;
-            esac
-            if [ "$major" -lt 5 ]; then
-              echo "delete $tag"
-              gh release delete "$tag" --cleanup-tag --yes
-            else
-              echo "keep   $tag"
-            fi
-          done < /tmp/releases.txt
-          echo "--- remaining ---"
-          gh release list --limit 50
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          base = "https://api.github.com/repos/" + repo
+
+          def call(url, method="GET"):
+              request = urllib.request.Request(url, method=method)
+              request.add_header("Authorization", "Bearer " + token)
+              request.add_header("Accept", "application/vnd.github+json")
+              with urllib.request.urlopen(request) as response:
+                  return response.read()
+
+          def try_call(url, method):
+              try:
+                  call(url, method)
+                  return True
+              except urllib.error.HTTPError as error:
+                  print("  ", method, url, "failed:", error.code)
+                  return False
+
+          for release in json.loads(call(base + "/releases?per_page=100")):
+              tag = release["tag_name"]
+              version = tag[1:] if tag.startswith("v") else tag
+              major = version.split(".")[0]
+              if not major.isdigit():
+                  print("skip  ", tag, "(not a numeric version)")
+                  continue
+              if int(major) >= 5:
+                  print("keep  ", tag, release["name"])
+                  continue
+              print("delete", tag, release["name"])
+              try_call(base + "/releases/" + str(release["id"]), "DELETE")
+              try_call(base + "/git/refs/tags/" + tag, "DELETE")
+
+          print("--- remaining ---")
+          for release in json.loads(call(base + "/releases?per_page=100")):
+              print(release["tag_name"], release["name"])
+          PY
