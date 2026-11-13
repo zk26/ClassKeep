@@ -102,13 +102,12 @@ jobs:
           k=desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp
           sed -i '1i #undef UNICODE\n#undef _UNICODE' "$k"
           # vnckeymap.cpp logs through VNCLog and triggers vncCad, whose
-          # implementations live in translators we do not build; both were only
-          # ever reachable from the upstream logger. Drop the calls (they are
-          # debug logging and a CAD helper ikeback implements itself).
-          perl -0pi -e 's/vnclog\.Print\(.*?\);\s*//gs' "$k"
-          perl -0pi -e 's/vncCad::Cadthread\(.*?\);\s*//gs' "$k"
+          # implementations live in translators we do not build. Turning the
+          # calls into void expressions keeps the surrounding statements (and
+          # any if/else) syntactically intact while dropping the dependency.
+          perl -0pi -e 's/vnclog\.Print\(/(void)(/gs' "$k"
+          perl -0pi -e 's/vncCad::Cadthread\(/(void)(/gs' "$k"
           grep -c 'vnclog\.Print\|vncCad::Cadthread' "$k" || true
-          head -3 "$k"
 
       - name: Configure
         shell: msys2 {0}
