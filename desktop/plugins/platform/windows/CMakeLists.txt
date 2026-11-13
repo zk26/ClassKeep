@@ -90,5 +90,11 @@ set_source_files_properties(WindowsNetworkFunctions.cpp PROPERTIES SKIP_UNITY_BU
 # NOTE: vnckeymap.cpp comes from the pinned UltraVNC tree and its VNCLOG() macro
 # relies on __FUNCTION__ being a string literal. Current GCC makes it a pointer,
 # so the macro no longer compiles. The CI fetch step patches that single macro
-# (see .github/workflows/ikeback-windows.yml) instead of forking the sources;
-# source-file compile flags do not reach these third-party units.
+# (see .github/workflows/ikeback-windows.yml) instead of forking the sources.
+#
+# Its SettingsManager.h is ANSI-only: under the project-wide UNICODE/_UNICODE
+# defines TCHAR becomes wchar_t and the legacy char* accessors no longer
+# compile. COMPILE_DEFINITIONS is the only per-source channel CMake forwards
+# to the compiler, so cancel the two defines for this unit only.
+set_property(SOURCE "${ultravnc_DIR}/winvnc/winvnc/vnckeymap.cpp"
+	APPEND PROPERTY COMPILE_DEFINITIONS "-UUNICODE" "-U_UNICODE")
