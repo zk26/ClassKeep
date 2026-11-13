@@ -166,7 +166,15 @@ jobs:
           cat windows-platform.log
           # Surface the real compiler errors as annotations: the job log itself
           # is not retrievable without authentication.
-          errs=$(grep -E "error:|undefined reference" windows-platform.log | head -9)
+          {
+            echo "== vnckeymap.cpp refs =="
+            grep -n "settings\|Cadthread" desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp | head -6
+            echo "== settings declaration =="
+            grep -rn "settings;" desktop/3rdparty/ultravnc/winvnc/winvnc/*.h | head -4
+            echo "== Cadthread declaration =="
+            grep -rn "Cadthread" desktop/3rdparty/ultravnc/winvnc/winvnc/*.h | head -3
+          } | while IFS= read -r line; do echo "::notice::${line}"; done
+          errs=$(grep -E "error:|undefined reference" windows-platform.log | head -7)
           if [ -n "$errs" ]; then
             printf '%s\n' "$errs" | while IFS= read -r line; do echo "::error::${line}"; done
           else
