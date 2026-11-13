@@ -146,7 +146,7 @@ jobs:
           grep -rn 'define VNCLOG' desktop/3rdparty/ultravnc/winvnc/ | head -8 || true
           # GWL_* accessors are only declared for WINVER < 0x0500; rewrite them.
           find desktop/3rdparty/ultravnc -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.c' \) \
-            -exec perl -pi -e 's/\bGWL_WNDPROC\b/GWLP_WNDPROC/g; s/\bGWL_HINSTANCE\b/GWLP_HINSTANCE/g; s/\bGWL_ID\b/GWLP_ID/g; s/\bGWL_STYLE\b/GWLP_STYLE/g; s/\bGWL_EXSTYLE\b/GWLP_EXSTYLE/g; s/\bGWL_USERDATA\b/GWLP_USERDATA/g; s/DWL_MSGRESULT/DWLP_MSGRESULT/g; s/DWL_DLGPROC/DWLP_DLGPROC/g; s/DWL_USER/DWLP_USER/g' {} + || true
+            -exec perl -pi -e 's/\bGWL_WNDPROC\b/GWLP_WNDPROC/g; s/\bGWL_HINSTANCE\b/GWLP_HINSTANCE/g; s/\bGWL_ID\b/GWLP_ID/g; s/\bGWL_USERDATA\b/GWLP_USERDATA/g; s/DWL_MSGRESULT/DWLP_MSGRESULT/g; s/DWL_DLGPROC/DWLP_DLGPROC/g; s/DWL_USER/DWLP_USER/g' {} + || true
           k=desktop/3rdparty/ultravnc/winvnc/winvnc/vnckeymap.cpp
           sed -i '1i #undef UNICODE\n#undef _UNICODE' "$k"
           perl -0pi -e 's/vnclog\.Print\([^;]*\);/(void)0;/gs' "$k"
