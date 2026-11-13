@@ -27,7 +27,11 @@
 #include <windows.h>
 // The UltraVNC header we replaced pulled these in transitively; WindowsUserFunctions
 // relies on them for NetGetDCName()/NetApiBufferFree()/NERR_Success and for
-// GetUserNameExW()/NameDisplay.
+// GetUserNameExW()/NameDisplay. secext.h includes sspi.h, which refuses to
+// compile unless one of the SECURITY_* flavours is selected first.
+#ifndef SECURITY_WIN32
+#define SECURITY_WIN32
+#endif
 #include <lm.h>
 #include <secext.h>
 
