@@ -87,7 +87,9 @@ build_ikeback_plugin(builtin-ultravnc-server
 	UltraVncConfiguration.h
 	)
 
-target_link_libraries(builtin-ultravnc-server PRIVATE -lws2_32 -luserenv -lole32 -lversion -lgdi32 -limm32 -lwinmm ${ZLIB_LIBRARIES} ${JPEG_LIBRARIES} ${LZO_LIBRARIES})
+# sodium: UltraVNC's SettingsManager pulls in libsodium for its encryption
+# support; without the header the whole plugin fails to compile.
+target_link_libraries(builtin-ultravnc-server PRIVATE -lws2_32 -luserenv -lole32 -lversion -lgdi32 -limm32 -lwinmm sodium ${ZLIB_LIBRARIES} ${JPEG_LIBRARIES} ${LZO_LIBRARIES})
 target_include_directories(builtin-ultravnc-server PRIVATE
 	${ultravnc_DIR}
 	${ultravnc_DIR}/common
