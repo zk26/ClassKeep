@@ -114,7 +114,12 @@ qt6_disable_unicode_defines(builtin-ultravnc-server)
 # construct (e.g. d3des.c's K&R style definition) stops the VNC server plugin
 # from being produced, and ikeback-server then exits with
 # "no VNC server plugins found" - i.e. nothing can connect at all.
-set(ULTRAVNC_COMPILER_FLAGS "-Wno-comments -Wno-attributes -Wno-write-strings -Wno-parentheses -Wno-misleading-indentation -Wno-unused-result -Wno-unused-label -Wno-unknown-pragmas -Wno-unused-variable -Wno-unused-value -Wno-unused-but-set-variable -Wno-deprecated-declarations -Wno-format-zero-length -Wno-sign-compare -Wno-int-to-pointer-cast -Wno-old-style-definition -Wno-implicit-int -Wno-implicit-function-declaration -Wno-error -fexceptions")
+set(ULTRAVNC_COMPILER_FLAGS "-Wno-comments -Wno-attributes -Wno-write-strings -Wno-parentheses -Wno-misleading-indentation -Wno-unused-result -Wno-unused-label -Wno-unknown-pragmas -Wno-unused-variable -Wno-unused-value -Wno-unused-but-set-variable -Wno-deprecated-declarations -Wno-format-zero-length -Wno-sign-compare -Wno-int-to-pointer-cast -Wno-error -fexceptions")
 
-set_source_files_properties(${ultravnc_C_SOURCES} PROPERTIES COMPILE_FLAGS "${ULTRAVNC_COMPILER_FLAGS}")
-set_source_files_properties(${ultravnc_CXX_SOURCES} PROPERTIES COMPILE_FLAGS "${ULTRAVNC_COMPILER_FLAGS} -Wno-terminate -Wno-conversion-null")
+# C-only legacy diagnostics: passing these to the C++ driver only produces
+# "valid for C/ObjC but not for C++" noise.
+set(ULTRAVNC_C_FLAGS "${ULTRAVNC_COMPILER_FLAGS} -Wno-old-style-definition -Wno-implicit-int -Wno-implicit-function-declaration")
+set(ULTRAVNC_CXX_FLAGS "${ULTRAVNC_COMPILER_FLAGS} -Wno-terminate -Wno-conversion-null")
+
+set_source_files_properties(${ultravnc_C_SOURCES} PROPERTIES COMPILE_FLAGS "${ULTRAVNC_C_FLAGS}")
+set_source_files_properties(${ultravnc_CXX_SOURCES} PROPERTIES COMPILE_FLAGS "${ULTRAVNC_CXX_FLAGS}")
